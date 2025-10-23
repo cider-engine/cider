@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Cider.Generator/Cider.Generator.csproj" />
+  <Project Path="Cider.Test/Cider.Test.csproj" />
+  <Project Path="Cider/Cider.csproj" />
+</Solution>

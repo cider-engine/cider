@@ -1,9 +1,6 @@
 using Cider.Components;
-using MonoGame.Extended.Input;
 using MonoGame.Extended.Input.InputListeners;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Cider.Input
 {

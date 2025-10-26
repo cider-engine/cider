@@ -1,3 +1,4 @@
+using Cider.Data;
 using Cider.Input;
 using Cider.Render;
 using Microsoft.Xna.Framework;
@@ -8,7 +9,7 @@ namespace Cider.Components
     public class Component
     {
 #nullable enable
-        public string Id { get; set => field = value ?? throw new NullReferenceException(); } = string.Empty;
+        public string Name { get; set => field = value ?? throw new NullReferenceException(); } = string.Empty;
 
         public Component? Parent
         {
@@ -17,29 +18,16 @@ namespace Cider.Components
             {
                 if (this is Scene) throw new InvalidOperationException();
                 if (field is Scene scene1) OnDetachToScene(scene1);
-                else if (RootScene is Scene scene2) OnDetachToScene(scene2);
+                else if (Root is Scene scene2) OnDetachToScene(scene2);
 
                 if (value is Scene scene3) OnAttachToScene(scene3);
-                else if (value?.RootScene is Scene scene4) OnAttachToScene(scene4);
+                else if (value?.Root is Scene scene4) OnAttachToScene(scene4);
 
                 field = value;
             }
         }
 
-        public Scene? RootScene
-        {
-            get
-            {
-                if (this is Scene _this) return _this;
-                Component? component = Parent;
-                while (true)
-                {
-                    if (component is Scene scene) return scene;
-                    if (component is null) return null;
-                    component = component.Parent;
-                }
-            }
-        }
+        public Scene? Root { get; private set; }
 #nullable disable
 
         public Component()
@@ -53,6 +41,7 @@ namespace Cider.Components
 
         protected internal virtual void OnAttachToScene(Scene root)
         {
+            Root = root;
             foreach (var item in Children)
                 item.OnAttachToScene(root);
         }
@@ -63,16 +52,16 @@ namespace Cider.Components
                 item.OnLoaded(root);
         }
 
-        protected internal virtual void OnUpdate(GameTime gameTime)
+        protected internal virtual void OnUpdate(in TimeContext context)
         {
             foreach (var item in Children)
-                item.OnUpdate(gameTime);
+                item.OnUpdate(context);
         }
 
-        protected internal virtual void OnFixedUpdate(GameTime gameTime)
+        protected internal virtual void OnFixedUpdate(in TimeContext context)
         {
             foreach (var item in Children)
-                item.OnFixedUpdate(gameTime);
+                item.OnFixedUpdate(context);
         }
 
         protected internal virtual void OnDraw(RenderContext context)
@@ -86,6 +75,7 @@ namespace Cider.Components
         {
             foreach (var item in Children)
                 item.OnDetachToScene(root);
+            Root = null;
         }
 
         protected internal virtual bool HitTest(HitTestResult result)

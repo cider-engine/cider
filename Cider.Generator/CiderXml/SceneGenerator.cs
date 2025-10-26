@@ -38,7 +38,8 @@ namespace Cider.Generator.CiderXml
 
                         if (namespaces.Count == 0) continue;
 
-                        foreach (var ns in assembly.GlobalNamespace.GetNamespaceMembers()) ProcessNamespace(ns, namespaces);
+                        //foreach (var ns in assembly.GlobalNamespace.GetNamespaceMembers()) ProcessNamespace(ns, namespaces);
+                        ProcessNamespace(assembly.GlobalNamespace, namespaces); // 允许不在命名空间中声明类
 
                         static void ProcessNamespace(INamespaceSymbol @namespace, Dictionary<string, Dictionary<string, string>> namespaces)
                         {
@@ -84,52 +85,88 @@ namespace Cider.Generator.CiderXml
 
                     var separatorIndex = @class.LastIndexOf('.');
 
-                    if (separatorIndex < 1) return default;
+                    if (separatorIndex > -1)
+                    {
+                        var sceneNamespace = @class.Substring(0, separatorIndex);
+                        writer.WriteLine($"namespace {sceneNamespace};");
+                        writer.WriteLine();
+                    }
 
-                    var sceneNamespace = @class.Substring(0, separatorIndex);
-                    var sceneClass = @class.Substring(separatorIndex + 1);
+                    var sceneClass = @class.Substring(separatorIndex + 1); // 不用特殊处理，-1 + 1 = 0
                     writer.WriteLine($$"""
-                        namespace {{sceneNamespace}}
+                        public partial class {{sceneClass}} : global::Cider.Components.Scene
                         {
-                            public partial class {{sceneClass}} : global::Cider.Components.Scene
+                            public {{sceneClass}}()
                             {
-                                protected override void OnLoaded(global::Cider.Components.Scene scene)
-                                {
-                                    Children.AddRange([
+                                Children.AddRange([
                         """);
 
-                    writer.Indent = 4;
+                    writer.Indent = 3;
 
-                    ProcessElement(root, mappings, writer);
+                    var namedFields = new List<string>();
+
+                    ProcessElement(root, mappings, writer, namedFields);
 
                     writer.Indent = 0;
 
-                    writer.WriteLine($$"""
-                                    ]);
-
-                                    base.OnLoaded(scene);
-                                }
+                    writer.WriteLine("""
+                                ]);
                             }
-                        }
                         """);
+
+                    writer.WriteLine();
+
+                    foreach (var field in namedFields)
+                    {
+                        writer.Indent = 1;
+                        writer.WriteLine(field);
+                    }
+
+                    writer.Indent = 0;
+
+                    writer.WriteLine('}');
 
                     writer.Flush();
 
                     return (stringWriter.ToString(), @class);
 
-                    static void ProcessElement(XElement element, Dictionary<string, Dictionary<string, string>> mappings, IndentedTextWriter writer)
+                    static void ProcessElement(XElement element,
+                        Dictionary<string, Dictionary<string, string>> mappings,
+                        IndentedTextWriter writer,
+                        List<string> namedFields)
                     {
                         foreach (var child in element.Elements().Where(static x => !IsAttribute(x.Parent, x)))
                         {
                             if (mappings.TryGetValue(element.Name.NamespaceName, out var dict))
                             {
                                 if (dict.TryGetValue(child.Name.LocalName, out var fullName))
-                                    writer.WriteLine($"new {fullName}()");
+                                {
+                                    if (child.Attribute(CommandWithClass) is XAttribute attr1)
+                                    {
+                                        if (child.Attribute(CommandWithName) is XAttribute attr2)
+                                        {
+                                            writer.WriteLine($"(this.{attr2.Value} = new global::{attr1.Value}()");
+                                            namedFields.Add($"internal global::{attr1.Value} {attr2.Value};");
+                                        }
+
+                                        else writer.WriteLine($"new global::{attr1.Value}()");
+                                    }
+
+                                    else if (child.Attribute(CommandWithName) is XAttribute attr2)
+                                    {
+                                        writer.WriteLine($"(this.{attr2.Value} = new {fullName}()");
+                                        namedFields.Add($"internal {fullName} {attr2.Value};");
+                                    }
+
+                                    else writer.WriteLine($"(new {fullName}()");
+                                }
 
                                 writer.WriteLine('{');
                                 writer.Indent++;
+
                                 foreach (var attr in child.Attributes())
                                 {
+                                    if (attr.Name.Namespace == CommandNamespace) continue;
                                     var value = attr.Value;
                                     if (value.Length > 0 && value[0] == '@')
                                     {
@@ -158,7 +195,7 @@ namespace Cider.Generator.CiderXml
                                             var name = attr.Name.LocalName;
                                             writer.Write(name.Substring(name.IndexOf('.') + 1));
                                             writer.Write(" = ");
-                                            ProcessElement(attr, mappings, writer);
+                                            ProcessElement(attr, mappings, writer, namedFields);
                                         }
 
                                         else if (count > 1)
@@ -167,19 +204,20 @@ namespace Cider.Generator.CiderXml
                                             var name = attr.Name.LocalName;
                                             writer.Write(name.Substring(name.IndexOf('.') + 1));
                                             writer.WriteLine(" = {");
-                                            ProcessElement(attr, mappings, writer);
+                                            ProcessElement(attr, mappings, writer, namedFields);
                                             writer.WriteLine("},");
                                         }
                                     }
 
                                     writer.WriteLine("Children = {");
                                     writer.Indent++;
-                                    ProcessElement(child, mappings, writer);
+                                    ProcessElement(child, mappings, writer, namedFields);
                                     writer.Indent--;
                                     writer.WriteLine('}');
                                 }
+
                                 writer.Indent--;
-                                writer.WriteLine("},");
+                                writer.WriteLine("}),");
                             }
                         }
                     }

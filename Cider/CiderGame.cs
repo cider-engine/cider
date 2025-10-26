@@ -84,7 +84,9 @@ namespace Cider
                 _accumulator -= _fixedTimeStep;
             }
 
-            CurrentScene.OnUpdate(gameTime);
+            var timeContext = new Cider.Data.TimeContext(gameTime.ElapsedGameTime);
+
+            CurrentScene.OnUpdate(timeContext);
 
             base.Update(gameTime);
         }

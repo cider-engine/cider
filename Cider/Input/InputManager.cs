@@ -24,11 +24,6 @@ namespace Cider.Input
             KeyboardExtended.Update();
 
             _mouseListener.Update(gameTime);
-
-            if (CiderGame.Instance.IsFocused)
-            {
-                
-            }
         }
 
         public static MouseStateExtended GetMouseState() => MouseExtended.GetState();

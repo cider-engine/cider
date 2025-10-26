@@ -23,5 +23,8 @@ namespace Cider.Generator
 
         public static readonly XNamespace DefaultNamespace = "https://github.com/cider-engine";
         public static readonly XNamespace CommandNamespace = "https://github.com/cider-engine/command";
+
+        public static readonly XName CommandWithClass = CommandNamespace + "Class";
+        public static readonly XName CommandWithName = CommandNamespace + "Name";
     }
 }

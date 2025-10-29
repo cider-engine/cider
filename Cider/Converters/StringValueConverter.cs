@@ -1,3 +1,5 @@
+using Cider.Assets;
+using Cider.Data;
 using Cider.Data.In2D;
 using System;
 
@@ -21,11 +23,6 @@ namespace Cider.Converters
 
         public static implicit operator bool(StringValueConverter converter) => bool.Parse(converter._value);
 
-        public static implicit operator Sprite(StringValueConverter converter) => new()
-        {
-            Source = converter._value
-        };
-
         public static implicit operator Vector2(StringValueConverter converter)
         {
             Span<Range> ranges = stackalloc Range[3];
@@ -47,7 +44,7 @@ namespace Cider.Converters
             }
         }
 
-        public static implicit operator Microsoft.Xna.Framework.Color(StringValueConverter converter)
+        public static implicit operator Color(StringValueConverter converter)
         {
             if (converter._value.StartsWith('#'))
             {
@@ -77,5 +74,7 @@ namespace Cider.Converters
                 throw new FormatException("Only hex color format is supported.");
             }
         }
+
+        public static implicit operator Texture2DAsset(StringValueConverter converter) => new(converter._value);
     }
 }

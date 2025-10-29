@@ -161,7 +161,9 @@ namespace Cider.Generator.CiderXml
                                     else writer.WriteLine($"(new {fullName}()");
                                 }
 
-                                writer.WriteLine('{');
+                                else writer.WriteLine("new()");
+
+                                    writer.WriteLine('{');
                                 writer.Indent++;
 
                                 foreach (var attr in child.Attributes())
@@ -176,6 +178,14 @@ namespace Cider.Generator.CiderXml
                                         writer.WriteLine(',');
                                     }
 
+                                    else if (value.StartsWith("asset://"))
+                                    {
+                                        writer.Write(attr.Name.LocalName);
+                                        writer.Write(" = global::Cider.Assets.AssetManager.");
+                                        writer.Write(value.Substring("asset://".Length));
+                                        writer.WriteLine(',');
+                                    }
+
                                     else
                                     {
                                         writer.Write(attr.Name.LocalName);
@@ -184,6 +194,7 @@ namespace Cider.Generator.CiderXml
                                         writer.WriteLine("\"),");
                                     }
                                 }
+
                                 if (child.HasElements)
                                 {
                                     foreach (var attr in child.Elements().Where(static x => IsAttribute(x.Parent, x)))
@@ -214,6 +225,13 @@ namespace Cider.Generator.CiderXml
                                     ProcessElement(child, mappings, writer, namedFields);
                                     writer.Indent--;
                                     writer.WriteLine('}');
+                                }
+
+                                else if (!string.IsNullOrWhiteSpace(child.Value))
+                                {
+                                    writer.Write("Content = new global::Cider.Converters.StringValueConverter(\"");
+                                    writer.Write(child.Value);
+                                    writer.WriteLine("\"),");
                                 }
 
                                 writer.Indent--;

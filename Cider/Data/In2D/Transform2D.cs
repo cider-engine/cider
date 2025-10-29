@@ -34,7 +34,10 @@ namespace Cider.Data.In2D
 
         public readonly Transform2D ApplyTransform2D(Transform2D transform)
         {
-            return new(Position + transform.Position,
+            // 先按当前 Scale 缩放 transform 的位置（分量相乘），再按当前 Rotation 旋转，最后加上当前 Position
+            var scaled = new Vector2(transform.Position.X * Scale.X, transform.Position.Y * Scale.Y);
+            var rotated = scaled.Rotate(RotationInRadians);
+            return new(Position + rotated,
                 RotationInRadians + transform.RotationInRadians,
                 Scale * transform.Scale);
         }

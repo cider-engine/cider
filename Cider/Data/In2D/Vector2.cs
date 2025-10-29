@@ -20,6 +20,18 @@ namespace Cider.Data.In2D
         public float X;
         public float Y;
 
+        public readonly Vector2 Add(float x, float y) => new(x + X, y + Y);
+        public readonly Vector2 Subtract(float x, float y) => new(X - x, Y - y);
+
+        public readonly Vector2 Rotate(float angleInRadians)
+        {
+            float cos = MathF.Cos(angleInRadians);
+            float sin = MathF.Sin(angleInRadians);
+            return new Vector2(X * cos - Y * sin, X * sin + Y * cos);
+        }
+
+        public readonly override string ToString() => $"Vector2({X}, {Y})";
+
         public static Vector2 operator +(Vector2 left, Vector2 right)
         {
             return new Vector2
@@ -83,10 +95,19 @@ namespace Cider.Data.In2D
             };
         }
 
+        public static bool operator ==(Vector2 left, Vector2 right) => left.X == right.X && left.Y == right.Y;
+
+        public static bool operator !=(Vector2 left, Vector2 right) => !(left == right);
+
         public readonly void Deconstruct(out float x, out float y)
         {
             x = X;
             y = Y;
+        }
+
+        public static Vector2 FromPoint(Microsoft.Xna.Framework.Point point)
+        {
+            return new Vector2 { X = point.X, Y = point.Y };
         }
 
         public static implicit operator Vector2((float X, float Y) tuple)

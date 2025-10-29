@@ -54,6 +54,8 @@ namespace Cider.Generator.CiderXml
                         game.Run();
                         """);
 
+                    writer.Flush();
+
                     return stringWriter.ToString();
 
                     static void ProcessElements(XElement root, IndentedTextWriter writer)

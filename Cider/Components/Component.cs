@@ -84,8 +84,9 @@ namespace Cider.Components
         }
 
 
-        internal void ForeachHitTest(HitTestResult result)
+        internal virtual void ForeachHitTest(HitTestResult result)
         {
+            if (!IsVisible) return;
             if (HitTest(result)) result.SetComponent(this);
             
             foreach (var item in Children)

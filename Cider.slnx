@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Cider.Generator/Cider.Generator.csproj" />
+  <Project Path="Cider.Sdk/Cider.Sdk.csproj" Id="9853d470-fd3c-46e1-9218-26dc82ac785a" />
   <Project Path="Cider.Task/Cider.Task.csproj" Id="f508a87c-e43d-4323-9702-a48ee491ee63" />
   <Project Path="Cider.Test/Cider.Test.csproj" />
   <Project Path="Cider/Cider.csproj" />

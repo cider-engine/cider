@@ -2,9 +2,7 @@ using Cider.Data;
 using Cider.Data.In2D;
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Cider.Extensions
 {

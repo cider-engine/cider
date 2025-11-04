@@ -3,10 +3,8 @@ using Cider.Input;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using MonoStereo;
 using System;
-using System.Diagnostics;
 using System.Threading;
 
 namespace Cider
@@ -33,13 +31,18 @@ namespace Cider
             set
             {
                 if (_initialized)
+                {
+                    value.OnParentTransformChanged(EventArgs.Empty);
                     value.OnLoaded(value); // 如果游戏没有初始化，则在Initialize里调用
+                }
 
                 field = value;
             }
         }
 
         public bool IsFocused { get; private set; }
+
+        public ProjectSettings ProjectSettings { get; }
 
         public CiderGame(ProjectSettings settings)
         {
@@ -52,6 +55,8 @@ namespace Cider
             CurrentScene = settings.MainScene;
 
             Window.AllowUserResizing = true;
+
+            ProjectSettings = settings;
         }
 
         [Obsolete("The Content property is available but shouldn't be used")]
@@ -61,6 +66,7 @@ namespace Cider
         {
             base.Initialize();
             MonoStereoEngine.Initialize(() => _disposed);
+            CurrentScene.OnParentTransformChanged(EventArgs.Empty);
             CurrentScene.OnLoaded(CurrentScene);
             _initialized = true;
         }
@@ -76,17 +82,32 @@ namespace Cider
 
             InputManager.Update(gameTime);
 
+            foreach (var item in CurrentScene.BodiesToRemove2D)
+            {
+                CurrentScene.World2D.Remove(item);
+            }
+
+            CurrentScene.BodiesToRemove2D.Clear();
+
             _accumulator += gameTime.ElapsedGameTime.TotalSeconds;
 
             while (_accumulator >= _fixedTimeStep)
             {
                 CurrentScene.World2D.Step((float)_fixedTimeStep);
                 _accumulator -= _fixedTimeStep;
+                CurrentScene.OnFixedUpdate(new Cider.Data.TimeContext(TimeSpan.FromSeconds(_fixedTimeStep)));
             }
 
             var timeContext = new Cider.Data.TimeContext(gameTime.ElapsedGameTime);
 
             CurrentScene.OnUpdate(timeContext);
+
+            foreach (var item in CurrentScene.BodiesToAdd2D)
+            {
+                CurrentScene.World2D.Add(item);
+            }
+
+            CurrentScene.BodiesToAdd2D.Clear();
 
             base.Update(gameTime);
         }

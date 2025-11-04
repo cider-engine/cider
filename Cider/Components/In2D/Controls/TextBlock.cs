@@ -3,7 +3,7 @@ using Cider.Attributes;
 using Cider.Data;
 using Cider.Data.In2D;
 using Cider.Input;
-using Cider.Render.In2D;
+using Cider.Render;
 using Cider.Extensions;
 using FontStashSharp;
 using System;
@@ -61,9 +61,9 @@ namespace Cider.Components.In2D.Controls
             return RectangleHitTest(result, measuredWidth, measuredHeight);
         }
 
-        protected override void OnDraw2D(RenderContext2D context)
+        protected override void OnRender(RenderContext context)
         {
-            var transform = context.CurrentTransform2D;
+            var transform = GlobalTransform;
             var scale = transform.Scale;
             if ((Font, FontSize, Text, scale) != _cachedMeasureParams)
             {

@@ -59,5 +59,16 @@ namespace Cider.Assets
         }
 
         public static bool operator !=(Asset? a, Asset? b) => !(a == b);
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is Asset asset) return this == asset;
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Path.GetHashCode();
+        }
     }
 }

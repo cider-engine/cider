@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cider.Data.In2D
 {
@@ -31,6 +32,25 @@ namespace Cider.Data.In2D
         }
 
         public readonly override string ToString() => $"Vector2({X}, {Y})";
+
+        public readonly override bool Equals([NotNullWhen(true)] object obj)
+        {
+            return obj is Vector2 vector && X == vector.X && Y == vector.Y;
+        }
+
+        public readonly override int GetHashCode()
+        {
+            return HashCode.Combine(X, Y);
+        }
+
+        public static Vector2 operator -(Vector2 vector)
+        {
+            return new Vector2
+            {
+                X = -vector.X,
+                Y = -vector.Y
+            };
+        }
 
         public static Vector2 operator +(Vector2 left, Vector2 right)
         {

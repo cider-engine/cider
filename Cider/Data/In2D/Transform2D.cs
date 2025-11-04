@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Cider.Data.In2D
 {
@@ -40,6 +38,18 @@ namespace Cider.Data.In2D
             return new(Position + rotated,
                 RotationInRadians + transform.RotationInRadians,
                 Scale * transform.Scale);
+        }
+
+        public readonly Transform2D Invert()
+        {
+            // 计算逆缩放
+            var invScale = new Vector2(1.0f / Scale.X, 1.0f / Scale.Y);
+            // 计算逆旋转    
+            var invRotation = -RotationInRadians;
+            // 计算逆位置
+            var invPosition = -(Position.Rotate(invRotation) * invScale);
+
+            return new Transform2D(invPosition, invRotation, invScale);
         }
     }
 }

@@ -1,6 +1,6 @@
 using Cider.Data;
 using Cider.Input;
-using Cider.Render.In2D;
+using Cider.Render;
 using Cider.Extensions;
 using System;
 
@@ -19,9 +19,9 @@ namespace Cider.Components.In2D
             return RectangleHitTest(result, Width, Height);
         }
 
-        protected override void OnDraw2D(RenderContext2D context)
+        protected override void OnRender(RenderContext context)
         {
-            var transform = context.CurrentTransform2D;
+            var transform = GlobalTransform;
             context.SpriteBatch.FillRectangle(transform.Position, Width, Height, transform.RotationInRadians, Color);
         }
     }

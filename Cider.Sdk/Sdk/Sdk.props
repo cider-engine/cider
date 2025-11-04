@@ -1,0 +1,13 @@
+<Project>
+	<Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+	<PropertyGroup>
+		<CiderVersion>0.0.2-beta</CiderVersion>
+		<CiderAssetsPath>Assets</CiderAssetsPath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Cider" Version="$(CiderVersion)" />
+		<PackageReference Include="Cider.Generator" Version="$(CiderVersion)" />
+	</ItemGroup>
+</Project>

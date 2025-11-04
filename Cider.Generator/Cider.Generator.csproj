@@ -1,15 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
+	  <TargetFramework>netstandard2.0</TargetFramework>
+	  <LangVersion>latest</LangVersion>
+	  <PackageVersion>0.0.2-beta</PackageVersion>
+	  <Authors>cider-engine</Authors>
 	  <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+	  <IncludeBuildOutput>false</IncludeBuildOutput>
+	  <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
   </PropertyGroup>
 
   <ItemGroup>
 	<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-    <PackageReference Include="System.Text.Json" Version="9.0.10" />
+	<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+	<PackageReference Include="System.Text.Json" Version="9.0.10" />
   </ItemGroup>
 
 	<ItemGroup>

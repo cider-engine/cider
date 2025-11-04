@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Cider.Data.In2D.Physics
+namespace Cider.Components.In2D.Physics
 {
     public class RectangleShape2D : Shape2D
     {
@@ -18,16 +18,18 @@ namespace Cider.Data.In2D.Physics
 
         public override Body? Body => _fixture?.Body;
 
-        public override void Attach(Body body)
+        public override void Attach(Body body, bool isSensor = false)
         {
             if (_fixture is not null)
                 throw new InvalidOperationException("Shape is already attached to a body.");
-            _fixture = body.CreateRectangle(Width, Height, Density, new());
+            _fixture = body.CreateRectangle(Width, Height, Density, Position);
+            _fixture.IsSensor = isSensor;
         }
 
         public override void Detach(Body body)
         {
-            body.Remove(_fixture);
+            if (_fixture?.Body is not null)
+                body.Remove(_fixture);
             _fixture = null;
         }
     }

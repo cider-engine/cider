@@ -36,6 +36,20 @@ namespace Cider.Generator.CiderXml
                             }
                         }
 
+                        #region 直接引入类
+                        foreach (var (xmlns, type) in assembly.GetAttributes()
+                            .Where(static attr => attr.AttributeClass.Name == "XmlnsDirectTypeAttribute")
+                            .Select(static attr => (xmlns: (string)attr.ConstructorArguments[0].Value,
+                                type: (INamedTypeSymbol)attr.ConstructorArguments[1].Value)))
+                        {
+                            if (!mappings.TryGetValue(xmlns, out var dict))
+                            {
+                                mappings.Add(xmlns, dict = new());
+                            }
+                            dict[type.Name] = type.GetFullyQualifiedName();
+                        }
+                        #endregion
+
                         if (namespaces.Count == 0) continue;
 
                         //foreach (var ns in assembly.GlobalNamespace.GetNamespaceMembers()) ProcessNamespace(ns, namespaces);
@@ -145,11 +159,11 @@ namespace Cider.Generator.CiderXml
                                     {
                                         if (child.Attribute(CommandWithName) is XAttribute attr2)
                                         {
-                                            writer.WriteLine($"(this.{attr2.Value} = new global::{attr1.Value}()");
+                                            writer.WriteLine($"(this.{attr2.Value} = ({fullName})new global::{attr1.Value}()");
                                             namedFields.Add($"internal global::{attr1.Value} {attr2.Value};");
                                         }
 
-                                        else writer.WriteLine($"new global::{attr1.Value}()");
+                                        else writer.WriteLine($"(({fullName})new global::{attr1.Value}()");
                                     }
 
                                     else if (child.Attribute(CommandWithName) is XAttribute attr2)
@@ -161,9 +175,9 @@ namespace Cider.Generator.CiderXml
                                     else writer.WriteLine($"(new {fullName}()");
                                 }
 
-                                else writer.WriteLine("new()");
+                                else writer.WriteLine("(new()");
 
-                                    writer.WriteLine('{');
+                                writer.WriteLine('{');
                                 writer.Indent++;
 
                                 foreach (var attr in child.Attributes())
@@ -201,22 +215,14 @@ namespace Cider.Generator.CiderXml
                                     {
                                         var count = attr.Elements().Count();
 
-                                        if (count == 1)
-                                        {
-                                            var name = attr.Name.LocalName;
-                                            writer.Write(name.Substring(name.IndexOf('.') + 1));
-                                            writer.Write(" = ");
-                                            ProcessElement(attr, mappings, writer, namedFields);
-                                        }
-
-                                        else if (count > 1)
+                                        if (count > 0)
                                         {
 
                                             var name = attr.Name.LocalName;
                                             writer.Write(name.Substring(name.IndexOf('.') + 1));
-                                            writer.WriteLine(" = {");
+                                            writer.WriteLine(" = new global::Cider.Converters.CollectionValueConverter(");
                                             ProcessElement(attr, mappings, writer, namedFields);
-                                            writer.WriteLine("},");
+                                            writer.WriteLine("),");
                                         }
                                     }
 

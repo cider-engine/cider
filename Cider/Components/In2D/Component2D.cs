@@ -1,7 +1,6 @@
 using Cider.Data.In2D;
 using Cider.Input;
 using Cider.Render;
-using Cider.Render.In2D;
 using MonoGame.Extended.Input.InputListeners;
 using System;
 
@@ -33,53 +32,68 @@ namespace Cider.Components.In2D
             set => RotationInRadians = value * (MathF.PI / 180);
         }
 
-        public Transform2D Transform { get; set; } = new();
+        public Transform2D Transform
+        {
+            get;
+            set
+            {
+                field = value;
+                var args = new Transform2DChangedEventArgs()
+                {
+                    CurrentTransform2D = GlobalTransform
+                };
+                OnGlobalTransformChanged(args);
+                var toBeRestored = args.CurrentTransform2D;
+                foreach (var item in Children)
+                {
+                    item.OnParentTransformChanged(args);
+                    args.CurrentTransform2D = toBeRestored;
+                }
+            }
+        } = new();
+
+        private protected Transform2D _parentGlobalTransform = new();
 
         public Transform2D GlobalTransform
         {
-            get
-            {
-                var globalTransform = Transform;
-                var parent = Parent;
-                while (parent is Component2D parent2D)
-                {
-                    globalTransform = globalTransform.ApplyTransform2D(parent2D.Transform);
-                    parent = parent.Parent;
-                }
-
-                return globalTransform;
-            }
+            get => _parentGlobalTransform.ApplyTransform2D(Transform);
         }
 
         public event EventHandler<MouseEventArgs> MouseDown;
 
         public event EventHandler<MouseEventArgs> MouseUp;
 
-        protected virtual void OnDraw2D(RenderContext2D context)
+        protected internal override void OnParentTransformChanged(EventArgs args)
         {
-        }
-
-        protected internal override void OnDraw(RenderContext context)
-        {
-            if (!IsVisible) return;
-
-            var context2D = context is RenderContext2D ctx
-                ? ctx.ApplyTransform(Transform)
-                : new()
-                {
-                    GameTime = context.GameTime,
-                    SpriteBatch = context.SpriteBatch,
-                    CurrentTransform2D = Transform,
-                };
-
-            var toBeRestored = context2D.CurrentTransform2D;
-
-            OnDraw2D(context2D);
-
-            foreach (var item in Children)
+            if (args is Transform2DChangedEventArgs args2D)
             {
-                item.OnDraw(context2D);
-                context2D.CurrentTransform2D = toBeRestored;
+                _parentGlobalTransform = args2D.CurrentTransform2D;
+                args2D.ApplyTransform(Transform);
+                OnGlobalTransformChanged(args2D);
+
+                var toBeRestored = args2D.CurrentTransform2D;
+                foreach (var item in Children)
+                {
+                    item.OnParentTransformChanged(args2D);
+                    args2D.CurrentTransform2D = toBeRestored;
+                }
+            }
+
+            else
+            {
+                _parentGlobalTransform = new();
+                var newArgs2D = new Transform2DChangedEventArgs()
+                {
+                    CurrentTransform2D = Transform
+                };
+                OnGlobalTransformChanged(newArgs2D);
+
+                var toBeRestored = newArgs2D.CurrentTransform2D;
+                foreach (var item in Children)
+                {
+                    item.OnParentTransformChanged(newArgs2D);
+                    newArgs2D.CurrentTransform2D = toBeRestored;
+                }
             }
         }
 
@@ -112,7 +126,7 @@ namespace Cider.Components.In2D
         }
 #nullable disable
 
-        internal static bool RectangleHitTest(HitTestResult result, float width, float height)
+        internal static bool RectangleHitTest(HitTestResult result, float width, float height, float offsetX = 0, float offsetY = 0)
         {
             var transform = result.CurrentTransform2D;
             var vector = Vector2.FromPoint(result.EventArgs.Position);
@@ -132,7 +146,7 @@ namespace Cider.Components.In2D
             local = new Vector2(local.X / transform.Scale.X, local.Y / transform.Scale.Y);
 
             // 判断是否在矩形 [0, Width] x [0, Height] 内
-            if (local.X >= 0f && local.Y >= 0f && local.X <= width && local.Y <= height)
+            if (local.X >= 0 - offsetX && local.Y >= 0 - offsetY && local.X <= width - offsetX && local.Y <= height - offsetY)
             {
                 return true;
             }

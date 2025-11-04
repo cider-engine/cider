@@ -1,3 +1,4 @@
+using Cider.Attributes;
 using Cider.Data;
 using Cider.Input;
 using Cider.Render;
@@ -39,6 +40,7 @@ namespace Cider.Components
 
         public ComponentCollection Children { get; }
 
+        [Dispatcher]
         protected internal virtual void OnAttachToScene(Scene root)
         {
             Root = root;
@@ -46,31 +48,40 @@ namespace Cider.Components
                 item.OnAttachToScene(root);
         }
 
+        [Dispatcher]
         protected internal virtual void OnLoaded(Scene root)
         {
             foreach (var item in Children)
                 item.OnLoaded(root);
         }
 
+        [Dispatcher]
         protected internal virtual void OnUpdate(in TimeContext context)
         {
             foreach (var item in Children)
                 item.OnUpdate(context);
         }
 
+        [Dispatcher]
         protected internal virtual void OnFixedUpdate(in TimeContext context)
         {
             foreach (var item in Children)
                 item.OnFixedUpdate(context);
         }
 
-        protected internal virtual void OnDraw(RenderContext context)
+        protected virtual void OnRender(RenderContext context)
+        {}
+
+        [Dispatcher]
+        internal virtual void OnDraw(RenderContext context)
         {
             if (!IsVisible) return;
+            OnRender(context);
             foreach (var item in Children)
                 item.OnDraw(context);
         }
 
+        [Dispatcher]
         protected internal virtual void OnDetachToScene(Scene root)
         {
             foreach (var item in Children)
@@ -83,7 +94,7 @@ namespace Cider.Components
             return false;
         }
 
-
+        [Dispatcher]
         internal virtual void ForeachHitTest(HitTestResult result)
         {
             if (!IsVisible) return;
@@ -91,6 +102,19 @@ namespace Cider.Components
             
             foreach (var item in Children)
                 item.ForeachHitTest(result);
+        }
+
+        protected virtual void OnGlobalTransformChanged(EventArgs args)
+        {}
+
+        [Dispatcher]
+        protected internal virtual void OnParentTransformChanged(EventArgs args)
+        {
+            OnGlobalTransformChanged(args);
+            foreach (var item in Children)
+            {
+                item.OnParentTransformChanged(args);
+            }
         }
 
         public ToRootEnumeratorGetter GetToRootEnumeratorGetter() => new(this);

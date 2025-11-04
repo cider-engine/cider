@@ -1,6 +1,7 @@
 using Cider.Assets;
 using Cider.Data;
-using Cider.Render.In2D;
+using Cider.Input;
+using Cider.Render;
 using System;
 
 namespace Cider.Components.In2D
@@ -17,22 +18,33 @@ namespace Cider.Components.In2D
 
         public bool FlipVertically { get; set; } = false;
 
-        protected override void OnDraw2D(RenderContext2D context)
+        protected internal override bool HitTest(HitTestResult result)
+        {
+            if (Texture is null) return false;
+            if (IsCentered)
+                return RectangleHitTest(result, Texture.Width, Texture.Height, Texture.Width / 2f, Texture.Height / 2f);
+
+            else return RectangleHitTest(result, Texture.Width, Texture.Height);
+        }
+
+        protected override void OnRender(RenderContext context)
         {
             if (Texture is null) return;
+
+            var transform = GlobalTransform;
 
             context.SpriteBatch.Draw(
                 texture: Texture.Get(),
 
-                position: context.CurrentTransform2D.Position,
+                position: transform.Position,
 
                 sourceRectangle: new(0, 0, Texture.Width, Texture.Height),
 
                 color: Color.White,
 
-                rotation: context.CurrentTransform2D.RotationInRadians,
+                rotation: transform.RotationInRadians,
 
-                scale: context.CurrentTransform2D.Scale,
+                scale: transform.Scale,
 
                 origin: IsCentered ? new(Texture.Width / 2f, Texture.Height / 2f) : Microsoft.Xna.Framework.Vector2.Zero,
 

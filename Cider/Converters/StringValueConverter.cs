@@ -9,21 +9,21 @@ namespace Cider.Converters
     {
         private readonly string _value = value;
 
-        public static implicit operator string(StringValueConverter converter) => converter._value;
+        public static implicit operator string(in StringValueConverter converter) => converter._value;
 
-        public static implicit operator byte(StringValueConverter converter) => byte.Parse(converter._value);
+        public static implicit operator byte(in StringValueConverter converter) => byte.Parse(converter._value);
 
-        public static implicit operator int(StringValueConverter converter) => int.Parse(converter._value);
+        public static implicit operator int(in StringValueConverter converter) => int.Parse(converter._value);
 
-        public static implicit operator long(StringValueConverter converter) => long.Parse(converter._value);
+        public static implicit operator long(in StringValueConverter converter) => long.Parse(converter._value);
 
-        public static implicit operator float(StringValueConverter converter) => float.Parse(converter._value);
+        public static implicit operator float(in StringValueConverter converter) => float.Parse(converter._value);
 
-        public static implicit operator double(StringValueConverter converter) => double.Parse(converter._value);
+        public static implicit operator double(in StringValueConverter converter) => double.Parse(converter._value);
 
-        public static implicit operator bool(StringValueConverter converter) => bool.Parse(converter._value);
+        public static implicit operator bool(in StringValueConverter converter) => bool.Parse(converter._value);
 
-        public static implicit operator Vector2(StringValueConverter converter)
+        public static implicit operator Vector2(in StringValueConverter converter)
         {
             Span<Range> ranges = stackalloc Range[3];
             if (converter._value.AsSpan().Split(ranges, ',') == 2)
@@ -44,7 +44,7 @@ namespace Cider.Converters
             }
         }
 
-        public static implicit operator Color(StringValueConverter converter)
+        public static implicit operator Color(in StringValueConverter converter)
         {
             if (converter._value.StartsWith('#'))
             {
@@ -75,6 +75,6 @@ namespace Cider.Converters
             }
         }
 
-        public static implicit operator Texture2DAsset(StringValueConverter converter) => new(converter._value);
+        public static implicit operator Texture2DAsset(in StringValueConverter converter) => new(converter._value);
     }
 }

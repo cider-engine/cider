@@ -1,14 +1,12 @@
 using Cider.Components;
 using Cider.Components.In2D;
-using Cider.Components.In2D.Controls;
+using Cider.Extensions;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.Input;
 using MonoGame.Extended.Input.InputListeners;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
 
 namespace Cider.Input
 {
@@ -26,9 +24,17 @@ namespace Cider.Input
             _mouseListener.Update(gameTime);
         }
 
-        public static MouseStateExtended GetMouseState() => MouseExtended.GetState();
+        public static int GetAxis(Data.Keys negativeKey, Data.Keys positiveKey)
+        {
+            var state = Keyboard.GetState();
+            return (state.IsKeyDown(negativeKey.ToKeys()) ? -1 : 0) + (state.IsKeyDown(positiveKey.ToKeys()) ? 1 : 0);
+        }
 
-        public static KeyboardStateExtended GetKeyboardState() => KeyboardExtended.GetState();
+        public static bool IsKeyDown(Data.Keys key)
+        {
+            var state = Keyboard.GetState();
+            return state.IsKeyDown(key.ToKeys());
+        }
 
         static InputManager()
         {

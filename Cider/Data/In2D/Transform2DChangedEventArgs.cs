@@ -1,13 +1,14 @@
-using Cider.Data.In2D;
 using System;
+using System.Collections.Generic;
+using System.Text;
 
-namespace Cider.Render.In2D
+namespace Cider.Data.In2D
 {
-    public class RenderContext2D : RenderContext
+    public class Transform2DChangedEventArgs : EventArgs
     {
         public Transform2D CurrentTransform2D { get; internal set; }
 
-        public RenderContext2D ApplyTransform(Transform2D transform)
+        public Transform2DChangedEventArgs ApplyTransform(Transform2D transform)
         {
             CurrentTransform2D = CurrentTransform2D.ApplyTransform2D(transform);
             return this;

@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Runtime.CompilerServices;
 
 namespace Cider.Components
 {
@@ -26,39 +25,67 @@ namespace Cider.Components
 
         public void AddRange(params ReadOnlySpan<Component> components)
         {
+            // 先设置 Parent，再把项加入集合，最后统一触发事件，确保事件处理器能看到集合已包含这些项
             foreach (var item in components)
             {
                 item.Parent = Owner;
             }
+
             _list.AddRange(components);
+
+            foreach (var item in components)
+            {
+                ComponentAdded?.Invoke(Owner, item);
+            }
         }
 
         protected override void InsertItem(int index, Component item)
         {
-            item.Parent = Owner;
+            // 先插入，再设置 Parent 并触发事件，保证事件处理器看到项已经在集合内
             base.InsertItem(index, item);
+            item.Parent = Owner;
+            ComponentAdded?.Invoke(Owner, item);
         }
 
         protected override void SetItem(int index, Component item)
         {
-            _list[index].Parent = null;
-            item.Parent = Owner;
+            // 保存旧项，替换集合内容后再调整 Parent 并触发事件
+            var old = _list[index];
             base.SetItem(index, item);
+
+            old.Parent = null;
+            item.Parent = Owner;
+
+            ComponentRemoved?.Invoke(Owner, old);
+            ComponentAdded?.Invoke(Owner,item);
         }
 
         protected override void RemoveItem(int index)
         {
-            _list[index].Parent = null;
+            // 先取出将被移除的项，执行移除，再触发事件并清除 Parent
+            var removed = _list[index];
             base.RemoveItem(index);
+
+            removed.Parent = null;
+            ComponentRemoved?.Invoke(Owner, removed);
         }
 
         protected override void ClearItems()
         {
-            foreach (var item in _list)
+            // 复制旧集合，执行清空，再对每个旧项触发移除事件并清空 Parent
+            var oldItems = _list.ToArray();
+            base.ClearItems();
+
+            foreach (var item in oldItems)
             {
                 item.Parent = null;
+                ComponentRemoved?.Invoke(Owner, item);
             }
-            base.ClearItems();
         }
+
+        public delegate void ComponentChangedEventHandler(Component owner, Component changedComponent);
+
+        public event ComponentChangedEventHandler ComponentAdded;
+        public event ComponentChangedEventHandler ComponentRemoved;
     }
 }

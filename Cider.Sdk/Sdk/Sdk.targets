@@ -1,0 +1,23 @@
+<Project>
+
+	<ItemGroup>
+		<CiderAssets Include="$(CiderAssetsPath)\**\*" />
+
+		<None Include="@(CiderAssets)" CopyToOutputDirectory="PreserveNewest" />
+		<None Remove="**\*.cider.meta" />
+		
+		<CompilerVisibleProperty Include="MSBuildProjectDirectory" />
+
+		<AdditionalFiles Include="**\*.cider.xml" />
+		<AdditionalFiles Include="**\*.cider.meta" />
+	</ItemGroup>
+	
+	
+	<UsingTask TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\tasks\Cider.Task.dll" />
+
+	<Target Name="AssetMetaPreprocess" BeforeTargets="BeforeBuild">
+		<AssetTask Assets="@(CiderAssets)" />
+	</Target>
+
+	<Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+</Project>

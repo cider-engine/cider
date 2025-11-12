@@ -90,9 +90,13 @@ namespace Cider.Generator.CiderXml
                         return default;
                     }
 
-                    var @class = root.Attribute(CommandNamespace + "Class")?.Value;
+                    var @class = root.Attribute(CommandWithClass)?.Value;
 
-                    if (root.Name != DefaultNamespace + "Scene" || @class is null) return default;
+                    string fullName = null;
+                    if (mappings.TryGetValue(root.Name.NamespaceName, out var dict))
+                        if (dict.TryGetValue(root.Name.LocalName, out fullName))
+
+                    if (fullName is null || @class is null) return default;
 
                     using var stringWriter = new StringWriter();
                     using var writer = new IndentedTextWriter(stringWriter, "    ");
@@ -108,7 +112,7 @@ namespace Cider.Generator.CiderXml
 
                     var sceneClass = @class.Substring(separatorIndex + 1); // 不用特殊处理，-1 + 1 = 0
                     writer.WriteLine($$"""
-                        public partial class {{sceneClass}} : global::Cider.Components.Scene
+                        public partial class {{sceneClass}} : {{fullName}}
                         {
                             public {{sceneClass}}()
                             {

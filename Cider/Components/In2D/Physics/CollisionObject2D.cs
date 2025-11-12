@@ -1,11 +1,8 @@
 using Cider.Data;
 using Cider.Data.In2D;
-using nkast.Aether.Physics2D.Collision;
 using nkast.Aether.Physics2D.Dynamics;
 using nkast.Aether.Physics2D.Dynamics.Contacts;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Cider.Components.In2D.Physics
 {

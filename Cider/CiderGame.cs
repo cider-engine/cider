@@ -20,6 +20,8 @@ namespace Cider
 
         public static CiderGame Instance { get; private set; }
 
+        public static bool IsInitialized => Instance?._initialized ?? false;
+
         protected GraphicsDeviceManager GraphicsDeviceManager { get; private set; }
 
         protected SpriteBatch SpriteBatch { get; private set; }
@@ -39,6 +41,8 @@ namespace Cider
             }
         }
 
+        public ProjectSettings ProjectSettings { get; private set; }
+
         public bool IsFocused { get; private set; }
 
         public CiderGame(ProjectSettings settings)
@@ -48,6 +52,8 @@ namespace Cider
             GraphicsDeviceManager = new GraphicsDeviceManager(this);
             // Content.RootDirectory = "Content";
             IsMouseVisible = true;
+
+            ProjectSettings = settings;
 
             CurrentScene = settings.MainScene;
 
@@ -61,11 +67,13 @@ namespace Cider
 
         protected override void Initialize()
         {
+            if (ProjectSettings is null)
+                throw new InvalidOperationException("You must set project settings before initializing the game.");
             base.Initialize();
             MonoStereoEngine.Initialize(() => _disposed);
             CurrentScene.OnParentTransformChanged(EventArgs.Empty);
-            CurrentScene.OnLoaded(CurrentScene);
             _initialized = true;
+            CurrentScene.OnLoaded(CurrentScene);
         }
 
         protected override void LoadContent()

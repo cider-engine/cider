@@ -3,7 +3,7 @@
   <PropertyGroup>
 	  <TargetFramework>netstandard2.0</TargetFramework>
 	  <LangVersion>latest</LangVersion>
-	  <PackageVersion>0.0.2-beta</PackageVersion>
+	  <PackageVersion>0.0.3-alpha</PackageVersion>
 	  <Authors>cider-engine</Authors>
 	  <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 	  <IncludeBuildOutput>false</IncludeBuildOutput>

@@ -1,19 +1,41 @@
 <Project>
 
+	<ItemGroup Condition="$(CiderTest)">
+		<ProjectReference Include="..\Cider\Cider.csproj" />
+		<ProjectReference Include="..\Cider.Generator\Cider.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+	<ItemGroup Condition="!$(CiderTest)">
+		<PackageReference Include="Cider" Version="$(CiderVersion)" />
+		<PackageReference Include="Cider.Generator" Version="$(CiderVersion)" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<CiderAssets Include="$(CiderAssetsPath)\**\*" />
 
-		<None Include="@(CiderAssets)" CopyToOutputDirectory="PreserveNewest" />
-		<None Remove="**\*.cider.meta" />
+		<CiderAssetsWithoutMeta Include="@(CiderAssets)" />
+		<CiderAssetsWithoutMeta Remove="**\*.cider.meta" />
+
+		<None Include="@(CiderAssetsWithoutMeta)" CopyToOutputDirectory="PreserveNewest" />
 		
 		<CompilerVisibleProperty Include="MSBuildProjectDirectory" />
 
 		<AdditionalFiles Include="**\*.cider.xml" />
 		<AdditionalFiles Include="**\*.cider.meta" />
+		
+		
+	</ItemGroup>
+
+	<!--Android-->
+	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
+		<AndroidAsset Include="@(CiderAssetsWithoutMeta)" />
+		<AndroidAsset Remove="**\*.cider.meta" />
+		<AndroidAsset Remove="**\*.cider.xml" />
 	</ItemGroup>
 	
 	
-	<UsingTask TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\tasks\Cider.Task.dll" />
+	<UsingTask Condition="$(CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildProjectDirectory)\..\Cider.Task\bin\$(Configuration)\netstandard2.0\Cider.Task.dll" />
+	<UsingTask Condition="!$(CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\tasks\Cider.Task.dll" />
 
 	<Target Name="AssetMetaPreprocess" BeforeTargets="BeforeBuild">
 		<AssetTask Assets="@(CiderAssets)" />

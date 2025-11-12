@@ -39,19 +39,23 @@ namespace Cider.Generator.CiderXml
                     writer.Indent = 0;
 
                     writer.WriteLine("""
-                        using var game = new global::Cider.CiderGame(new()
+                        namespace Cider;
+
+                        public static class GameHelper
                         {
+                            public static global::Cider.CiderGame NewGame() => new global::Cider.CiderGame(new()
+                            {
                         """);
 
-                    writer.Indent = 1;
+                    writer.Indent = 2;
 
                     ProcessElements(root, writer);
 
                     writer.Indent = 0;
 
                     writer.Write("""
-                        });
-                        game.Run();
+                            });
+                        }
                         """);
 
                     writer.Flush();

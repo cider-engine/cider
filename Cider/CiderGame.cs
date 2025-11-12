@@ -5,7 +5,6 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using MonoStereo;
 using System;
-using System.Threading;
 
 namespace Cider
 {
@@ -42,8 +41,6 @@ namespace Cider
 
         public bool IsFocused { get; private set; }
 
-        public ProjectSettings ProjectSettings { get; }
-
         public CiderGame(ProjectSettings settings)
         {
             Instance?.Dispose();
@@ -56,7 +53,7 @@ namespace Cider
 
             Window.AllowUserResizing = true;
 
-            ProjectSettings = settings;
+            Window.Position = Window.Position; // 莫名其妙试出来的防止第一次改变窗口大小时改变缓冲区会使窗口反复居中频闪的方法
         }
 
         [Obsolete("The Content property is available but shouldn't be used")]
@@ -114,6 +111,15 @@ namespace Cider
 
         protected override void Draw(GameTime gameTime)
         {
+            // 防止窗口大小改变后画面拉伸
+            if (Window.ClientBounds.Width != GraphicsDeviceManager.PreferredBackBufferWidth ||
+                Window.ClientBounds.Height != GraphicsDeviceManager.PreferredBackBufferHeight)
+            {
+                GraphicsDeviceManager.PreferredBackBufferWidth = Window.ClientBounds.Width;
+                GraphicsDeviceManager.PreferredBackBufferHeight = Window.ClientBounds.Height;
+                GraphicsDeviceManager.ApplyChanges();
+            }
+
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
             SpriteBatch.Begin();

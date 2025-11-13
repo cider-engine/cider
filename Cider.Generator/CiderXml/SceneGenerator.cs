@@ -71,7 +71,7 @@ namespace Cider.Generator.CiderXml
                 });
 
             var provider = context.AdditionalTextsProvider
-                .Where(static x => x.Path.EndsWith(".scene.cider.xml"))
+                .Where(static x => x.Path.EndsWith(".scene.cider"))
                 .Combine(xmlnsContext)
                 .Select(static (x, token) =>
                 {

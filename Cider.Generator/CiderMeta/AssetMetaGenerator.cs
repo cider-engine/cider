@@ -52,7 +52,7 @@ namespace Cider.Generator.CiderMeta
                     }
                 });
 
-            var provider = context.AdditionalTextsProvider.Where(static x => x.Path.EndsWith(".cider.meta"))
+            var provider = context.AdditionalTextsProvider.Where(static x => x.Path.EndsWith(".meta"))
                 .Collect()
                 .Combine(compilation)
                 .Combine(projectPathProvider)
@@ -86,7 +86,7 @@ namespace Cider.Generator.CiderMeta
 
                         // standard2.0不支持Path.GetRelativePath凑合用吧
 
-                        var fullPath = Path.ChangeExtension(Path.ChangeExtension(additionalText.Path, null), null);
+                        var fullPath = Path.ChangeExtension(additionalText.Path, null);
                         var relativePath = fullPath.Substring(projectPath.Length + 1).Replace('\\', '/'); // MSBuildProjectDirectory不包含最终反斜杠，不考虑项目在根目录的情况
 
                         var extension = Path.GetExtension(fullPath);

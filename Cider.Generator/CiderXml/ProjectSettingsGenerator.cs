@@ -24,11 +24,11 @@ namespace Cider.Generator.CiderXml
             });
 
             var settings = context.AdditionalTextsProvider
-                .Where(static x => x.Path.EndsWith("projectSettings.cider.xml"))
+                .Where(static x => x.Path.EndsWith("projectSettings.cider"))
                 .Combine(projectPath)
                 .Select(static (x, token) =>
                 {
-                    if (x.Left.Path != Path.Combine(x.Right, "projectSettings.cider.xml")) return null;
+                    if (x.Left.Path != Path.Combine(x.Right, "projectSettings.cider")) return null;
                     var text = x.Left.GetText(token);
                     if (text is null) return null;
 

@@ -18,8 +18,8 @@ namespace Cider.Components
             internal set
             {
                 if (this is Scene) throw new InvalidOperationException();
-                if (field is Scene scene1) OnDetachToScene(scene1);
-                else if (Root is Scene scene2) OnDetachToScene(scene2);
+                if (field is Scene scene1) OnDetachFromScene(scene1);
+                else if (Root is Scene scene2) OnDetachFromScene(scene2);
 
                 if (value is Scene scene3) OnAttachToScene(scene3);
                 else if (value?.Root is Scene scene4) OnAttachToScene(scene4);
@@ -82,10 +82,10 @@ namespace Cider.Components
         }
 
         [Dispatcher]
-        protected internal virtual void OnDetachToScene(Scene root)
+        protected internal virtual void OnDetachFromScene(Scene root)
         {
             foreach (var item in Children)
-                item.OnDetachToScene(root);
+                item.OnDetachFromScene(root);
             Root = null;
         }
 

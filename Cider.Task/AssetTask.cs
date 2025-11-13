@@ -23,9 +23,9 @@ namespace Cider.Task
                 }
 
                 // 元数据文件
-                if (fullPath.EndsWith(".cider.meta"))
+                if (fullPath.EndsWith(".meta"))
                 {
-                    var originFile = fullPath.Substring(0, fullPath.Length - ".cider.meta".Length);
+                    var originFile = fullPath.Substring(0, fullPath.Length - ".meta".Length);
                     if (!File.Exists(originFile))
                     {
                         //File.Delete(fullPath);
@@ -42,8 +42,8 @@ namespace Cider.Task
                     return false;
                 }
 
-                if (File.Exists(fullPath + ".cider.meta")) continue;
-                File.WriteAllText(fullPath + ".cider.meta", $$"""
+                if (File.Exists(fullPath + ".meta")) continue;
+                File.WriteAllText(fullPath + ".meta", $$"""
                     {
                         "uid": "_{{Guid.NewGuid().ToString("N").ToUpper()}}"
                     }

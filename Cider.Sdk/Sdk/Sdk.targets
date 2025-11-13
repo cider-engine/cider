@@ -14,14 +14,14 @@
 		<CiderAssets Include="$(CiderAssetsPath)\**\*" />
 
 		<CiderAssetsWithoutMeta Include="@(CiderAssets)" />
-		<CiderAssetsWithoutMeta Remove="**\*.cider.meta" />
+		<CiderAssetsWithoutMeta Remove="**\*.meta" />
 
 		<None Include="@(CiderAssetsWithoutMeta)" CopyToOutputDirectory="PreserveNewest" />
 		
 		<CompilerVisibleProperty Include="MSBuildProjectDirectory" />
 
-		<AdditionalFiles Include="**\*.cider.xml" />
-		<AdditionalFiles Include="**\*.cider.meta" />
+		<AdditionalFiles Include="**\*.cider" />
+		<AdditionalFiles Include="**\*.meta" />
 		
 		
 	</ItemGroup>
@@ -29,8 +29,8 @@
 	<!--Android-->
 	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
 		<AndroidAsset Include="@(CiderAssetsWithoutMeta)" />
-		<AndroidAsset Remove="**\*.cider.meta" />
-		<AndroidAsset Remove="**\*.cider.xml" />
+		<AndroidAsset Remove="**\*.meta" />
+		<AndroidAsset Remove="**\*.cider" />
 	</ItemGroup>
 	
 	

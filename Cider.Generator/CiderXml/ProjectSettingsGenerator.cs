@@ -13,14 +13,23 @@ namespace Cider.Generator.CiderXml
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
+            var projectPath = context.AnalyzerConfigOptionsProvider
+                .Select(static (x, token) =>
+            {
+                if (x.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var projectPath))
+                {
+                    return projectPath;
+                }
+                return null;
+            });
+
             var settings = context.AdditionalTextsProvider
                 .Where(static x => x.Path.EndsWith("projectSettings.cider.xml"))
-                .Collect()
+                .Combine(projectPath)
                 .Select(static (x, token) =>
                 {
-                    var file = x.OrderBy(static x => x.Path.Length).FirstOrDefault();
-                    if (file is null) return null;
-                    var text = file.GetText(token);
+                    if (x.Left.Path != Path.Combine(x.Right, "projectSettings.cider.xml")) return null;
+                    var text = x.Left.GetText(token);
                     if (text is null) return null;
 
                     XElement root;

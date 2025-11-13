@@ -1,4 +1,3 @@
-using Cider.Data;
 using nkast.Aether.Physics2D.Dynamics;
 using nkast.Aether.Physics2D.Dynamics.Contacts;
 using System;

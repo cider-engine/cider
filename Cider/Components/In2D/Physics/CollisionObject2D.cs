@@ -52,12 +52,12 @@ namespace Cider.Components.In2D.Physics
             base.OnAttachToScene(root);
         }
 
-        protected internal override void OnDetachToScene(Scene root)
+        protected internal override void OnDetachFromScene(Scene root)
         {
             root.EnqueueBodyToRemove2D(Body);
             Body.OnCollision -= OnCollision;
             Body.OnSeparation -= OnSeparation;
-            base.OnDetachToScene(root);
+            base.OnDetachFromScene(root);
         }
 
         protected virtual bool OnCollision(Fixture sender, Fixture other, Contact contact)

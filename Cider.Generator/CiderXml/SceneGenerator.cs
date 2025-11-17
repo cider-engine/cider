@@ -9,73 +9,18 @@ using static Cider.Generator.GeneratorHelper;
 
 namespace Cider.Generator.CiderXml
 {
-    [Generator]
-    public class SceneGenerator : IIncrementalGenerator
+    public partial class CiderXmlGenerator
     {
-
-        public void Initialize(IncrementalGeneratorInitializationContext context)
+        public static void SceneInitialize(IncrementalGeneratorInitializationContext context, IncrementalValueProvider<AlwaysEqualWrapper<Dictionary<string, Dictionary<string, string>>>> xmlnsContext)
         {
-            var xmlnsContext = context.CompilationProvider
-                .Select(static (x, token) =>
-                {
-                    var mappings = new Dictionary<string /* xmlns命名空间 */, Dictionary<string /* 类名 */, string /* 类的完整限定名 */>>();
-                    foreach (var assembly in x.SourceModule.ReferencedAssemblySymbols)
-                    {
-                        var namespaces = new Dictionary<string /* 命名空间 */, Dictionary<string, string> /* 同上面那个嵌套的 */>();
-                        foreach (var (xmlns, ns) in assembly.GetAttributes()
-                            .Where(static attr => attr.AttributeClass.Name == "XmlnsDefinitionAttribute")
-                            .Select(static attr => (xmlns: (string)attr.ConstructorArguments[0].Value, ns: (string)attr.ConstructorArguments[1].Value)))
-                        {
-                            if (mappings.TryGetValue(xmlns, out var value))
-                                namespaces.Add(ns, value);
-
-                            else
-                            {
-                                mappings.Add(xmlns, value = new()); // 保证两个Dictionary的Value指向同一个Dictionary<string, string>
-                                namespaces.Add(ns, value);
-                            }
-                        }
-
-                        #region 直接引入类
-                        foreach (var (xmlns, type) in assembly.GetAttributes()
-                            .Where(static attr => attr.AttributeClass.Name == "XmlnsDirectTypeAttribute")
-                            .Select(static attr => (xmlns: (string)attr.ConstructorArguments[0].Value,
-                                type: (INamedTypeSymbol)attr.ConstructorArguments[1].Value)))
-                        {
-                            if (!mappings.TryGetValue(xmlns, out var dict))
-                            {
-                                mappings.Add(xmlns, dict = new());
-                            }
-                            dict[type.Name] = type.GetFullyQualifiedName();
-                        }
-                        #endregion
-
-                        if (namespaces.Count == 0) continue;
-
-                        //foreach (var ns in assembly.GlobalNamespace.GetNamespaceMembers()) ProcessNamespace(ns, namespaces);
-                        ProcessNamespace(assembly.GlobalNamespace, namespaces); // 允许不在命名空间中声明类
-
-                        static void ProcessNamespace(INamespaceSymbol @namespace, Dictionary<string, Dictionary<string, string>> namespaces)
-                        {
-                            var name = @namespace.ToDisplayString();
-                            if (namespaces.ContainsKey(name))
-                                foreach (var type in @namespace.GetTypeMembers())
-                                {
-                                    namespaces[name].Add(type.Name, type.GetFullyQualifiedName());
-                                }
-
-                            foreach (var ns in @namespace.GetNamespaceMembers()) ProcessNamespace(ns, namespaces);
-                        }
-                    }
-                    return mappings;
-                });
-
             var provider = context.AdditionalTextsProvider
                 .Where(static x => x.Path.EndsWith(".scene.cider"))
                 .Combine(xmlnsContext)
+                .Combine(context.CompilationProvider)
                 .Select(static (x, token) =>
                 {
-                    var (additionalText, mappings) = x;
+                    var ((additionalText, mappingsWrapper), compilation) = x;
+                    var mappings = mappingsWrapper.Value;
 
                     var text = additionalText.GetText(token)?.ToString();
                     if (text is null) return default;
@@ -112,7 +57,7 @@ namespace Cider.Generator.CiderXml
 
                     var sceneClass = @class.Substring(separatorIndex + 1); // 不用特殊处理，-1 + 1 = 0
                     writer.WriteLine($$"""
-                        public partial class {{sceneClass}} : {{fullName}}
+                        public partial class {{sceneClass}} : global::{{fullName}}
                         {
                             public {{sceneClass}}()
                             {
@@ -123,12 +68,13 @@ namespace Cider.Generator.CiderXml
 
                     var namedFields = new List<string>();
 
-                    ProcessElement(root, mappings, writer, namedFields);
+                    if (root.Element(DefaultWithChildren) is XElement children)
+                        ProcessElement(children, mappings, writer, namedFields, compilation, false);
 
                     writer.Indent = 0;
 
                     writer.WriteLine("""
-                                ]);
+                                    ]);
                             }
                         """);
 
@@ -147,120 +93,6 @@ namespace Cider.Generator.CiderXml
                     writer.Flush();
 
                     return (stringWriter.ToString(), @class);
-
-                    static void ProcessElement(XElement element,
-                        Dictionary<string, Dictionary<string, string>> mappings,
-                        IndentedTextWriter writer,
-                        List<string> namedFields)
-                    {
-                        foreach (var child in element.Elements().Where(static x => !IsAttribute(x.Parent, x)))
-                        {
-                            if (mappings.TryGetValue(element.Name.NamespaceName, out var dict))
-                            {
-                                if (dict.TryGetValue(child.Name.LocalName, out var fullName))
-                                {
-                                    if (child.Attribute(CommandWithClass) is XAttribute attr1)
-                                    {
-                                        if (child.Attribute(CommandWithName) is XAttribute attr2)
-                                        {
-                                            writer.WriteLine($"(this.{attr2.Value} = ({fullName})new global::{attr1.Value}()");
-                                            namedFields.Add($"internal global::{attr1.Value} {attr2.Value};");
-                                        }
-
-                                        else writer.WriteLine($"(({fullName})new global::{attr1.Value}()");
-                                    }
-
-                                    else if (child.Attribute(CommandWithName) is XAttribute attr2)
-                                    {
-                                        writer.WriteLine($"(this.{attr2.Value} = new {fullName}()");
-                                        namedFields.Add($"internal {fullName} {attr2.Value};");
-                                    }
-
-                                    else writer.WriteLine($"(new {fullName}()");
-                                }
-
-                                else writer.WriteLine("(new()");
-
-                                writer.WriteLine('{');
-                                writer.Indent++;
-
-                                foreach (var attr in child.Attributes())
-                                {
-                                    if (attr.Name.Namespace == CommandNamespace) continue;
-                                    var value = attr.Value;
-                                    if (value.Length > 0 && value[0] == '@')
-                                    {
-                                        writer.Write(attr.Name.LocalName);
-                                        writer.Write(" = ");
-                                        writer.Write(value.Substring(1));
-                                        writer.WriteLine(',');
-                                    }
-
-                                    else if (value.StartsWith("asset://"))
-                                    {
-                                        writer.Write(attr.Name.LocalName);
-                                        writer.Write(" = global::Cider.Assets.AssetManager.");
-                                        writer.Write(value.Substring("asset://".Length));
-                                        writer.WriteLine(',');
-                                    }
-
-                                    else
-                                    {
-                                        writer.Write(attr.Name.LocalName);
-                                        writer.Write(" = new global::Cider.Converters.StringValueConverter(\"");
-                                        writer.Write(value);
-                                        writer.WriteLine("\"),");
-                                    }
-                                }
-
-                                if (child.HasElements)
-                                {
-                                    foreach (var attr in child.Elements().Where(static x => IsAttribute(x.Parent, x)))
-                                    {
-                                        var count = attr.Elements().Count();
-
-                                        if (count > 0)
-                                        {
-
-                                            var name = attr.Name.LocalName;
-                                            writer.Write(name.Substring(name.IndexOf('.') + 1));
-                                            writer.WriteLine(" = new global::Cider.Converters.CollectionValueConverter(");
-                                            ProcessElement(attr, mappings, writer, namedFields);
-                                            writer.WriteLine("),");
-                                        }
-                                    }
-
-                                    writer.WriteLine("Children = {");
-                                    writer.Indent++;
-                                    ProcessElement(child, mappings, writer, namedFields);
-                                    writer.Indent--;
-                                    writer.WriteLine('}');
-                                }
-
-                                else if (!string.IsNullOrWhiteSpace(child.Value))
-                                {
-                                    writer.Write("Content = new global::Cider.Converters.StringValueConverter(\"");
-                                    writer.Write(child.Value);
-                                    writer.WriteLine("\"),");
-                                }
-
-                                writer.Indent--;
-                                writer.WriteLine("}),");
-                            }
-                        }
-                    }
-
-                    static bool IsAttribute(XElement element, XElement child)
-                    {
-                        if (element.Name.Namespace != child.Name.Namespace) return false;
-
-                        var parentName = element.Name.LocalName.AsSpan();
-                        var childName = child.Name.LocalName.AsSpan();
-                        var dotPos = childName.IndexOf('.');
-                        if (dotPos < 0) return false;
-
-                        return parentName.SequenceEqual(childName.Slice(0, dotPos));
-                    }
                 });
 
             context.RegisterSourceOutput(provider, static (context, x) =>

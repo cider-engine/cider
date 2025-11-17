@@ -5,7 +5,7 @@ using System.Collections.ObjectModel;
 
 namespace Cider.Components
 {
-    public class ComponentCollection : Collection<Component>
+    public class ComponentCollection : Collection<Component>, IEnumerable<Component>
     {
         private readonly List<Component> _list; // 基类的IList为private，这里持有该list引用
 

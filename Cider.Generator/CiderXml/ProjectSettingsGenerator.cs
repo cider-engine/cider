@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using System;
 using System.CodeDom.Compiler;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
@@ -8,10 +9,9 @@ using static Cider.Generator.GeneratorHelper;
 
 namespace Cider.Generator.CiderXml
 {
-    [Generator]
-    public class ProjectSettingsGenerator : IIncrementalGenerator
+    public partial class CiderXmlGenerator
     {
-        public void Initialize(IncrementalGeneratorInitializationContext context)
+        public static void ProjectSettingsInitialize(IncrementalGeneratorInitializationContext context, IncrementalValueProvider<AlwaysEqualWrapper<Dictionary<string, Dictionary<string, string>>>> xmlnsContext)
         {
             var projectPath = context.AnalyzerConfigOptionsProvider
                 .Select(static (x, token) =>
@@ -26,10 +26,13 @@ namespace Cider.Generator.CiderXml
             var settings = context.AdditionalTextsProvider
                 .Where(static x => x.Path.EndsWith("projectSettings.cider"))
                 .Combine(projectPath)
+                .Combine(xmlnsContext)
+                .Combine(context.CompilationProvider)
                 .Select(static (x, token) =>
                 {
-                    if (x.Left.Path != Path.Combine(x.Right, "projectSettings.cider")) return null;
-                    var text = x.Left.GetText(token);
+                    var (((additionalText, projectPath), mappingsWrapper), compilation) = x;
+                    if (additionalText.Path != Path.Combine(projectPath, "projectSettings.cider")) return null;
+                    var text = additionalText.GetText(token);
                     if (text is null) return null;
 
                     XElement root;
@@ -58,7 +61,7 @@ namespace Cider.Generator.CiderXml
 
                     writer.Indent = 2;
 
-                    ProcessElements(root, writer);
+                    ProcessElement(root, mappingsWrapper.Value, writer, null, compilation, true);
 
                     writer.Indent = 0;
 
@@ -70,57 +73,6 @@ namespace Cider.Generator.CiderXml
                     writer.Flush();
 
                     return stringWriter.ToString();
-
-                    static void ProcessElements(XElement root, IndentedTextWriter writer)
-                    {
-                        foreach (var attr in root.Attributes())
-                        {
-                            if (attr.IsNamespaceDeclaration) continue;
-                            writer.Write(attr.Name.LocalName);
-                            writer.Write(" = ");
-                            if (attr.Name.Namespace == CommandNamespace)
-                            {
-                                switch (attr.Name.LocalName)
-                                {
-                                    case "MainScene":
-                                        writer.Write("new global::");
-                                        writer.Write(attr.Value);
-                                        writer.WriteLine("(),");
-                                        break;
-                                }
-                            }
-
-                            else
-                            {
-                                writer.Write("new global::Cider.Converters.StringValueConverter(\"");
-                                writer.Write(attr.Value);
-                                writer.WriteLine("\"),");
-                            }
-                        }
-
-                        if (root.HasElements)
-                            foreach (var element in root.Elements())
-                            {
-                                writer.WriteLine("new()");
-                                writer.WriteLine('{');
-                                writer.Indent++;
-                                ProcessElements(element, writer);
-                                writer.Indent--;
-                                writer.WriteLine("},");
-                            }
-
-                        else
-                        {
-                            if (!string.IsNullOrWhiteSpace(root.Value))
-                            {
-                                writer.Write(root.Name.LocalName);
-                                writer.Write(" = ");
-                                writer.Write("new global::Cider.Converters.StringValueConverter(\"");
-                                writer.Write(root.Value);
-                                writer.WriteLine("\"),");
-                            }
-                        }
-                    }
                 });
 
             context.RegisterSourceOutput(settings, static (context, settings) =>

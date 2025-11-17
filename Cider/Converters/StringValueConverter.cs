@@ -2,9 +2,11 @@ using Cider.Assets;
 using Cider.Data;
 using Cider.Data.In2D;
 using System;
+using System.ComponentModel;
 
 namespace Cider.Converters
 {
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public readonly ref partial struct StringValueConverter(string value)
     {
         private readonly string _value = value;
@@ -74,7 +76,5 @@ namespace Cider.Converters
                 throw new FormatException("Only hex color format is supported.");
             }
         }
-
-        public static implicit operator Texture2DAsset(in StringValueConverter converter) => new(converter._value);
     }
 }

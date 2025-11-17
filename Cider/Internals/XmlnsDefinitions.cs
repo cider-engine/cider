@@ -8,3 +8,6 @@ using Cider.Attributes;
 
 
 [assembly: XmlnsDefinition("https://github.com/cider-engine", "Cider.Data.In2D")]
+
+
+[assembly: XmlnsDefinition("https://github.com/cider-engine", "Cider.Project")]

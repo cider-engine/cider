@@ -1,5 +1,6 @@
 using Cider.Components;
 using Cider.Input;
+using Cider.Project;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -55,7 +56,7 @@ namespace Cider
 
             ProjectSettings = settings;
 
-            CurrentScene = settings.MainScene;
+            CurrentScene = settings.Application.Run.MainScene;
 
             Window.AllowUserResizing = true;
 

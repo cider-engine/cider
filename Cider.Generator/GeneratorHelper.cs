@@ -4,7 +4,6 @@ using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Xml.Linq;
 
 namespace Cider.Generator
@@ -109,17 +108,17 @@ namespace Cider.Generator
                                 return;
                             }
 
+                            static ISymbol? SearchMember(INamedTypeSymbol? symbol, string name)
+                            {
+                                if (symbol is null) return null;
+                                return symbol.GetMembers(name).SingleOrDefault() ?? SearchMember(symbol.BaseType, name);
+                            }
+
                             var memberType = (member as IPropertySymbol)?.Type ?? (member as IFieldSymbol)?.Type;
                             if (memberType is null)
                             {
                                 writer.WriteErrorMessage();
                                 return;
-                            }
-
-                            static ISymbol? SearchMember(INamedTypeSymbol? symbol, string name)
-                            {
-                                if (symbol is null) return null;
-                                return symbol.GetMembers(name).SingleOrDefault() ?? SearchMember(symbol.BaseType, name);
                             }
 
                             if (child.Value.StartsWith("asset://"))
@@ -153,55 +152,51 @@ namespace Cider.Generator
                                         writer.WriteLine("',");
                                         break;
 
-                                    case SpecialType.System_Enum:
-                                        writer.Write(child.Name.LocalName);
-                                        writer.Write(" = global::");
-                                        writer.Write(memberType.MetadataName);
-                                        writer.Write('.');
-                                        writer.Write(child.Value);
-                                        writer.WriteLine(',');
-                                        break;
-
-                                    case SpecialType.System_Array:
-                                        writer.Write(child.Name.LocalName);
-                                        writer.WriteLine(" = [");
-                                        writer.Indent++;
-                                        ProcessElement(child, mappings, writer, namedFields, compilation, false);
-                                        writer.Indent--;
-                                        writer.WriteLine("],");
-                                        break;
+                                    
 
                                     default:
-                                        if (memberType.Interfaces.Any(static x => x.SpecialType is > SpecialType.System_Array and <= SpecialType.System_Collections_Generic_IReadOnlyCollection_T))
+                                        switch (memberType.TypeKind)
                                         {
-                                            writer.Write(child.Name.LocalName);
-                                            if (member is IPropertySymbol
+                                            case TypeKind.Enum:
+                                                writer.Write(child.Name.LocalName);
+                                                writer.Write(" = global::");
+                                                writer.Write(memberType.GetFullMetadataName());
+                                                writer.Write('.');
+                                                writer.Write(child.Value);
+                                                writer.WriteLine(',');
+                                                break;
+
+                                            case TypeKind.Array:
+                                                writer.Write(child.Name.LocalName);
+                                                writer.WriteLine(" = {([");
+                                                writer.Indent++;
+                                                ProcessElement(child, mappings, writer, namedFields, compilation, false);
+                                                writer.Indent--;
+                                                writer.WriteLine("])},");
+                                                break;
+
+                                            default:
+                                                if (memberType.Interfaces.Any(static x => x.SpecialType is > SpecialType.System_Array and <= SpecialType.System_Collections_Generic_IReadOnlyCollection_T))
                                                 {
-                                                    SetMethod: null
-                                                } or IFieldSymbol
+                                                    writer.Write(child.Name.LocalName);
+                                                    writer.WriteLine(" = {([");
+                                                    writer.Indent++;
+                                                    ProcessElement(child, mappings, writer, namedFields, compilation, false);
+                                                    writer.Indent--;
+                                                    writer.WriteLine("])},");
+                                                    break;
+                                                }
+
+                                                else
                                                 {
-                                                    IsReadOnly: true
-                                                })
-                                                writer.WriteLine(" = {");
-                                            else
-                                            {
-                                                writer.WriteLine(" = new()");
-                                                writer.WriteLine('{');
-                                            }
-                                            writer.Indent++;
-                                            ProcessElement(child, mappings, writer, namedFields, compilation, false);
-                                            writer.Indent--;
-                                            writer.WriteLine("},");
-                                            break;
+                                                    writer.Write(child.Name.LocalName);
+                                                    writer.Write(" = ");
+                                                    ProcessElement(child, mappings, writer, namedFields, compilation, false);
+                                                    break;
+                                                }
                                         }
 
-                                        else
-                                        {
-                                            writer.Write(child.Name.LocalName);
-                                            writer.Write(" = ");
-                                            ProcessElement(child, mappings, writer, namedFields, compilation, false);
-                                            break;
-                                        }
+                                        break;
                                 }
                         }
                     }
@@ -305,6 +300,17 @@ namespace Cider.Generator
                             case "Asset":
                                 writer.Write("global::Cider.Assets.AssetManager.");
                                 writer.Write(child.Value.Substring("asset://".Length));
+                                writer.WriteLine(',');
+                                break;
+
+                            case "Enum":
+                                writer.Write("global::");
+                                if (child.Attribute("Type") is XAttribute attr)
+                                {
+                                    writer.Write(attr.Value);
+                                    writer.Write('.');
+                                }
+                                writer.Write(child.Value);
                                 writer.WriteLine(',');
                                 break;
 

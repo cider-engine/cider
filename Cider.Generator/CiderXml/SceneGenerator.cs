@@ -51,8 +51,10 @@ namespace Cider.Generator.CiderXml
                     if (separatorIndex > -1)
                     {
                         var sceneNamespace = @class.Substring(0, separatorIndex);
-                        writer.WriteLine($"namespace {sceneNamespace};");
-                        writer.WriteLine();
+                        writer.WriteLine($$"""
+                        using Cider.Extensions;
+                        namespace {{sceneNamespace}};
+                        """);
                     }
 
                     var sceneClass = @class.Substring(separatorIndex + 1); // 不用特殊处理，-1 + 1 = 0

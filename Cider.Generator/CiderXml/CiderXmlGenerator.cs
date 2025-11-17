@@ -1,6 +1,5 @@
 using Microsoft.CodeAnalysis;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace Cider.Generator.CiderXml

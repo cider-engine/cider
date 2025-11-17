@@ -51,6 +51,7 @@ namespace Cider.Generator.CiderXml
                     writer.Indent = 0;
 
                     writer.WriteLine("""
+                        using Cider.Extensions;
                         namespace Cider;
 
                         public static class GameHelper

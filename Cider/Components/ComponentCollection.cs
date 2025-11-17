@@ -21,6 +21,12 @@ namespace Cider.Components
             Owner = owner;
         }
 
+        public int Capacity
+        {
+            get => _list.Capacity;
+            set => _list.Capacity = value;
+        }
+
         public new List<Component>.Enumerator GetEnumerator() => _list.GetEnumerator();
 
         public void AddRange(params ReadOnlySpan<Component> components)

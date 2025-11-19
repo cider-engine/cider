@@ -1,5 +1,4 @@
 using nkast.Aether.Physics2D.Dynamics;
-using nkast.Aether.Physics2D.Dynamics.Contacts;
 using System;
 
 namespace Cider.Components.In2D.Physics
@@ -16,26 +15,21 @@ namespace Cider.Components.In2D.Physics
 
         public bool IsOnFloor()
         {
-            ContactEdge contactEdge = Body.ContactList;
-            while (contactEdge != null)
+            for (var contactEdge = Body.ContactList; contactEdge != null; contactEdge = contactEdge.Next)
             {
-                Contact contact = contactEdge.Contact;
+                var contact = contactEdge.Contact;
+                if (!contact.IsTouching)
+                    continue;
 
-                if (contact.IsTouching)
-                {
-                    contact.GetWorldManifold(out var normal, out _);
+                if (contact.FixtureA.IsSensor || contact.FixtureB.IsSensor)
+                    continue;
 
-                    if (contact.FixtureA.Body != Body && contact.FixtureB.Body != Body)
-                    {
-                        contactEdge = contactEdge.Next;
-                        continue;
-                    }
+                contact.GetWorldManifold(out var normal, out _);
+                if (contact.FixtureB.Body == Body) // 目前我还没测出来啥情况下FixtureB.Body == Body
+                    normal = -normal;
 
-                    if (normal.Y >= yThreshold)
-                        return true;
-                }
-
-                contactEdge = contactEdge.Next;
+                if (normal.Y >= yThreshold)
+                    return true;
             }
             return false;
         }

@@ -4,7 +4,6 @@ using Cider.Project;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using MonoStereo;
 using System;
 
 namespace Cider
@@ -58,6 +57,8 @@ namespace Cider
 
             CurrentScene = settings.Application.Run.MainScene;
 
+            if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS()) return;
+
             Window.AllowUserResizing = true;
 
             Window.Position = Window.Position; // 莫名其妙试出来的防止第一次改变窗口大小时改变缓冲区会使窗口反复居中频闪的方法
@@ -71,7 +72,6 @@ namespace Cider
             if (ProjectSettings is null)
                 throw new InvalidOperationException("You must set project settings before initializing the game.");
             base.Initialize();
-            MonoStereoEngine.Initialize(() => _disposed);
             CurrentScene.OnParentTransformChanged(EventArgs.Empty);
             _initialized = true;
             CurrentScene.OnLoaded(CurrentScene);
@@ -84,8 +84,6 @@ namespace Cider
 
         protected override void Update(GameTime gameTime)
         {
-            MonoStereoEngine.ThrowIfErrored();
-
             InputManager.Update(gameTime);
 
             foreach (var item in CurrentScene.BodiesToRemove2D)
@@ -120,13 +118,16 @@ namespace Cider
 
         protected override void Draw(GameTime gameTime)
         {
-            // 防止窗口大小改变后画面拉伸
-            if (Window.ClientBounds.Width != GraphicsDeviceManager.PreferredBackBufferWidth ||
-                Window.ClientBounds.Height != GraphicsDeviceManager.PreferredBackBufferHeight)
+            if (Window.AllowUserResizing)
             {
-                GraphicsDeviceManager.PreferredBackBufferWidth = Window.ClientBounds.Width;
-                GraphicsDeviceManager.PreferredBackBufferHeight = Window.ClientBounds.Height;
-                GraphicsDeviceManager.ApplyChanges();
+                // 防止窗口大小改变后画面拉伸
+                if (Window.ClientBounds.Width != GraphicsDeviceManager.PreferredBackBufferWidth ||
+                    Window.ClientBounds.Height != GraphicsDeviceManager.PreferredBackBufferHeight)
+                {
+                    GraphicsDeviceManager.PreferredBackBufferWidth = Window.ClientBounds.Width;
+                    GraphicsDeviceManager.PreferredBackBufferHeight = Window.ClientBounds.Height;
+                    GraphicsDeviceManager.ApplyChanges();
+                }
             }
 
             GraphicsDevice.Clear(Color.CornflowerBlue);

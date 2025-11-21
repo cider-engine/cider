@@ -1,8 +1,8 @@
 <Project>
 
 	<ItemGroup Condition="$(CiderTest)">
-		<ProjectReference Include="..\Cider\Cider.csproj" />
-		<ProjectReference Include="..\Cider.Generator\Cider.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+		<ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Cider\Cider.csproj" />
+		<ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Cider.Generator\Cider.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
 	<ItemGroup Condition="!$(CiderTest)">
@@ -34,7 +34,7 @@
 	</ItemGroup>
 	
 	
-	<UsingTask Condition="$(CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildProjectDirectory)\..\Cider.Task\bin\$(Configuration)\netstandard2.0\Cider.Task.dll" />
+	<UsingTask Condition="$(CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\..\Cider.Task\bin\$(Configuration)\netstandard2.0\Cider.Task.dll" />
 	<UsingTask Condition="!$(CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\tasks\Cider.Task.dll" />
 
 	<Target Name="AssetMetaPreprocess" BeforeTargets="BeforeBuild">

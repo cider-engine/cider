@@ -56,7 +56,8 @@ namespace Cider.Generator.CiderXml
 
                         public static class GameHelper
                         {
-                            public static global::Cider.CiderGame NewGame() => new global::Cider.CiderGame(new()
+                            [return: global::System.Diagnostics.CodeAnalysis.NotNull]
+                            public static global::Cider.Game NewGame() => new global::Cider.Game(new()
                             {
                         """);
 

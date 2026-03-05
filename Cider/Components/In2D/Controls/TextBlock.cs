@@ -1,13 +1,16 @@
 using Cider.Assets;
 using Cider.Attributes;
-using Cider.Data;
 using Cider.Data.In2D;
-using Cider.Input;
-using Cider.Render;
 using Cider.Extensions;
-using FontStashSharp;
+using Cider.Input;
+using Cider.Internals;
+using Cider.Render;
 using System;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
+using System.Numerics;
+using System.Threading.Tasks;
 
 namespace Cider.Components.In2D.Controls
 {
@@ -15,10 +18,43 @@ namespace Cider.Components.In2D.Controls
     public class TextBlock : Control
     {
 #nullable enable
-        public FontAsset? Font { get; set; }
+        private Texture? _cachedTexture = null;
+        private Task<Font>? _underlyingFont = null;
+        public FontAsset? Font
+        {
+            get;
+            set
+            {
+                DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+                DisposableHelpers.DisposeAndSetNull(ref _underlyingFont);
+                field = value;
+                if (value is not null && Game.IsInitialized)
+                {
+                    _underlyingFont = value.Load(FontSize);
+                    _underlyingFont.ContinueWith(x =>
+                    {
+                        x.EnsureSuccess();
+                        if (CurrentWindow is not null)
+                        {
+                            var font = x.Result;
+                            using var surface = font.RenderShaded(Text, Foreground, Background);
+                            _cachedTexture = new(CurrentWindow.Renderer, surface);
+                        }
+                    });
+                }
+            }
+        }
 #nullable disable
 
-        public float FontSize { get; set; } = 64;
+        public float FontSize
+        {
+            get;
+            set
+            {
+                ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, 0, nameof(FontSize));
+                field = value;
+            }
+        } = 64;
 
         [NotNull]
         public string Text { get; set => field = value ?? throw new NullReferenceException(); } = string.Empty;
@@ -27,57 +63,57 @@ namespace Cider.Components.In2D.Controls
         /// <see cref="Text"/>属性的别名
         /// </summary>
         [NotNull]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public string Content { get => Text; set => Text = value; }
+
+        public Color Foreground { get; set; } = Color.Black;
 
         public Color Background { get; set; } = Color.Transparent;
 
-        private (FontAsset font, float fontSize, string text, Vector2 scale) _cachedMeasureParams = default;
-
-        private float measuredWidth;
-
-        private float measuredHeight;
-
-        private void UpdateMeasuredSize(Vector2 scale)
+        protected override void OnWindowChanged(Window oldWindow, Window newWindow)
         {
-            if (Font is null || FontSize == 0 || scale.X == 0 || scale.Y == 0)
+            DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+            if (newWindow is not null)
             {
-                measuredWidth = 0;
-                measuredHeight = 0;
-                return;
+                _underlyingFont ??= Font?.Load(FontSize);
+                _underlyingFont?.ContinueWith(x =>
+                {
+                    x.EnsureSuccess();
+                    var font = x.Result;
+                    using var surface = font.RenderShaded(Text, Foreground, Background);
+                    _cachedTexture = new(newWindow.Renderer, surface);
+                });
             }
-            var (width, height) = Font.Get().GetFont(FontSize).MeasureString(Text, scale);
-            measuredWidth = width;
-            measuredHeight = height;
         }
 
-        protected internal override bool HitTest(HitTestResult result)
+        public bool TryMeasureSize(out float unscaledWidth, out float unscaledHeight)
         {
-            if ((Font, FontSize, Text, result.CurrentTransform2D.Scale) != _cachedMeasureParams)
+            if (Font is null || _underlyingFont?.IsCompletedSuccessfully != true)
             {
-                _cachedMeasureParams = (Font, FontSize, Text, result.CurrentTransform2D.Scale);
-                UpdateMeasuredSize(result.CurrentTransform2D.Scale);
+                unscaledWidth = 0;
+                unscaledHeight = 0;
+                return false;
             }
-            if (Font is null) return false;
-            return RectangleHitTest(result, measuredWidth, measuredHeight);
+            var (width, height) = _underlyingFont.Result.MeasureString(Text);
+            unscaledWidth = width;
+            unscaledHeight = height;
+            return true;
+        }
+
+        protected override bool HitTest(HitTestResult result)
+        {
+            if (Font is null || _cachedTexture is null) return false;
+            return RectangleHitTest(result, _cachedTexture.Width, _cachedTexture.Height); // 可点击必定已渲染，复用Texture的Width和Height
         }
 
         protected override void OnRender(RenderContext context)
         {
+            if (_cachedTexture is null) return;
+
             var transform = GlobalTransform;
-            var scale = transform.Scale;
-            if ((Font, FontSize, Text, scale) != _cachedMeasureParams)
-            {
-                _cachedMeasureParams = (Font, FontSize, Text, scale);
-                UpdateMeasuredSize(scale);
-            }
             if (Font is null) return;
-            context.SpriteBatch.FillRectangle(transform.Position, measuredWidth, measuredHeight, transform.RotationInRadians, Background);
-            context.SpriteBatch.DrawString(Font.Get().GetFont(FontSize),
-                Text,
-                transform.Position, Color.White,
-                transform.RotationInRadians,
-                Vector2.Zero,
-                scale);
+            //context.FillRectangle(transform.Position, measuredWidth, measuredHeight, transform.RotationInDegrees, Background, transform.Scale);
+            context.RenderTexture(_cachedTexture, transform.Position, null, transform.RotationInDegrees, transform.Scale, Vector2.Zero, FlipMode.None);
         }
     }
 }

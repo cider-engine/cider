@@ -1,22 +1,21 @@
-using Cider.Attributes;
+using Cider.Input;
 using System;
-using MonoGame.Extended.Input.InputListeners;
 
 namespace Cider.Components.In2D.Controls
 {
     public class Button : TextBlock
     {
-        protected internal override void OnMouseUp(object sender, MouseEventArgs args)
+        protected internal override void OnMouseUp(Component sender, MouseButtonEventArgs args)
         {
             OnClick(this, args);
             base.OnMouseUp(sender, args);
         }
 
-        protected virtual void OnClick(object sender, MouseEventArgs args)
+        protected virtual void OnClick(Component sender, MouseButtonEventArgs args)
         {
             Click?.Invoke(sender, args);
         }
 
-        public event EventHandler<MouseEventArgs> Click;
+        public event EventHandler<Component, MouseButtonEventArgs> Click;
     }
 }

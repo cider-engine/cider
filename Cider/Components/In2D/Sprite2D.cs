@@ -1,24 +1,34 @@
 using Cider.Assets;
-using Cider.Data;
 using Cider.Data.In2D;
+using Cider.Extensions;
 using Cider.Input;
+using Cider.Internals;
 using Cider.Render;
 using System;
+using System.Drawing;
+using System.Numerics;
+using System.Threading.Tasks;
 
 namespace Cider.Components.In2D
 {
     public class Sprite2D : Component2D
     {
-        // Texture不为null时此值一定不为null
-        private Rectangle? _cachedRenderRegion = null;
 #nullable enable
-        public Texture2DAsset? Texture
+        private RectangleF? _cachedRenderRegion = null;
+        private Task<Texture>? _underlyingTexture = null;
+
+        public TextureAsset? Texture
         {
             get;
             set
             {
+                _underlyingTexture = null;
                 field = value;
-                UpdateRenderRegion();
+                if (value is null) _cachedRenderRegion = null;
+                else if (CurrentWindow is Window window)
+                {
+                    _underlyingTexture = value.LoadTexture(window.Renderer).EnsureToBeSuccessful();
+                }
             }
         }
 #nullable disable
@@ -31,7 +41,7 @@ namespace Cider.Components.In2D
 
         public bool RegionEnabled { get; set { field = value; UpdateRenderRegion(); } } = false;
 
-        public Rectangle RegionRectangle { get; set { field = value; UpdateRenderRegion(); } } = new Rectangle();
+        public RectangleF RegionRectangle { get; set { field = value; UpdateRenderRegion(); } } = new();
 
         public int FrameIndex
         {
@@ -52,7 +62,7 @@ namespace Cider.Components.In2D
             set
             {
                 if (FrameIndex >= VerticalFrameCount * value)
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(HorizontalFrameCount));
 
                 field = value;
                 UpdateRenderRegion();
@@ -65,36 +75,46 @@ namespace Cider.Components.In2D
             set
             {
                 if (FrameIndex >= HorizontalFrameCount * value)
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(VerticalFrameCount));
 
                 field = value;
                 UpdateRenderRegion();
             }
         } = 1;
 
-        protected internal override void OnLoaded(Scene root)
+        protected override void OnWindowChanged(Window oldWindow, Window newWindow)
         {
-            UpdateRenderRegion();
-            base.OnLoaded(root);
+            if (Texture is null) return;
+            if (oldWindow is not null)
+            {
+                DisposableHelpers.DisposeAndSetNull(ref _underlyingTexture);
+                Texture.UnloadTexture(oldWindow.Renderer);
+            }
+            if (newWindow is not null)
+            {
+                _underlyingTexture = Texture.LoadTexture(newWindow.Renderer);
+                _underlyingTexture.ContinueWith(x =>
+                {
+                    x.EnsureSuccess();
+                    UpdateRenderRegion();
+                }, TaskScheduler.FromCurrentSynchronizationContext());
+            }
         }
 
         private void UpdateRenderRegion()
         {
-            if (!CiderGame.IsInitialized) return;
-            if (Texture is null)
-            {
-                _cachedRenderRegion = null;
-                return;
-            }
+            if (CurrentWindow is null || Texture is null || _underlyingTexture?.IsCompletedSuccessfully != true) return;
+
+            var texture = _underlyingTexture.Result;
 
             if (HorizontalFrameCount == 1 && VerticalFrameCount == 1)
             {
-                _cachedRenderRegion = RegionEnabled ? RegionRectangle : new(0, 0, Texture.Width, Texture.Height);
+                _cachedRenderRegion = RegionEnabled ? RegionRectangle : new(0, 0, texture.Width, texture.Height);
                 return;
             }
 
-            var frameWidth = (float)Texture.Width / HorizontalFrameCount;
-            var frameHeight = (float)Texture.Height / VerticalFrameCount;
+            var frameWidth = (float)texture.Width / HorizontalFrameCount;
+            var frameHeight = (float)texture.Height / VerticalFrameCount;
 
             var column = FrameIndex % HorizontalFrameCount;
             var row = FrameIndex / HorizontalFrameCount;
@@ -102,22 +122,22 @@ namespace Cider.Components.In2D
             var x = frameWidth * column;
             var y = frameHeight * row;
 
-            if (RegionEnabled) _cachedRenderRegion = new Rectangle(
-                (int)(RegionRectangle.X + x),
-                (int)(RegionRectangle.Y + y),
+            if (RegionEnabled) _cachedRenderRegion = new RectangleF(
+                RegionRectangle.X + x,
+                RegionRectangle.Y + y,
                 RegionRectangle.Width,
                 RegionRectangle.Height);
 
-            else _cachedRenderRegion = new Rectangle(
-                (int)x,
-                (int)y,
-                (int)frameWidth,
-                (int)frameHeight);
+            else _cachedRenderRegion = new RectangleF(
+                x,
+                y,
+                frameWidth,
+                frameHeight);
         }
 
-        protected internal override bool HitTest(HitTestResult result)
+        protected override bool HitTest(HitTestResult result)
         {
-            if (Texture is null || !_cachedRenderRegion.HasValue) return false;
+            if (Texture is null || _cachedRenderRegion is null) return false;
             var rect = _cachedRenderRegion.Value;
             if (IsCentered)
                 return RectangleHitTest(result, rect.Width, rect.Height, rect.Width / 2f, rect.Height / 2f);
@@ -127,35 +147,30 @@ namespace Cider.Components.In2D
 
         protected override void OnRender(RenderContext context)
         {
-            if (Texture is null) return;
+            if (Texture is null || _underlyingTexture?.IsCompletedSuccessfully != true) return;
 
             var transform = GlobalTransform;
-
             var rect = _cachedRenderRegion.Value;
 
-            context.SpriteBatch.Draw(
-                texture: Texture.Get(),
+            context.RenderTexture(
+                texture: _underlyingTexture.Result,
 
-                position: transform.Position,
+                position: IsCentered ? transform.Position - new Vector2(rect.Width / 2f, rect.Height / 2f) : transform.Position,
 
-                sourceRectangle: _cachedRenderRegion,
+                sourceRectangle: rect,
 
-                color: Color.White,
-
-                rotation: transform.RotationInRadians,
+                rotationInDegrees: transform.RotationInDegrees,
 
                 scale: transform.Scale,
 
-                origin: IsCentered ? new(rect.Width / 2f, rect.Height / 2f) : Microsoft.Xna.Framework.Vector2.Zero,
+                origin: IsCentered ? new(rect.Width / 2f, rect.Height / 2f) : Vector2.Zero,
 
-                effects: (FlipHorizontally
-                    ? Microsoft.Xna.Framework.Graphics.SpriteEffects.FlipHorizontally
-                    : Microsoft.Xna.Framework.Graphics.SpriteEffects.None) |
+                flipMode: (FlipHorizontally
+                    ? FlipMode.FlipHorizontally
+                    : FlipMode.None) |
                 (FlipVertically
-                    ? Microsoft.Xna.Framework.Graphics.SpriteEffects.FlipVertically
-                    : Microsoft.Xna.Framework.Graphics.SpriteEffects.None),
-
-                layerDepth: 0);
+                    ? FlipMode.FlipVertically
+                    : FlipMode.None));
         }
     }
 }

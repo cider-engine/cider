@@ -1,15 +1,24 @@
-using Cider.Data;
+using SDL;
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cider.Extensions
 {
     public static class EnumExtensions
     {
-        extension(Keys key)
+        extension(SDL_WindowID id)
         {
-            public Microsoft.Xna.Framework.Input.Keys ToKeys() => (Microsoft.Xna.Framework.Input.Keys)key;
+#nullable enable
+            internal bool TryGetWindow([NotNullWhen(true)] out Window? window) => Window.AllWindows.TryGetValue(new((uint)(id)), out window);
+
+            internal Window? RelativeWindow
+            {
+                get
+                {
+                    if (TryGetWindow(id, out var window)) return window;
+                    else return null;
+                }
+            }
         }
     }
 }

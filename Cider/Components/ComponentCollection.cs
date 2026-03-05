@@ -31,13 +31,14 @@ namespace Cider.Components
 
         public void AddRange(params ReadOnlySpan<Component> components)
         {
-            // 先设置 Parent，再把项加入集合，最后统一触发事件，确保事件处理器能看到集合已包含这些项
+            // 先把项加入集合，再设置 Parent，最后统一触发事件，确保事件处理器能看到集合已包含这些项
+            _list.AddRange(components);
+
             foreach (var item in components)
             {
+                item.Parent?.Children.Remove(item);
                 item.Parent = Owner;
             }
-
-            _list.AddRange(components);
 
             foreach (var item in components)
             {
@@ -49,6 +50,7 @@ namespace Cider.Components
         {
             // 先插入，再设置 Parent 并触发事件，保证事件处理器看到项已经在集合内
             base.InsertItem(index, item);
+            item.Parent?.Children.Remove(item);
             item.Parent = Owner;
             ComponentAdded?.Invoke(Owner, item);
         }
@@ -60,6 +62,7 @@ namespace Cider.Components
             base.SetItem(index, item);
 
             old.Parent = null;
+            item.Parent?.Children.Remove(item);
             item.Parent = Owner;
 
             ComponentRemoved?.Invoke(Owner, old);

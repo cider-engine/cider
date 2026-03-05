@@ -2,7 +2,6 @@ using Cider.Attributes;
 using Cider.Data;
 using Cider.Input;
 using Cider.Render;
-using Microsoft.Xna.Framework;
 using System;
 
 namespace Cider.Components
@@ -18,17 +17,19 @@ namespace Cider.Components
             internal set
             {
                 if (this is Scene) throw new InvalidOperationException();
-                if (field is Scene scene1) OnDetachFromScene(scene1);
-                else if (Root is Scene scene2) OnDetachFromScene(scene2);
+                if (field is Scene scene1) OnDetachFromSceneDispatcher(scene1);
+                else if (Root is Scene scene2) OnDetachFromSceneDispatcher(scene2);
 
-                if (value is Scene scene3) OnAttachToScene(scene3);
-                else if (value?.Root is Scene scene4) OnAttachToScene(scene4);
+                if (value is Scene scene3) OnAttachToSceneDispatcher(scene3);
+                else if (value?.Root is Scene scene4) OnAttachToSceneDispatcher(scene4);
 
                 field = value;
             }
         }
 
         public Scene? Root { get; private set; }
+
+        public Window? CurrentWindow => Root?.Window;
 #nullable disable
 
         public Component()
@@ -41,89 +42,123 @@ namespace Cider.Components
         public ComponentCollection Children { get; }
 
         [Dispatcher]
-        protected internal virtual void OnAttachToScene(Scene root)
+        internal virtual void OnAttachToSceneDispatcher(Scene root)
         {
             Root = root;
+            OnAttachToScene(root);
             foreach (var item in Children)
-                item.OnAttachToScene(root);
+                item.OnAttachToSceneDispatcher(root);
         }
 
-        [Dispatcher]
-        protected internal virtual void OnLoaded(Scene root)
-        {
-            foreach (var item in Children)
-                item.OnLoaded(root);
-        }
+        protected virtual void OnAttachToScene(Scene root)
+        { }
 
         [Dispatcher]
-        protected internal virtual void OnUpdate(in TimeContext context)
+        internal virtual void OnLoadedDispatcher(Scene root)
         {
+            OnLoaded(root);
             foreach (var item in Children)
-                item.OnUpdate(context);
+                item.OnLoadedDispatcher(root);
         }
 
+        protected virtual void OnLoaded(Scene root)
+        { }
+
         [Dispatcher]
-        protected internal virtual void OnFixedUpdate(in TimeContext context)
+        internal virtual void OnUpdateDispatcher(TimeContext context)
         {
+            OnUpdate(context);
             foreach (var item in Children)
-                item.OnFixedUpdate(context);
+                item.OnUpdateDispatcher(context);
         }
+
+        protected virtual void OnUpdate(TimeContext context)
+        { }
+
+        [Dispatcher]
+        internal virtual void OnFixedUpdateDispatcher(TimeContext context)
+        {
+            OnFixedUpdate(context);
+            foreach (var item in Children)
+                item.OnFixedUpdateDispatcher(context);
+        }
+
+        protected virtual void OnFixedUpdate(TimeContext context)
+        { }
 
         protected virtual void OnRender(RenderContext context)
         {}
 
         [Dispatcher]
-        internal virtual void OnDraw(RenderContext context)
+        internal virtual void OnRenderDispatcher(RenderContext context)
         {
             if (!IsVisible) return;
             OnRender(context);
             foreach (var item in Children)
-                item.OnDraw(context);
+                item.OnRenderDispatcher(context);
         }
 
         [Dispatcher]
-        protected internal virtual void OnDetachFromScene(Scene root)
+        internal virtual void OnDetachFromSceneDispatcher(Scene root)
         {
             foreach (var item in Children)
-                item.OnDetachFromScene(root);
+                item.OnDetachFromSceneDispatcher(root);
+            OnDetachFromScene(root);
             Root = null;
         }
 
-        protected internal virtual bool HitTest(HitTestResult result)
+        protected virtual void OnDetachFromScene(Scene root)
+        { }
+
+        protected virtual bool HitTest(HitTestResult result)
         {
             return false;
         }
 
         [Dispatcher]
-        internal virtual void ForeachHitTest(HitTestResult result)
+        internal virtual void HitTestDispatcher(HitTestResult result)
         {
             if (!IsVisible) return;
+
+            var toBeRestored = result.CurrentTransform2D;
+
             if (HitTest(result)) result.SetComponent(this);
             
             foreach (var item in Children)
-                item.ForeachHitTest(result);
+            {
+                item.HitTestDispatcher(result);
+                result.CurrentTransform2D = toBeRestored;
+            }
         }
 
         protected virtual void OnGlobalTransformChanged(EventArgs args)
         {}
 
         [Dispatcher]
-        protected internal virtual void OnParentTransformChanged(EventArgs args)
+        internal virtual void OnGlobalTransformChangedDispatcher(EventArgs args)
         {
             OnGlobalTransformChanged(args);
             foreach (var item in Children)
             {
-                item.OnParentTransformChanged(args);
+                item.OnGlobalTransformChangedDispatcher(args);
+            }
+        }
+#nullable enable
+        protected virtual void OnWindowChanged(Window? oldWindow, Window? newWindow)
+        {}
+
+        [Dispatcher]
+        internal void OnWindowChangedDispatcher(Window? oldWindow, Window? newWindow)
+        {
+            OnWindowChanged(oldWindow, newWindow);
+
+            foreach (var item in Children)
+            {
+                item.OnWindowChangedDispatcher(oldWindow, newWindow);
             }
         }
 
-        public ToRootEnumeratorGetter GetToRootEnumeratorGetter() => new(this);
-
-#nullable enable
-        public struct ToRootEnumeratorGetter(Component? start)
-        {
-            public readonly ToRootEnumerator GetEnumerator() => new(start);
-        }
+        public ToRootEnumerator EnumerateToRoot() => new(this);
 
         public struct ToRootEnumerator(Component? start)
         {
@@ -144,6 +179,8 @@ namespace Cider.Components
                 _started = true;
                 return _current is not null;
             }
+
+            public readonly ToRootEnumerator GetEnumerator() => this;
         }
     }
 }

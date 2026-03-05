@@ -6,6 +6,18 @@ namespace Cider.Components
 {
     public class Scene : Component
     {
+#nullable enable
+        public Window? Window
+        {
+            get;
+            set
+            {
+                var old = field;
+                field = value;
+                OnWindowChangedDispatcher(old, value);
+            }
+        }
+#nullable disable
         internal List<nkast.Aether.Physics2D.Dynamics.Body> BodiesToAdd2D { get; } = new();
         internal List<nkast.Aether.Physics2D.Dynamics.Body> BodiesToRemove2D { get; } = new();
 

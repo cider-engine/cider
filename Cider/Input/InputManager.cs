@@ -1,86 +1,151 @@
 using Cider.Components;
 using Cider.Components.In2D;
-using Cider.Extensions;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.Input;
-using MonoGame.Extended.Input.InputListeners;
+using SDL;
 using System;
 using System.Collections.Generic;
 
 namespace Cider.Input
 {
+#nullable enable
+    public delegate void MouseMovedEventHandler(Window? window, MouseMovedEventArgs args);
+    public delegate void MouseButtonEventHandler(Window? window, MouseButtonEventArgs args);
+
     public static class InputManager
     {
-#nullable enable
-        private static readonly MouseListener _mouseListener = new();
-
 #nullable disable
-        internal static void Update(GameTime gameTime)
-        {
-            MouseExtended.Update();
-            KeyboardExtended.Update();
+        public static event MouseMovedEventHandler MouseMoved;
 
-            _mouseListener.Update(gameTime);
-        }
+        public static event MouseButtonEventHandler MouseUp;
 
-        public static int GetAxis(Data.Keys negativeKey, Data.Keys positiveKey)
-        {
-            var state = Keyboard.GetState();
-            return (state.IsKeyDown(negativeKey.ToKeys()) ? -1 : 0) + (state.IsKeyDown(positiveKey.ToKeys()) ? 1 : 0);
-        }
+        public static event MouseButtonEventHandler MouseDown;
+#nullable enable
+        private static readonly HashSet<Component2D> visitedMouseMovedComponents = new(256); // 深度
 
-        public static bool IsKeyDown(Data.Keys key)
+        internal static void RaiseMouseMoved(Window? window, in SDL_MouseMotionEvent e)
         {
-            var state = Keyboard.GetState();
-            return state.IsKeyDown(key.ToKeys());
-        }
+            var args = new MouseMovedEventArgs(
+                Position: new(e.x, e.y),
+                Movement: new(e.xrel, e.yrel),
+                Timestamp: e.timestamp,
+                MouseId: e.which,
+                ButtonState: (MouseButtonFlags)e.state);
 
-        static InputManager()
-        {
-            _mouseListener.MouseUp += static (_, e) =>
+            MouseMoved?.Invoke(window, args);
+
+            if (window is null) return;
+
+            Component2D? mouseLeave = null;
+
+            Component2D? mouseEnter = null;
+
+            using (var result = HitTestResult.GetScopedSingleton(args.Position - args.Movement))
             {
-                if (CiderGame.Instance.IsFocused)
+                window.Scene.HitTestDispatcher(result);
+
+                if (result.GetComponent() is Component component)
                 {
-                    var result = new HitTestResult(e);
-
-                    CiderGame.Instance.CurrentScene.ForeachHitTest(result);
-
-                    if (result.GetComponent() is Component component)
+                    mouseLeave = component as Component2D;
+                    foreach (var item in component.EnumerateToRoot())
                     {
-                        foreach (var item in component.GetToRootEnumeratorGetter())
+                        if (item is Component2D c2d)
                         {
-                            if (item is Component2D c2d)
-                            {
-                                c2d.OnMouseUp(c2d, e);
-                            }
+                            c2d.OnMouseMoved(component, args);
+                            visitedMouseMovedComponents.Add(c2d);
                         }
-
                     }
                 }
-            };
+            }
 
-            _mouseListener.MouseDown += static (_, e) =>
+            using (var result = HitTestResult.GetScopedSingleton(args.Position))
             {
-                if (CiderGame.Instance.IsFocused)
+                window.Scene.HitTestDispatcher(result);
+
+                if (result.GetComponent() is Component component)
                 {
-                    var result = new HitTestResult(e);
-
-                    CiderGame.Instance.CurrentScene.ForeachHitTest(result);
-
-                    if (result.GetComponent() is Component component)
+                    mouseEnter = component as Component2D;
+                    foreach (var item in component.EnumerateToRoot())
                     {
-                        foreach (var item in component.GetToRootEnumeratorGetter())
+                        if (item is Component2D c2d)
                         {
-                            if (item is Component2D c2d)
-                            {
-                                c2d.OnMouseDown(c2d, e);
-                            }
+                            if (visitedMouseMovedComponents.Contains(c2d)) break;
+                            c2d.OnMouseMoved(component, args);
                         }
-
                     }
                 }
-            };
+            }
+
+            visitedMouseMovedComponents.Clear();
+
+            if (mouseLeave != mouseEnter)
+            {
+                mouseLeave?.IsMouseOver = false;
+                mouseLeave?.OnMouseLeave(mouseLeave, args);
+
+                mouseEnter?.IsMouseOver = true;
+                mouseEnter?.OnMouseEnter(mouseEnter, args);
+            }
+        }
+
+        internal static void RaiseMouseUp(Window? window, in SDL_MouseButtonEvent e)
+        {
+            var args = new MouseButtonEventArgs(
+                Position: new(e.x, e.y),
+                Timestamp: e.timestamp,
+                MouseId: e.which,
+                Button: (MouseButton)e.button,
+                IsDown: e.down,
+                ClickTimes: e.clicks
+            );
+
+            MouseUp?.Invoke(window, args);
+
+            if (window is null) return;
+
+            using var result = HitTestResult.GetScopedSingleton(args.Position);
+
+            window.Scene.HitTestDispatcher(result);
+
+            if (result.GetComponent() is Component component)
+            {
+                foreach (var item in component.EnumerateToRoot())
+                {
+                    if (item is Component2D c2d)
+                    {
+                        c2d.OnMouseUp(component, args);
+                    }
+                }
+            }
+        }
+
+        internal static void RaiseMouseDown(Window? window, in SDL_MouseButtonEvent e)
+        {
+            var args = new MouseButtonEventArgs(
+                Position: new(e.x, e.y),
+                Timestamp: e.timestamp,
+                MouseId: e.which,
+                Button: (MouseButton)e.button,
+                IsDown: e.down,
+                ClickTimes: e.clicks
+            );
+
+            MouseDown?.Invoke(window, args);
+
+            if (window is null) return;
+
+            using var result = HitTestResult.GetScopedSingleton(args.Position);
+
+            window.Scene.HitTestDispatcher(result);
+
+            if (result.GetComponent() is Component component)
+            {
+                foreach (var item in component.EnumerateToRoot())
+                {
+                    if (item is Component2D c2d)
+                    {
+                        c2d.OnMouseDown(component, args);
+                    }
+                }
+            }
         }
     }
 }

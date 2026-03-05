@@ -1,8 +1,7 @@
-using Cider.Data;
 using Cider.Input;
 using Cider.Render;
-using Cider.Extensions;
 using System;
+using System.Drawing;
 
 namespace Cider.Components.In2D
 {
@@ -14,7 +13,7 @@ namespace Cider.Components.In2D
 
         public float Height { get; set; }
 
-        protected internal override bool HitTest(HitTestResult result)
+        protected override bool HitTest(HitTestResult result)
         {
             return RectangleHitTest(result, Width, Height);
         }
@@ -22,7 +21,7 @@ namespace Cider.Components.In2D
         protected override void OnRender(RenderContext context)
         {
             var transform = GlobalTransform;
-            context.SpriteBatch.FillRectangle(transform.Position, Width, Height, transform.RotationInRadians, Color);
+            context.FillRectangle(transform.Position, Width, Height, transform.RotationInRadians, Color, transform.Scale);
         }
     }
 }

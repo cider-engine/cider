@@ -4,52 +4,13 @@ using System.Text;
 
 namespace Cider.Assets
 {
-    public abstract class Asset : IDisposable
+    public abstract class Asset : IEquatable<Asset>
     {
-        private bool _disposed;
+        private readonly string _path;
+        public string Path => OperatingSystem.IsAndroid() ? _path["Assets/".Length..] : _path;
 
-        public string Path { get; }
+        public Asset(string path) => _path = path;
 
-        public Asset(string path) => Path = path;
-
-        public abstract bool IsLoaded { get; }
-
-        public abstract void Load();
-
-        public abstract void Unload();
-
-        public abstract object Get(); // 在子类重写时返回具体类型
-
-        public virtual void Dispose()
-        {
-            if (_disposed) return;
-            GC.SuppressFinalize(this);
-            if (IsLoaded)
-                Unload();
-            _disposed = true;
-        }
-
-        ~Asset()
-        {
-            if (IsLoaded)
-                Unload();
-        }
-
-#nullable enable
-        protected Action<Asset>? _onLoaded;
-        protected Action<Asset>? _onUnloaded;
-#nullable disable
-
-        public event Action<Asset> OnLoaded
-        {
-            add => _onLoaded += value;
-            remove => _onLoaded -= value;
-        }
-        public event Action<Asset> OnUnloaded
-        {
-            add => _onUnloaded += value;
-            remove => _onUnloaded -= value;
-        }
 #nullable enable
         public static bool operator ==(Asset? a, Asset? b)
         {
@@ -59,6 +20,8 @@ namespace Cider.Assets
         }
 
         public static bool operator !=(Asset? a, Asset? b) => !(a == b);
+
+        public bool Equals(Asset? other) => this == other;
 
         public override bool Equals(object? obj)
         {

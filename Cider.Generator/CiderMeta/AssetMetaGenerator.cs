@@ -68,7 +68,8 @@ namespace Cider.Generator.CiderMeta
                     using var stringWriter = new StringWriter();
                     using var writer = new IndentedTextWriter(stringWriter, "    ");
 
-                    writer.Indent = 0;
+                    // 手动控制缩进
+                    //writer.Indent = 0;
 
                     writer.WriteLine("""
                         namespace Cider.Assets;
@@ -77,7 +78,7 @@ namespace Cider.Generator.CiderMeta
                         {
                         """);
 
-                    writer.Indent = 1;
+                    //writer.Indent = 1;
 
                     foreach (var additionalText in additionalTexts)
                     {
@@ -103,7 +104,10 @@ namespace Cider.Generator.CiderMeta
                             var uid = doc.RootElement.GetProperty("uid").GetString();
 
                             writer.WriteLine($$"""
-                                public static readonly {{assetClass}} {{uid}} = new("{{relativePath}}");
+                                    /// <summary>
+                                    /// 存储路径：<c>{{relativePath}}</c>
+                                    /// </summary>
+                                    public static readonly {{assetClass}} {{uid}} = new("{{relativePath}}");
                                 """);
                         }
                         catch
@@ -116,7 +120,7 @@ namespace Cider.Generator.CiderMeta
                         }
                     }
 
-                    writer.Indent = 0;
+                    //writer.Indent = 0;
                     writer.WriteLine('}');
 
                     return stringWriter.ToString();

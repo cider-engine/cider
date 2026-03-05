@@ -4,8 +4,7 @@ using System.Text;
 
 namespace Cider.Data
 {
-    public readonly struct TimeContext(TimeSpan deltaTime)
+    public readonly record struct TimeContext(TimeSpan DeltaTime)
     {
-        public readonly TimeSpan DeltaTime = deltaTime;
     }
 }

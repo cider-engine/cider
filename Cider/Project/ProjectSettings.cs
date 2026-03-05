@@ -1,5 +1,6 @@
 using Cider.Components;
 using System;
+using System.Drawing;
 
 namespace Cider.Project
 {

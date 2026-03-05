@@ -1,4 +1,4 @@
-using MonoGame.Extended.ECS;
+using Cider.Extensions;
 using nkast.Aether.Physics2D.Dynamics;
 using System;
 
@@ -19,7 +19,7 @@ namespace Cider.Components.In2D.Physics
         {
             if (_fixture is not null)
                 throw new InvalidOperationException("Shape is already attached to a body.");
-            _fixture = body.CreateCircle(Radius, Density, Position);
+            _fixture = body.CreateCircle(Radius, Density, Position.AsPhysicsVector2());
             _fixture.IsSensor = isSensor;
         }
 

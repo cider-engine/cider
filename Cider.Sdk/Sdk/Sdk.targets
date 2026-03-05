@@ -1,4 +1,10 @@
 <Project>
+	<Import Condition="!$(TargetFramework.Contains('browser'))" Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+	<Import Condition="$(TargetFramework.Contains('browser'))" Project="Sdk.props" Sdk="Microsoft.NET.Sdk.WebAssembly" />
+
+	<PropertyGroup Condition="!$(TargetFramework.Contains('-'))"> <!--不为-android -browser这样的平台限定框架-->
+		<OutputType>WinExe</OutputType>
+	</PropertyGroup>
 
 	<ItemGroup Condition="$(CiderTest)">
 		<ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Cider\Cider.csproj" />
@@ -22,8 +28,6 @@
 
 		<AdditionalFiles Include="**\*.cider" />
 		<AdditionalFiles Include="**\*.meta" />
-		
-		
 	</ItemGroup>
 
 	<!--Android-->
@@ -31,6 +35,19 @@
 		<AndroidAsset Include="@(CiderAssetsWithoutMeta)" />
 		<AndroidAsset Remove="**\*.meta" />
 		<AndroidAsset Remove="**\*.cider" />
+	</ItemGroup>
+	
+	<!--Browser-->
+	<PropertyGroup Condition="$(TargetFramework.Contains('browser'))">
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+		<WasmEnableExceptionHandling>false</WasmEnableExceptionHandling>
+	</PropertyGroup>
+	
+	<ItemGroup Condition="$(TargetFramework.Contains('browser'))">
+		<StaticWebAssetFingerprintPattern Include="JS" Pattern="*.js" Expression="#[.{fingerprint}]!" />
+		<NativeFileReference Include="lib\*.a" />
+		<WasmFilesToIncludeInFileSystem Include="Assets/**/*" />
 	</ItemGroup>
 	
 	
@@ -41,5 +58,6 @@
 		<AssetTask Assets="@(CiderAssets)" />
 	</Target>
 
-	<Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+	<Import Condition="!$(TargetFramework.Contains('browser'))" Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+	<Import Condition="$(TargetFramework.Contains('browser'))" Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.WebAssembly" />
 </Project>

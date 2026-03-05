@@ -1,5 +1,6 @@
 using Cider.Data;
 using Cider.Data.In2D;
+using Cider.Extensions;
 using nkast.Aether.Physics2D.Dynamics;
 using nkast.Aether.Physics2D.Dynamics.Contacts;
 using System;
@@ -44,20 +45,18 @@ namespace Cider.Components.In2D.Physics
 
         internal Body Body { get; }
 
-        protected internal override void OnAttachToScene(Scene root)
+        protected override void OnAttachToScene(Scene root)
         {
             Body.OnCollision += OnCollision;
             Body.OnSeparation += OnSeparation;
             root.EnqueueBodyToAdd2D(Body);
-            base.OnAttachToScene(root);
         }
 
-        protected internal override void OnDetachFromScene(Scene root)
+        protected override void OnDetachFromScene(Scene root)
         {
             root.EnqueueBodyToRemove2D(Body);
             Body.OnCollision -= OnCollision;
             Body.OnSeparation -= OnSeparation;
-            base.OnDetachFromScene(root);
         }
 
         protected virtual bool OnCollision(Fixture sender, Fixture other, Contact contact)
@@ -75,9 +74,9 @@ namespace Cider.Components.In2D.Physics
             var globalPosition = globalTransform.Position;
             var globalRotation = globalTransform.RotationInRadians;
 
-            if (globalPosition != (Vector2)Body.Position)
+            if (globalPosition != Body.Position.AsVector2())
             {
-                Body.Position = globalPosition;
+                Body.Position = globalPosition.AsPhysicsVector2();
             }
 
             if (globalRotation != Body.Rotation)
@@ -86,10 +85,10 @@ namespace Cider.Components.In2D.Physics
             }
         }
 
-        protected internal override void OnFixedUpdate(in TimeContext context)
+        protected override void OnFixedUpdate(TimeContext context)
         {
             // 从物理世界获取期望的全局位置和旋转
-            var targetGlobalPosition = (Vector2)Body.Position;
+            var targetGlobalPosition = Body.Position.AsVector2();
             var targetGlobalRotation = Body.Rotation;
 
             var globalTransform = GlobalTransform;
@@ -110,8 +109,6 @@ namespace Cider.Components.In2D.Physics
                     RotationInRadians = newLocalTransform.RotationInRadians
                 };
             }
-
-            base.OnFixedUpdate(context);
         }
     }
 }

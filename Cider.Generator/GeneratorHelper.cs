@@ -39,33 +39,18 @@ namespace Cider.Generator
         public static readonly XName CommandWithCollection = CommandNamespace + "Collection";
         public static readonly XName CommandWithValue = CommandNamespace + "Value";
 
-        /// 计划（伪代码）：
-        /// - 验证 writer 非空
-        /// - 规范化 message：替换换行、修 trim、限制长度，使用默认提示（如果为空）
-        /// - 写入一行 #error，内容为单行的错误摘要（编译器显示）
-        /// - 写入若干注释行，包含文件路径、行号、调用成员、时间戳，便于定位
-        /// - 泛型重载复用同样逻辑并返回 default(T)
         public static void WriteErrorMessage(this IndentedTextWriter writer, string message = "", [CallerMemberName] string callerMemberName = "", [CallerLineNumber] int callerLineNumber = 0, [CallerFilePath] string callerFilePath = "")
         {
-            if (writer == null) return;
+            if (writer is null) return;
 
-            // 规范化 message，移除换行并限制长度，避免破坏 #error 指令格式
             var msg = (message ?? string.Empty).Replace("\r", " ").Replace("\n", " ").Trim();
             if (string.IsNullOrWhiteSpace(msg))
             {
                 msg = "An error occurred in Cider Generator.";
             }
 
-            const int maxLength = 240;
-            if (msg.Length > maxLength)
-            {
-                msg = msg.Substring(0, maxLength).TrimEnd() + "...";
-            }
-
-            // 写入编译器可见的错误（单行）
             writer.WriteLine($"#error Cider Generator Error: {msg}");
 
-            // 写入定位信息作为注释，便于在生成的代码中查看详细上下文
             writer.WriteLine($"// File: {callerFilePath}");
             writer.WriteLine($"// Member: {callerMemberName}");
             writer.WriteLine($"// Line: {callerLineNumber}");
@@ -97,14 +82,14 @@ namespace Cider.Generator
                             var type = compilation.GetTypeByMetadataName(fullName);
                             if (type is null)
                             {
-                                writer.WriteErrorMessage();
+                                writer.WriteErrorMessage($"Type {fullName} could not be found");
                                 return;
                             }
 
                             var member = SearchMember(type, child.Name.LocalName);
                             if (member is null)
                             {
-                                writer.WriteErrorMessage();
+                                writer.WriteErrorMessage($"Member (property or field) {child.Name.LocalName} could not be found in type {type.Name}");
                                 return;
                             }
 
@@ -117,7 +102,7 @@ namespace Cider.Generator
                             var memberType = (member as IPropertySymbol)?.Type ?? (member as IFieldSymbol)?.Type;
                             if (memberType is null)
                             {
-                                writer.WriteErrorMessage();
+                                writer.WriteErrorMessage($"Member {member.Name} is not a property nor field of type {type.Name}");
                                 return;
                             }
 

@@ -1,8 +1,7 @@
-using Cider.Assets;
-using Cider.Data;
-using Cider.Data.In2D;
 using System;
 using System.ComponentModel;
+using System.Drawing;
+using System.Numerics;
 
 namespace Cider.Converters
 {
@@ -56,7 +55,7 @@ namespace Cider.Converters
                     var r = byte.Parse(hex[..2], System.Globalization.NumberStyles.HexNumber);
                     var g = byte.Parse(hex.Slice(2, 2), System.Globalization.NumberStyles.HexNumber);
                     var b = byte.Parse(hex.Slice(4, 2), System.Globalization.NumberStyles.HexNumber);
-                    return new(r, g, b);
+                    return Color.FromArgb(r, g, b);
                 }
                 else if (hex.Length == 8)
                 {
@@ -64,7 +63,7 @@ namespace Cider.Converters
                     var r = byte.Parse(hex.Slice(2, 2), System.Globalization.NumberStyles.HexNumber);
                     var g = byte.Parse(hex.Slice(4, 2), System.Globalization.NumberStyles.HexNumber);
                     var b = byte.Parse(hex.Slice(6, 2), System.Globalization.NumberStyles.HexNumber);
-                    return new(r, g, b, a);
+                    return Color.FromArgb(a, r, g, b);
                 }
                 else
                 {

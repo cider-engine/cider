@@ -1,5 +1,6 @@
-using Cider.Data.In2D;
+using Cider.Extensions;
 using nkast.Aether.Physics2D.Dynamics;
+using System.Numerics;
 
 namespace Cider.Components.In2D.Physics
 {
@@ -7,8 +8,8 @@ namespace Cider.Components.In2D.Physics
     {
         public Vector2 Velocity
         {
-            get => Body.LinearVelocity;
-            set => Body.LinearVelocity = value;
+            get => Body.LinearVelocity.AsVector2();
+            set => Body.LinearVelocity = value.AsPhysicsVector2();
         }
     }
 }

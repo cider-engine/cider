@@ -17,13 +17,41 @@ namespace Cider.Components
             internal set
             {
                 if (this is Scene) throw new InvalidOperationException();
-                if (field is Scene scene1) OnDetachFromSceneDispatcher(scene1);
-                else if (Root is Scene scene2) OnDetachFromSceneDispatcher(scene2);
+                if (field is Scene scene1)
+                {
+                    if (scene1.Window is Window window)
+                        OnWindowChangedDispatcher(window, null); // 如果已连接到窗口中就通知，与直接修改Window属性的通知不一样
 
-                if (value is Scene scene3) OnAttachToSceneDispatcher(scene3);
-                else if (value?.Root is Scene scene4) OnAttachToSceneDispatcher(scene4);
+                    OnDetachFromSceneDispatcher(scene1);
+                }
+                else if (Root is Scene scene2)
+                {
+                    if (scene2.Window is Window window)
+                        OnWindowChangedDispatcher(window, null);
+
+                    OnDetachFromSceneDispatcher(scene2);
+                }
 
                 field = value;
+
+                if (value is Scene scene3)
+                {
+                    OnAttachToSceneDispatcher(scene3);
+
+                    if (scene3.Window is Window window)
+                        OnWindowChangedDispatcher(null, window); // 不在树中CurrentWindow为null，从一个树挪到另一个树下经上述步骤CurrentWindow已经是null了
+
+                    if (Game.IsInitialized && scene3.Window is not null) OnLoadedDispatcher(scene3);
+                }
+                else if (value?.Root is Scene scene4)
+                {
+                    OnAttachToSceneDispatcher(scene4);
+
+                    if (scene4.Window is Window window)
+                        OnWindowChangedDispatcher(null, window);
+
+                    if (Game.IsInitialized && scene4.Window is not null) OnLoadedDispatcher(scene4);
+                }
             }
         }
 
@@ -35,6 +63,7 @@ namespace Cider.Components
         public Component()
         {
             Children = new(this);
+            if (this is Scene scene) Root = scene;
         }
 
         public bool IsVisible { get; set; } = true;
@@ -42,7 +71,7 @@ namespace Cider.Components
         public ComponentCollection Children { get; }
 
         [Dispatcher]
-        internal virtual void OnAttachToSceneDispatcher(Scene root)
+        internal void OnAttachToSceneDispatcher(Scene root)
         {
             Root = root;
             OnAttachToScene(root);
@@ -54,8 +83,9 @@ namespace Cider.Components
         { }
 
         [Dispatcher]
-        internal virtual void OnLoadedDispatcher(Scene root)
+        internal void OnLoadedDispatcher(Scene root)
         {
+            if (CurrentWindow is null) return;
             OnLoaded(root);
             foreach (var item in Children)
                 item.OnLoadedDispatcher(root);
@@ -67,6 +97,7 @@ namespace Cider.Components
         [Dispatcher]
         internal virtual void OnUpdateDispatcher(TimeContext context)
         {
+            if (CurrentWindow is null) return;
             OnUpdate(context);
             foreach (var item in Children)
                 item.OnUpdateDispatcher(context);
@@ -78,6 +109,7 @@ namespace Cider.Components
         [Dispatcher]
         internal virtual void OnFixedUpdateDispatcher(TimeContext context)
         {
+            if (CurrentWindow is null) return;
             OnFixedUpdate(context);
             foreach (var item in Children)
                 item.OnFixedUpdateDispatcher(context);

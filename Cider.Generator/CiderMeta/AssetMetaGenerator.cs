@@ -76,6 +76,9 @@ namespace Cider.Generator.CiderMeta
 
                         public static class AssetManager
                         {
+                            // 触发类的初始化
+                            public static void TriggerInit()
+                            {}
                         """);
 
                     //writer.Indent = 1;

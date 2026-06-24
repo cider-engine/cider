@@ -1,6 +1,8 @@
+using Cider.Extensions;
 using SDL;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Cider.Input
@@ -15,6 +17,12 @@ namespace Cider.Input
                 var ptr = SDL3.SDL_GetKeyboardState(&num);
                 return new(new(ptr, num));
             }
+        }
+
+#nullable enable
+        public static unsafe bool TryGetFocusedWindow([NotNullWhen(true)] out Window? window)
+        {
+            return SDL3.SDL_GetWindowID(SDL3.SDL_GetKeyboardFocus()).TryGetWindow(out window);
         }
     }
 

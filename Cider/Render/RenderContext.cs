@@ -14,9 +14,20 @@ namespace Cider.Render
     {
         public required Renderer Renderer { get; init; }
 
-        public RenderTextureColorScope WithTextureColorScope(Texture texture, Color color) => new(texture, color);
+        public RenderTextureColorScope PushTextureColor(Texture texture, Color color) => new(texture, color);
 
-        public RenderDrawColorScope WithDrawColorScope(Color color) => new(Renderer, color);
+        public RenderDrawColorScope PushDrawColor(Color color) => new(Renderer, color);
+
+        public RenderTargetScope PushTarget(Texture target) => new(Renderer, target);
+
+        public void FillColor(Color color)
+        {
+            using var colorScope = PushDrawColor(color);
+            unsafe
+            {
+                SDLHelpers.ThrowIfFalse(SDL_RenderClear(Renderer.Pointer));
+            }
+        }
 
         public void FillRectangle(Vector2 position, float width, float height, float rotationInDegrees, Color color, Vector2 scale)
         {
@@ -40,7 +51,12 @@ namespace Cider.Render
             SDL_FRect destination;
 
             if (sourceRectangle is RectangleF src) source = src.AsRect();
-            if (destinationRectangle is RectangleF dest) destination = dest.AsRect();
+            if (destinationRectangle is RectangleF dest)
+            {
+                destination = dest.AsRect();
+                destination.x -= Renderer.Camera2D.OffsetPosition.X;
+                destination.y -= Renderer.Camera2D.OffsetPosition.Y;
+            }
 
             SDL_FPoint center = new()
             {
@@ -91,6 +107,24 @@ namespace Cider.Render
         {
             SDLHelpers.ThrowIfFalse(SDL_SetTextureColorMod(_texture, _color.R, _color.G, _color.B));
             SDLHelpers.ThrowIfFalse(SDL_SetTextureAlphaMod(_texture, _color.A));
+        }
+    }
+
+    public readonly ref struct RenderTargetScope : IDisposable
+    {
+        private unsafe readonly SDL_Renderer* _renderer;
+        private unsafe readonly SDL_Texture* _target;
+
+        public unsafe RenderTargetScope(Renderer renderer, Texture target)
+        {
+            _renderer = renderer.Pointer;
+            _target = SDL_GetRenderTarget(renderer.Pointer);
+            SDL_SetRenderTarget(renderer.Pointer, target.Pointer);
+        }
+
+        public readonly unsafe void Dispose()
+        {
+            SDLHelpers.ThrowIfFalse(SDL_SetRenderTarget(_renderer, _target));
         }
     }
 }

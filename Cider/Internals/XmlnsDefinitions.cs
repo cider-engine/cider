@@ -13,8 +13,12 @@ using Cider.Attributes;
 [assembly: XmlnsDefinition(XmlnsStatics.Engine, "Cider.Project")]
 
 
+[assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Drawing.Size))]
+[assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Drawing.SizeF))]
 [assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Drawing.Point))]
+[assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Drawing.PointF))]
 [assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Drawing.Color))]
+[assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Drawing.Rectangle))]
 [assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Drawing.RectangleF))]
 [assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Numerics.Vector2))]
 

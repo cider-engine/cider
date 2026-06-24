@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cider.Platform
+namespace Cider.Platform.Browser
 {
     [SupportedOSPlatform("browser")]
     public static class Browser

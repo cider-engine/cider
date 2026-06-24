@@ -53,5 +53,11 @@ namespace Cider.Data.In2D
 
             return new Transform2D(invPosition, invRotation, invScale);
         }
+
+        public static Transform2D FromPosition(Vector2 relativePosition) => new(relativePosition, 0, Vector2.One);
+
+        public static Transform2D FromRotationInRadians(float rotationInRadians) => new(Vector2.Zero, rotationInRadians, Vector2.One);
+
+        public static Transform2D FromScale(Vector2 scale) => new(Vector2.Zero, 0, scale);
     }
 }

@@ -1,0 +1,6 @@
+[submodule "external/Cider.DotTiled"]
+	path = external/Cider.DotTiled
+	url = git@github.com:cider-engine/DotTiled.git
+[submodule "external/DotTiled"]
+	path = external/DotTiled
+	url = git@github.com:cider-engine/DotTiled.git

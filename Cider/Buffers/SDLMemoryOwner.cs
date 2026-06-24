@@ -1,6 +1,7 @@
 using SDL;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Cider.Buffers
@@ -35,8 +36,12 @@ namespace Cider.Buffers
                 //}
 
                 SDL3.SDL_free(ptr);
+                GetPointer(this) = null;
                 disposedValue = true;
             }
+
+            [UnsafeAccessor(UnsafeAccessorKind.Field, Name = nameof(ptr))]
+            static extern ref byte* GetPointer(SDLMemoryOwner @this);
         }
 
         ~SDLMemoryOwner()

@@ -6,6 +6,7 @@ using SDL;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,32 +15,30 @@ using static SDL.SDL3_ttf;
 namespace Cider.Assets
 {
     [SupportedAssetTypes(".ttf", ".otf")]
-    public class FontAsset : Asset
+    public class FontAsset : Asset<FontAsset>
     {
 #nullable enable
-        private readonly Dictionary<float, (CancellationTokenSource source, Task<Font> task)> _cachedFontLoader = new();
+        public const float DefaultPtSize = 18;
+
+        private Task<Font>? _cachedFontLoader = null;
+        private CancellationTokenSource _source = new();
+
         public FontAsset(string path) : base(path)
         {}
 
-        public Task<Font> Load(float ptsize = 64)
+        public Task<Font> Load()
         {
-            if (_cachedFontLoader.TryGetValue(ptsize, out var value)) return value.task;
+            if (_cachedFontLoader is not null) return _cachedFontLoader;
 
-            var source = new CancellationTokenSource();
-
-            var task = _Load(Path, ptsize, source.Token);
-
-            _cachedFontLoader.Add(ptsize, (source, task));
-
-            return task;
+            return _cachedFontLoader = _Load(Path, DefaultPtSize, _source.Token);
 
             static async Task<Font> _Load(string path, float ptsize, CancellationToken token)
             {
                 if (OperatingSystem.IsBrowser())
                 {
-                    using var res = await Platform.Browser.Client.GetAsync(Platform.Browser.LocationHref + path, token);
+                    using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
                     res.EnsureSuccessStatusCode();
-                    var (context, id) = await Platform.Browser.HttpResponseToIOStreamInterface(res, token);
+                    var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
 #pragma warning disable CA1416
                     return await Task.Run(() => LoadInBrowser(context, id, ptsize));
 #pragma warning restore CA1416
@@ -56,20 +55,15 @@ namespace Cider.Assets
             }
         }
 
-        public void Unload(float ptsize)
+        public void Unload()
         {
-            if (_cachedFontLoader.TryGetValue(ptsize, out var x))
-            {
-                x.source.Cancel();
-                x.source.Dispose();
-                x.task.ContinueWith(task =>
-                {
-                    task.EnsureSuccess();
-                    task.Result.Dispose();
-                });
-                _cachedFontLoader.Remove(ptsize);
-            }
+            _source.Cancel();
+            _source.Dispose();
+            _source = new();
+            DisposableHelpers.DisposeAndSetNull(ref _cachedFontLoader);
         }
+
+        public override FontAsset GetThis() => this;
     }
 
     public class Font : IDisposable
@@ -91,6 +85,12 @@ namespace Cider.Assets
             using var unmanaged = path.ToUnmanagedUtf8();
             _font = SDLHelpers.ThrowIfPtrIsNull(TTF_OpenFont(unmanaged.Pointer, ptsize));
         }
+
+        public FontVariant CreateVariant(float fontSize = FontAsset.DefaultPtSize, FontStyleFlags fontStyle = FontStyleFlags.Normal) => new(this)
+        {
+            FontSize = fontSize,
+            FontStyle = fontStyle
+        };
 
         internal unsafe Font(SDL_IOStream* stream, float ptsize)
         {
@@ -141,9 +141,13 @@ namespace Cider.Assets
                 unsafe
                 {
                     TTF_CloseFont(_font);
+                    GetPointer(this) = null;
                 }
                 disposedValue = true;
             }
+
+            [UnsafeAccessor(UnsafeAccessorKind.Field, Name = nameof(_font))]
+            extern static unsafe ref TTF_Font* GetPointer(Font @this);
         }
 
         ~Font()

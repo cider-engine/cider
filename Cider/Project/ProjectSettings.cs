@@ -1,3 +1,4 @@
+using Cider.Attributes;
 using Cider.Components;
 using System;
 using System.Drawing;
@@ -6,16 +7,23 @@ namespace Cider.Project
 {
     public class ProjectSettings
     {
-        public ApplicationSettings Application { get; init; } = new();
-    }
+        const string Application = nameof(Application);
 
-    public class ApplicationSettings
-    {
-        public RunSettings Run { get; init; } = new();
-    }
-
-    public class RunSettings
-    {
+        [SettingGroup(Application)]
         public Scene MainScene { get; init; }
+
+        const string Display = nameof(Display);
+
+        [SettingGroup(Display)]
+        public string MainWindowTitle { get; init; } = string.Empty;
+
+        [SettingGroup(Display)]
+        public WindowFlags MainWindowFlags { get; init; }
+
+        [SettingGroup(Display)]
+        public Size MainWindowSize { get; init; }
+
+        [SettingGroup(Display)]
+        public Color BackgroundColor { get; init; } = Color.Black;
     }
 }

@@ -26,6 +26,8 @@ namespace Cider.Components
             Gravity = new(0, 0)
         };
 
+        public event Action<Scene> FrameEndedOnce;
+
         internal void EnqueueBodyToAdd2D(nkast.Aether.Physics2D.Dynamics.Body body)
         {
             BodiesToAdd2D.Add(body);
@@ -34,6 +36,12 @@ namespace Cider.Components
         internal void EnqueueBodyToRemove2D(nkast.Aether.Physics2D.Dynamics.Body body)
         {
             BodiesToRemove2D.Add(body);
+        }
+
+        internal void InvokeFrameEndedOnce()
+        {
+            FrameEndedOnce?.Invoke(this);
+            FrameEndedOnce = null;
         }
     }
 }

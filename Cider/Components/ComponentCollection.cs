@@ -1,3 +1,4 @@
+using Cider.Collections;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -27,7 +28,7 @@ namespace Cider.Components
             set => _list.Capacity = value;
         }
 
-        public new List<Component>.Enumerator GetEnumerator() => _list.GetEnumerator();
+        public new CollectionCopyEnumerator<Component> GetEnumerator() => new(this);
 
         public void AddRange(params ReadOnlySpan<Component> components)
         {

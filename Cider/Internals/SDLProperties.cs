@@ -1,6 +1,7 @@
 using Cider.Extensions;
 using SDL;
 using System;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.Marshalling;
 
 namespace Cider.Internals
@@ -128,8 +129,12 @@ namespace Cider.Internals
                 }
 
                 SDL3.SDL_DestroyProperties(id);
+                GetPointer(this) = default;
                 disposedValue = true;
             }
+
+            [UnsafeAccessor(UnsafeAccessorKind.Field, Name = nameof(id))]
+            static extern ref SDL_PropertiesID GetPointer(SDLProperties @this);
         }
 
         ~SDLProperties()

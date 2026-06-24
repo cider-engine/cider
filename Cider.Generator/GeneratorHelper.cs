@@ -28,9 +28,11 @@ namespace Cider.Generator
 
         public static string GetFullMetadataName(this ISymbol symbol) => symbol.ToDisplayString(formatMetadata);
 
+        public const string DefaultNamespaceUri = "https://github.com/cider-engine";
+        public const string CommandNamespaceUri = "https://github.com/cider-engine/command";
 
-        public static readonly XNamespace DefaultNamespace = "https://github.com/cider-engine";
-        public static readonly XNamespace CommandNamespace = "https://github.com/cider-engine/command";
+        public static readonly XNamespace DefaultNamespace = DefaultNamespaceUri;
+        public static readonly XNamespace CommandNamespace = CommandNamespaceUri;
 
         public static readonly XName DefaultWithChildren = DefaultNamespace + "Children";
 
@@ -43,7 +45,7 @@ namespace Cider.Generator
         {
             if (writer is null) return;
 
-            var msg = (message ?? string.Empty).Replace("\r", " ").Replace("\n", " ").Trim();
+            var msg = (message ?? string.Empty).Replace('\r', ' ').Replace('\n', ' ').Trim();
             if (string.IsNullOrWhiteSpace(msg))
             {
                 msg = "An error occurred in Cider Generator.";
@@ -125,9 +127,19 @@ namespace Cider.Generator
 
                                     case SpecialType.System_String:
                                         writer.Write(child.Name.LocalName);
-                                        writer.Write(" = \"");
-                                        writer.Write(child.Value);
-                                        writer.WriteLine("\",");
+                                        if (child.Elements().SingleOrDefault() is XElement { Name: { NamespaceName: CommandNamespaceUri, LocalName: "Static" } } x)
+                                        {
+                                            writer.Write(" = global::");
+                                            writer.Write(x.Value);
+                                            writer.WriteLine(',');
+                                        }
+
+                                        else
+                                        {
+                                            writer.Write(" = @\"");
+                                            writer.Write(child.Value);
+                                            writer.WriteLine("\",");
+                                        }
                                         break;
 
                                     case SpecialType.System_Char:
@@ -144,20 +156,38 @@ namespace Cider.Generator
                                         {
                                             case TypeKind.Enum:
                                                 writer.Write(child.Name.LocalName);
-                                                writer.Write(" = global::");
-                                                writer.Write(memberType.GetFullMetadataName());
-                                                writer.Write('.');
-                                                writer.Write(child.Value);
+                                                if (child.Elements().ToArray() is XElement[] { Length: > 1 } array)
+                                                {
+                                                    writer.Write(" = global::");
+                                                    writer.Write(memberType.GetFullMetadataName());
+                                                    writer.Write('.');
+                                                    writer.Write(array[0].Value);
+                                                    foreach (var item in array.AsSpan(1))
+                                                    {
+                                                        writer.Write(" | global::");
+                                                        writer.Write(memberType.GetFullMetadataName());
+                                                        writer.Write('.');
+                                                        writer.Write(item.Value);
+                                                    }
+                                                }
+
+                                                else
+                                                {
+                                                    writer.Write(" = global::");
+                                                    writer.Write(memberType.GetFullMetadataName());
+                                                    writer.Write('.');
+                                                    writer.Write(child.Value);
+                                                }
                                                 writer.WriteLine(',');
                                                 break;
 
                                             case TypeKind.Array:
                                                 writer.Write(child.Name.LocalName);
-                                                writer.WriteLine(" = {([");
+                                                writer.WriteLine(" = ([");
                                                 writer.Indent++;
                                                 ProcessElement(child, mappings, writer, namedFields, compilation, false);
                                                 writer.Indent--;
-                                                writer.WriteLine("])},");
+                                                writer.WriteLine("]),");
                                                 break;
 
                                             default:

@@ -48,5 +48,12 @@ namespace Cider.Internals
                 throw new SDLException(SDL3.SDL_GetError());
             return number;
         }
+
+        public static T ThrowIfZero<T>(T number) where T : INumber<T>
+        {
+            if (T.IsZero(number))
+                throw new SDLException(SDL3.SDL_GetError());
+            return number;
+        }
     }
 }

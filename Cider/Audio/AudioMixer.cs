@@ -86,9 +86,13 @@ namespace Cider.Audio
                 unsafe
                 {
                     MIX_DestroyMixer(_mixer);
+                    GetPointer(this) = null;
                 }
                 disposedValue = true;
             }
+
+            [UnsafeAccessor(UnsafeAccessorKind.Field, Name = nameof(_mixer))]
+            static extern unsafe ref MIX_Mixer* GetPointer(AudioMixer @this);
         }
 
         ~AudioMixer()
@@ -235,9 +239,13 @@ namespace Cider.Audio
                 unsafe
                 {
                     MIX_DestroyTrack(_track);
+                    GetPointer(this) = null;
                 }
                 disposedValue = true;
             }
+
+            [UnsafeAccessor(UnsafeAccessorKind.Field, Name = nameof(_track))]
+            static extern unsafe ref MIX_Track* GetPointer(AudioTrack @this);
         }
 
         ~AudioTrack()

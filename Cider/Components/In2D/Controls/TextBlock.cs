@@ -19,29 +19,26 @@ namespace Cider.Components.In2D.Controls
     {
 #nullable enable
         private Texture? _cachedTexture = null;
-        private Task<Font>? _underlyingFont = null;
+        private FontVariant? _fontVariant = null;
+        private Text? _text = null;
+
         public FontAsset? Font
         {
             get;
             set
             {
+                if (field == value) return;
+
                 DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
-                DisposableHelpers.DisposeAndSetNull(ref _underlyingFont);
+                DisposableHelpers.DisposeAndSetNull(ref _fontVariant);
+                DisposableHelpers.DisposeAndSetNull(ref _text);
+
                 field = value;
-                if (value is not null && Game.IsInitialized)
-                {
-                    _underlyingFont = value.Load(FontSize);
-                    _underlyingFont.ContinueWith(x =>
-                    {
-                        x.EnsureSuccess();
-                        if (CurrentWindow is not null)
-                        {
-                            var font = x.Result;
-                            using var surface = font.RenderShaded(Text, Foreground, Background);
-                            _cachedTexture = new(CurrentWindow.Renderer, surface);
-                        }
-                    });
-                }
+
+                Font?.Load()
+                    .ContinueWith(x => SetFontProperties(_fontVariant = x.Result.CreateVariant()),
+                        TaskScheduler.FromCurrentSynchronizationContext())
+                    .EnsureToBeSuccessful();
             }
         }
 #nullable disable
@@ -57,7 +54,13 @@ namespace Cider.Components.In2D.Controls
         } = 64;
 
         [NotNull]
-        public string Text { get; set => field = value ?? throw new NullReferenceException(); } = string.Empty;
+        public string Text { get;
+            set
+            {
+                field = value ?? throw new NullReferenceException();
+                DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+            }
+        } = string.Empty;
 
         /// <summary>
         /// <see cref="Text"/>属性的别名
@@ -70,34 +73,34 @@ namespace Cider.Components.In2D.Controls
 
         public Color Background { get; set; } = Color.Transparent;
 
+        void SetFontProperties(FontVariant font)
+        {
+            font.FontSize = FontSize;
+        }
+
         protected override void OnWindowChanged(Window oldWindow, Window newWindow)
         {
             DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
-            if (newWindow is not null)
-            {
-                _underlyingFont ??= Font?.Load(FontSize);
-                _underlyingFont?.ContinueWith(x =>
-                {
-                    x.EnsureSuccess();
-                    var font = x.Result;
-                    using var surface = font.RenderShaded(Text, Foreground, Background);
-                    _cachedTexture = new(newWindow.Renderer, surface);
-                });
-            }
+            //DisposableHelpers.DisposeAndSetNull(ref _fontVariant);
+            DisposableHelpers.DisposeAndSetNull(ref _text);
         }
 
         public bool TryMeasureSize(out float unscaledWidth, out float unscaledHeight)
         {
-            if (Font is null || _underlyingFont?.IsCompletedSuccessfully != true)
+            if (_text is Text text)
+            {
+                text.Measure(out int width, out int height);
+                unscaledWidth = width;
+                unscaledHeight = height;
+                return true;
+            }
+
+            else
             {
                 unscaledWidth = 0;
                 unscaledHeight = 0;
                 return false;
             }
-            var (width, height) = _underlyingFont.Result.MeasureString(Text);
-            unscaledWidth = width;
-            unscaledHeight = height;
-            return true;
         }
 
         protected override bool HitTest(HitTestResult result)
@@ -108,10 +111,33 @@ namespace Cider.Components.In2D.Controls
 
         protected override void OnRender(RenderContext context)
         {
-            if (_cachedTexture is null) return;
+            if (Font is null) return;
+
+            if (_cachedTexture is null)
+            {
+                if (_fontVariant is null) return;
+
+                Text text;
+
+                if (_text is null)
+                    text = _text = new Text(context.Renderer.TextEngine.Value, _fontVariant, Text);
+
+                else
+                {
+                    text = _text;
+                    text.SetContent(Text);
+                }
+
+                text.Color = Foreground;
+
+                text.Measure(out int width, out int height);
+                _cachedTexture = new(context.Renderer, width, height, TextureAccess.Target);
+
+                using (context.PushTarget(_cachedTexture))
+                    text.Render(0, 0);
+            }
 
             var transform = GlobalTransform;
-            if (Font is null) return;
             //context.FillRectangle(transform.Position, measuredWidth, measuredHeight, transform.RotationInDegrees, Background, transform.Scale);
             context.RenderTexture(_cachedTexture, transform.Position, null, transform.RotationInDegrees, transform.Scale, Vector2.Zero, FlipMode.None);
         }

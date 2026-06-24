@@ -5,6 +5,7 @@ using Cider.Internals;
 using SDL;
 using System;
 using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 namespace Cider.Assets
 {
     [SupportedAssetTypes(".wav", ".mp3", ".ogg", ".flac")]
-    public class AudioAsset : Asset
+    public class AudioAsset : Asset<AudioAsset>
     {
 #nullable enable
         private Task<Audio>? _cachedAudioLoader = null;
@@ -31,11 +32,11 @@ namespace Cider.Assets
             {
                 if (OperatingSystem.IsBrowser())
                 {
-                    using var res = await Platform.Browser.Client.GetAsync(Platform.Browser.LocationHref + path, token);
+                    using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
 
                     res.EnsureSuccessStatusCode();
 
-                    var (context, id) = await Platform.Browser.HttpResponseToIOStreamInterface(res, token);
+                    var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
 #pragma warning disable CA1416
                     return await Task.Run(() => LoadInBrowser(context, id, mixer));
 #pragma warning restore CA1416
@@ -59,6 +60,8 @@ namespace Cider.Assets
             _source = new();
             DisposableHelpers.DisposeAndSetNull(ref _cachedAudioLoader);
         }
+
+        public override AudioAsset GetThis() => this;
     }
 
     public class Audio : IDisposable
@@ -78,12 +81,12 @@ namespace Cider.Assets
         public unsafe Audio(string path, AudioMixer? mixer = null)
         {
             using var unmanaged = path.ToUnmanagedUtf8();
-            _audio = SDLHelpers.ThrowIfPtrIsNull(SDL3_mixer.MIX_LoadAudio(mixer is AudioMixer x ? x.Pointer : null, unmanaged.Pointer, false));
+            _audio = SDLHelpers.ThrowIfPtrIsNull(SDL3_mixer.MIX_LoadAudio(mixer?.Pointer, unmanaged.Pointer, false));
         }
 
         internal unsafe Audio(SDL_IOStream* stream, AudioMixer? mixer = null)
         {
-            _audio = SDLHelpers.ThrowIfPtrIsNull(SDL3_mixer.MIX_LoadAudio_IO(mixer is AudioMixer x ? x.Pointer : null, stream, false, closeio: true));
+            _audio = SDLHelpers.ThrowIfPtrIsNull(SDL3_mixer.MIX_LoadAudio_IO(mixer?.Pointer , stream, false, closeio: true));
         }
 
         public unsafe long FramesToMilliseconds(long frames)
@@ -109,9 +112,13 @@ namespace Cider.Assets
                 unsafe
                 {
                     SDL3_mixer.MIX_DestroyAudio(_audio);
+                    GetPointer(this) = null;
                 }
                 disposedValue = true;
             }
+
+            [UnsafeAccessor(UnsafeAccessorKind.Field, Name = nameof(_audio))]
+            extern static unsafe ref MIX_Audio* GetPointer(Audio @this);
         }
 
         ~Audio()

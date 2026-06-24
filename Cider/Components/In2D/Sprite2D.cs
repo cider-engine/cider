@@ -15,19 +15,17 @@ namespace Cider.Components.In2D
     {
 #nullable enable
         private RectangleF? _cachedRenderRegion = null;
-        private Task<Texture>? _underlyingTexture = null;
 
         public TextureAsset? Texture
         {
             get;
             set
             {
-                _underlyingTexture = null;
                 field = value;
                 if (value is null) _cachedRenderRegion = null;
                 else if (CurrentWindow is Window window)
                 {
-                    _underlyingTexture = value.LoadTexture(window.Renderer).EnsureToBeSuccessful();
+                    value.LoadTexture(window.Renderer).EnsureToBeSuccessful();
                 }
             }
         }
@@ -85,15 +83,13 @@ namespace Cider.Components.In2D
         protected override void OnWindowChanged(Window oldWindow, Window newWindow)
         {
             if (Texture is null) return;
-            if (oldWindow is not null)
-            {
-                DisposableHelpers.DisposeAndSetNull(ref _underlyingTexture);
-                Texture.UnloadTexture(oldWindow.Renderer);
-            }
+            //if (oldWindow is not null)
+            //{
+            //    Texture.UnloadTexture(oldWindow.Renderer);
+            //}
             if (newWindow is not null)
             {
-                _underlyingTexture = Texture.LoadTexture(newWindow.Renderer);
-                _underlyingTexture.ContinueWith(x =>
+                Texture.LoadTexture(newWindow.Renderer).ContinueWith(x =>
                 {
                     x.EnsureSuccess();
                     UpdateRenderRegion();
@@ -103,36 +99,39 @@ namespace Cider.Components.In2D
 
         private void UpdateRenderRegion()
         {
-            if (CurrentWindow is null || Texture is null || _underlyingTexture?.IsCompletedSuccessfully != true) return;
+            if (CurrentWindow is null || Texture is null) return;
 
-            var texture = _underlyingTexture.Result;
-
-            if (HorizontalFrameCount == 1 && VerticalFrameCount == 1)
+            if (Texture?.LoadTexture(CurrentWindow?.Renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
             {
-                _cachedRenderRegion = RegionEnabled ? RegionRectangle : new(0, 0, texture.Width, texture.Height);
-                return;
+                var texture = task.Result;
+
+                if (HorizontalFrameCount == 1 && VerticalFrameCount == 1)
+                {
+                    _cachedRenderRegion = RegionEnabled ? RegionRectangle : new(0, 0, texture.Width, texture.Height);
+                    return;
+                }
+
+                var frameWidth = (float)texture.Width / HorizontalFrameCount;
+                var frameHeight = (float)texture.Height / VerticalFrameCount;
+
+                var column = FrameIndex % HorizontalFrameCount;
+                var row = FrameIndex / HorizontalFrameCount;
+
+                var x = frameWidth * column;
+                var y = frameHeight * row;
+
+                if (RegionEnabled) _cachedRenderRegion = new RectangleF(
+                    RegionRectangle.X + x,
+                    RegionRectangle.Y + y,
+                    RegionRectangle.Width,
+                    RegionRectangle.Height);
+
+                else _cachedRenderRegion = new RectangleF(
+                    x,
+                    y,
+                    frameWidth,
+                    frameHeight);
             }
-
-            var frameWidth = (float)texture.Width / HorizontalFrameCount;
-            var frameHeight = (float)texture.Height / VerticalFrameCount;
-
-            var column = FrameIndex % HorizontalFrameCount;
-            var row = FrameIndex / HorizontalFrameCount;
-
-            var x = frameWidth * column;
-            var y = frameHeight * row;
-
-            if (RegionEnabled) _cachedRenderRegion = new RectangleF(
-                RegionRectangle.X + x,
-                RegionRectangle.Y + y,
-                RegionRectangle.Width,
-                RegionRectangle.Height);
-
-            else _cachedRenderRegion = new RectangleF(
-                x,
-                y,
-                frameWidth,
-                frameHeight);
         }
 
         protected override bool HitTest(HitTestResult result)
@@ -147,30 +146,32 @@ namespace Cider.Components.In2D
 
         protected override void OnRender(RenderContext context)
         {
-            if (Texture is null || _underlyingTexture?.IsCompletedSuccessfully != true) return;
+            if (Texture is null) return;
 
-            var transform = GlobalTransform;
-            var rect = _cachedRenderRegion.Value;
+            if (Texture?.LoadTexture(context.Renderer) is Task<Texture> { IsCompletedSuccessfully: true } task && _cachedRenderRegion is RectangleF rect)
+            {
+                var transform = GlobalTransform;
 
-            context.RenderTexture(
-                texture: _underlyingTexture.Result,
+                context.RenderTexture(
+                    texture: task.Result,
 
-                position: IsCentered ? transform.Position - new Vector2(rect.Width / 2f, rect.Height / 2f) : transform.Position,
+                    position: IsCentered ? transform.Position - new Vector2(rect.Width / 2f, rect.Height / 2f) : transform.Position,
 
-                sourceRectangle: rect,
+                    sourceRectangle: rect,
 
-                rotationInDegrees: transform.RotationInDegrees,
+                    rotationInDegrees: transform.RotationInDegrees,
 
-                scale: transform.Scale,
+                    scale: transform.Scale,
 
-                origin: IsCentered ? new(rect.Width / 2f, rect.Height / 2f) : Vector2.Zero,
+                    origin: IsCentered ? new(rect.Width / 2f, rect.Height / 2f) : Vector2.Zero,
 
-                flipMode: (FlipHorizontally
-                    ? FlipMode.FlipHorizontally
-                    : FlipMode.None) |
-                (FlipVertically
-                    ? FlipMode.FlipVertically
-                    : FlipMode.None));
+                    flipMode: (FlipHorizontally
+                        ? FlipMode.FlipHorizontally
+                        : FlipMode.None) |
+                    (FlipVertically
+                        ? FlipMode.FlipVertically
+                        : FlipMode.None));
+            }
         }
     }
 }

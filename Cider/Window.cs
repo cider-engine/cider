@@ -7,6 +7,7 @@ using SDL;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 using static SDL.SDL3;
 
 #if OVERRIDE_WASM
@@ -72,7 +73,7 @@ namespace Cider
                     value.OnLoadedDispatcher(value); // 如果游戏没有初始化，则在Initialize里调用
                 }
             }
-        } = new();
+        } = new(); // 初始空场景不调用生命周期函数
 
         public Point Position
         {
@@ -130,25 +131,6 @@ namespace Cider
         [global::System.Runtime.InteropServices.DllImport("SDL3", CallingConvention = global::System.Runtime.InteropServices.CallingConvention.Cdecl, ExactSpelling = true)]
         private unsafe static extern SDL_Window* SDL_CreateWindow(byte* title, int w, int h, ulong flags);
 #endif
-        private unsafe Window(ReadOnlySpan<byte> zeroEndedUtf8Title, int width, int height, WindowFlags flags)
-        {
-            if (OperatingSystem.IsBrowser() && AllWindows.Count > 0) throw new PlatformNotSupportedException("browser doesn't support multiple windows.");
-
-            SDLHelpers.EnsureOnMainThread();
-            fixed (byte* title = zeroEndedUtf8Title)
-                _window = SDLHelpers.ThrowIfPtrIsNull(SDL_CreateWindow(title, width, height, (SpecificWindowFlags)flags));
-
-            WindowId = new((uint)SDL_GetWindowID(_window));
-
-            Renderer = new(_window);
-
-            Scene.Window = this;
-
-            SDLHelpers.ThrowIfFalse(SDL_SetRenderVSync(Renderer.Pointer, 1));
-
-            AllWindows.EnqueueAdd(WindowId, this);
-        }
-
         public unsafe Window(string title, int width, int height, WindowFlags flags)
         {
             if (OperatingSystem.IsBrowser() && AllWindows.Count > 0) throw new PlatformNotSupportedException("browser doesn't support multiple windows.");
@@ -163,7 +145,7 @@ namespace Cider
 
             Scene.Window = this;
 
-            SDLHelpers.ThrowIfFalse(SDL_SetRenderVSync(Renderer.Pointer, 1));
+            SDLHelpers.ThrowIfFalse(SDL_SetRenderVSync(Renderer.Pointer, 1)); // 默认强制垂直同步
 
             AllWindows.EnqueueAdd(WindowId, this);
         }
@@ -235,6 +217,49 @@ namespace Cider
             }
         }
 
+        public void SetTextInputArea(Rectangle? target, int cursorOffsetToTargetX = 0)
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+            SDLHelpers.EnsureOnMainThread();
+            unsafe
+            {
+                if (target is Rectangle x)
+                {
+                    SDL_Rect rect = new()
+                    {
+                        x = x.X,
+                        y = x.Y,
+                        w = x.Width,
+                        h = x.Height
+                    };
+
+                    SDLHelpers.ThrowIfFalse(SDL_SetTextInputArea(_window, &rect, cursorOffsetToTargetX));
+                }
+
+                else SDLHelpers.ThrowIfFalse(SDL_SetTextInputArea(_window, null, cursorOffsetToTargetX));
+            }
+        }
+#nullable enable
+        public void StartTextInput(TextInputOptions? options = null)
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+            SDLHelpers.EnsureOnMainThread();
+            unsafe
+            {
+                SDLHelpers.ThrowIfFalse(options is null ? SDL_StartTextInput(_window) : SDL_StartTextInputWithProperties(_window, options.Pointer));
+            }
+        }
+
+        public void StopTextInput()
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+            SDLHelpers.EnsureOnMainThread();
+            unsafe
+            {
+                SDLHelpers.ThrowIfFalse(SDL_StopTextInput(_window));
+            }
+        }
+
 
         public event EventHandler<Window, WindowCloseRequestedEventArgs> CloseRequested;
 
@@ -277,6 +302,7 @@ namespace Cider
                         unsafe
                         {
                             SDL_DestroyWindow(_window);
+                            GetPointer(this) = null;
                         }
                     });
                 }
@@ -284,10 +310,14 @@ namespace Cider
                 else unsafe
                 {
                     SDL_DestroyWindow(_window);
+                    GetPointer(this) = null;
                 }
 
                 disposedValue = true;
             }
+
+            [UnsafeAccessor(UnsafeAccessorKind.Field, Name = nameof(_window))]
+            static extern unsafe ref SDL_Window* GetPointer(Window @this);
         }
 
         ~Window()
@@ -434,5 +464,27 @@ namespace Cider
         /// 窗口不应可获得焦点
         /// </summary>
         NotFocusable = 0b1000_0000_0000_0000_0000_0000_0000_0000,
+    }
+
+    public class TextInputOptions : SDLProperties
+    {
+        public TextInputType Type
+        {
+            get => (TextInputType)GetNumberProperty(SDL_PROP_TEXTINPUT_TYPE_NUMBER);
+            set => SetNumberProperty(SDL_PROP_TEXTINPUT_TYPE_NUMBER, (long)value);
+        }
+    }
+
+    public enum TextInputType
+    {
+        Text = SDL_TextInputType.SDL_TEXTINPUT_TYPE_TEXT,
+        TextName = SDL_TextInputType.SDL_TEXTINPUT_TYPE_TEXT_NAME,
+        TextEmail = SDL_TextInputType.SDL_TEXTINPUT_TYPE_TEXT_EMAIL,
+        TextUsername = SDL_TextInputType.SDL_TEXTINPUT_TYPE_TEXT_USERNAME,
+        TextPasswordHidden = SDL_TextInputType.SDL_TEXTINPUT_TYPE_TEXT_PASSWORD_HIDDEN,
+        TextPasswordVisible = SDL_TextInputType.SDL_TEXTINPUT_TYPE_TEXT_PASSWORD_VISIBLE,
+        Number = SDL_TextInputType.SDL_TEXTINPUT_TYPE_NUMBER,
+        NumberPasswordHidden = SDL_TextInputType.SDL_TEXTINPUT_TYPE_NUMBER_PASSWORD_HIDDEN,
+        NumberPasswordVisible = SDL_TextInputType.SDL_TEXTINPUT_TYPE_NUMBER_PASSWORD_VISIBLE
     }
 }

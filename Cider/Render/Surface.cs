@@ -3,6 +3,7 @@ using Cider.Internals;
 using SDL;
 using System;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 
 namespace Cider.Render
 {
@@ -57,9 +58,13 @@ namespace Cider.Render
                 unsafe
                 {
                     SDL3.SDL_DestroySurface(_surface);
+                    GetPointer(this) = null;
                 }
                 disposedValue = true;
             }
+
+            [UnsafeAccessor(UnsafeAccessorKind.Field, Name = nameof(_surface))]
+            static extern unsafe ref SDL_Surface* GetPointer(Surface @this);
         }
 
         ~Surface()

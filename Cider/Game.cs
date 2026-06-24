@@ -29,6 +29,12 @@ namespace Cider
 
         private long _lastTick;
 
+        public int CurrentFPS { get; private set; }
+
+        private int _frameCount;
+
+        private double _fpsAccumulator;
+
         private readonly TaskCompletionSource<Exception> _exception = new();
 
         public static Game Instance { get; private set; }
@@ -49,6 +55,8 @@ namespace Cider
         public Window MainWindow { get; private set; }
 
         public CiderSynchronizationContext CurrentSynchronizationContext { get; private set; }
+
+        public IServiceProvider Services { get; private set; }
 
         public Game(ProjectSettings settings)
         {
@@ -88,7 +96,7 @@ namespace Cider
             {
                 var e = await _exception.Task;
                 Console.Error.WriteLine(e);
-                throw new Exception("an exception was thrown.", e);
+                throw new Exception("An exception was thrown.", e);
             }
             catch (OperationCanceledException)
             {
@@ -101,6 +109,13 @@ namespace Cider
             return _exception.TrySetException(exception);
         }
 
+        public Game ConfigureServices(Func<Game, IServiceProvider> serviceProviderFactory)
+        {
+            if (Services is not null) throw new InvalidOperationException($"{nameof(Services)} has been configured.");
+            Services = serviceProviderFactory.Invoke(this);
+            return this;
+        }
+
         void Initialize()
         {
             if (ProjectSettings is null)
@@ -111,9 +126,9 @@ namespace Cider
             SynchronizationContext.SetSynchronizationContext(CurrentSynchronizationContext = new CiderSynchronizationContext());
 
 
-            MainWindow = new Window("我草泥马", 800, 600, WindowFlags.Hidden | WindowFlags.Resizable) // test
+            MainWindow = new Window(ProjectSettings.MainWindowTitle, 800, 600, ProjectSettings.MainWindowFlags)
             {
-                Scene = ProjectSettings.Application.Run.MainScene
+                Scene = ProjectSettings.MainScene
             };
 
             CurrentScene.OnGlobalTransformChangedDispatcher(EventArgs.Empty);
@@ -124,6 +139,16 @@ namespace Cider
 
         void Update(TimeContext context)
         {
+            _frameCount++;
+            _fpsAccumulator += context.DeltaTime.TotalSeconds;
+
+            if (_fpsAccumulator >= 1.0)
+            {
+                CurrentFPS = (int)Math.Round(_frameCount / _fpsAccumulator);
+                _frameCount = 0;
+                _fpsAccumulator = 0;
+            }
+
             Window.AllWindows.FlushRemove();
             foreach (var window in Window.AllWindows.Values)
             {
@@ -189,7 +214,7 @@ namespace Cider
                 SDLHelpers.ThrowIfFalse(SDL3_mixer.MIX_Init());
                 SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_Init());
                 Instance.Initialize();
-                Instance._lastTick = Environment.TickCount64;
+                Instance._lastTick = Stopwatch.GetTimestamp();
                 return SDL_AppResult.SDL_APP_CONTINUE;
             }
             catch (Exception e)
@@ -208,8 +233,8 @@ namespace Cider
                 //if (OperatingSystem.IsBrowser() && SynchronizationContext.Current is null)
                 //    SynchronizationContext.SetSynchronizationContext(Instance.CurrentSynchronizationContext);
 
-                var currentTick = Environment.TickCount64;
-                var context = new TimeContext(TimeSpan.FromMilliseconds(currentTick - Instance!._lastTick));
+                var currentTick = Stopwatch.GetTimestamp();
+                var context = new TimeContext(Stopwatch.GetElapsedTime(Instance!._lastTick, currentTick));
                 Instance!.Update(context);
                 Instance!._lastTick = currentTick;
                 return SDL_AppResult.SDL_APP_CONTINUE;
@@ -327,8 +352,8 @@ namespace Cider
         static void Quit(nint state, SDL_AppResult result)
         {
             Debug.Assert(result == SDL_AppResult.SDL_APP_SUCCESS);
-            SDL3_mixer.MIX_Quit();
             SDL3_ttf.TTF_Quit();
+            SDL3_mixer.MIX_Quit();
             Instance._exception.TrySetCanceled();
         }
     }

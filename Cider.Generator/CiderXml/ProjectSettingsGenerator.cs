@@ -57,18 +57,25 @@ namespace Cider.Generator.CiderXml
                         public static class GameHelper
                         {
                             [return: global::System.Diagnostics.CodeAnalysis.NotNull]
-                            public static global::Cider.Game NewGame() => new global::Cider.Game(new()
+                            public static global::Cider.Game NewGame()
                             {
+                                var game = new global::Cider.Game(new()
+                                {
                         """);
 
-                    writer.Indent = 2;
+                    writer.Indent = 3;
 
                     ProcessElement(root, mappingsWrapper.Value, writer, null, compilation, true);
 
                     writer.Indent = 0;
 
                     writer.Write("""
-                            });
+                                });
+
+                                global::Cider.Assets.AssetManager.TriggerInit();
+
+                                return game;
+                            }
                         }
                         """);
 

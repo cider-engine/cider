@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-      <TargetFrameworks>net10.0;net10.0-android</TargetFrameworks>
+      <TargetFrameworks>net11.0;net11.0-android</TargetFrameworks>
       <PackageVersion>0.0.3-alpha</PackageVersion>
       <Authors>cider-engine</Authors>
       <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -9,9 +9,12 @@
   <ItemGroup>
     <PackageReference Include="Aether.Physics2D" Version="2.2.0" />
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
-    <PackageReference Include="ppy.SDL3-CS" Version="2026.302.0" />
-    <PackageReference Include="ppy.SDL3_image-CS" Version="2026.302.0" />
-    <PackageReference Include="ppy.SDL3_mixer-CS" Version="2026.302.0" />
-    <PackageReference Include="ppy.SDL3_ttf-CS" Version="2026.302.0" />
+    <PackageReference Include="ppy.SDL3-CS" Version="2026.623.0" />
+    <PackageReference Include="ppy.SDL3_image-CS" Version="2026.520.0" />
+    <PackageReference Include="ppy.SDL3_mixer-CS" Version="2026.623.0" />
+    <PackageReference Include="ppy.SDL3_ttf-CS" Version="2026.623.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\external\DotTiled\src\DotTiled\DotTiled.csproj" />
   </ItemGroup>
 </Project>

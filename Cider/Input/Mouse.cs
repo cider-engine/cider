@@ -1,6 +1,8 @@
+using Cider.Extensions;
 using SDL;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Text;
 
@@ -15,6 +17,12 @@ namespace Cider.Input
                 fixed (float* _x = &x, _y = &y)
                     return (MouseButtonFlags)SDL3.SDL_GetMouseState(_x, _y);
             }
+        }
+
+#nullable enable
+        public static unsafe bool TryGetFocusedWindow([NotNullWhen(true)] out Window? window)
+        {
+            return SDL3.SDL_GetWindowID(SDL3.SDL_GetMouseFocus()).TryGetWindow(out window);
         }
     }
 

@@ -73,6 +73,12 @@ namespace Cider.Generator
                         Compilation compilation,
                         bool isSettingProperty)
         {
+            static ISymbol? SearchMember(ITypeSymbol? symbol, string name)
+            {
+                if (symbol is null) return null;
+                return symbol.GetMembers(name).SingleOrDefault() ?? SearchMember(symbol.BaseType, name);
+            }
+
             if (isSettingProperty)
             {
                 if (mappings.TryGetValue(element.Name.NamespaceName, out var dict))
@@ -93,12 +99,6 @@ namespace Cider.Generator
                             {
                                 writer.WriteErrorMessage($"Member (property or field) {child.Name.LocalName} could not be found in type {type.Name}");
                                 return;
-                            }
-
-                            static ISymbol? SearchMember(INamedTypeSymbol? symbol, string name)
-                            {
-                                if (symbol is null) return null;
-                                return symbol.GetMembers(name).SingleOrDefault() ?? SearchMember(symbol.BaseType, name);
                             }
 
                             var memberType = (member as IPropertySymbol)?.Type ?? (member as IFieldSymbol)?.Type;
@@ -149,7 +149,7 @@ namespace Cider.Generator
                                         writer.WriteLine("',");
                                         break;
 
-                                    
+
 
                                     default:
                                         switch (memberType.TypeKind)
@@ -206,7 +206,27 @@ namespace Cider.Generator
                                                 {
                                                     writer.Write(child.Name.LocalName);
                                                     writer.Write(" = ");
-                                                    ProcessElement(child, mappings, writer, namedFields, compilation, false);
+                                                    if (child.HasElements)
+                                                        ProcessElement(child, mappings, writer, namedFields, compilation, false);
+
+                                                    else
+                                                    {
+                                                        if (SearchMember(memberType, child.Value) is IPropertySymbol { IsStatic: true } staticMember)
+                                                        {
+                                                            writer.Write(memberType.GetFullyQualifiedName());
+                                                            writer.Write('.');
+                                                            writer.Write(staticMember.Name);
+                                                            writer.WriteLine(',');
+                                                        }
+
+                                                        else
+                                                        {
+                                                            writer.Write(memberType.GetFullyQualifiedName());
+                                                            writer.Write(".Parse(\"");
+                                                            writer.Write(child.Value);
+                                                            writer.WriteLine("\"),");
+                                                        }
+                                                    }
                                                     break;
                                                 }
                                         }
@@ -218,17 +238,19 @@ namespace Cider.Generator
                 }
             }
 
-            else foreach (var child in element.Elements())
+            else
+                foreach (var child in element.Elements())
                 {
                     if (mappings.TryGetValue(child.Name.NamespaceName, out var dict))
                     {
-                        if (dict.TryGetValue(child.Name.LocalName, out var fullName))
+                        string? fullName = null;
+                        if (dict.TryGetValue(child.Name.LocalName, out fullName))
                         {
                             if (child.Attribute(CommandWithClass) is XAttribute attr1)
                             {
                                 if (child.Attribute(CommandWithName) is XAttribute attr2)
                                 {
-                                    writer.WriteLine($"(this.{attr2.Value} = (global::{fullName})new global::{attr1.Value}()");
+                                    writer.WriteLine($"(this.{attr2.Value} = new global::{attr1.Value}()");
                                     namedFields?.Add($"internal global::{attr1.Value} {attr2.Value};");
                                 }
 
@@ -249,6 +271,9 @@ namespace Cider.Generator
                         writer.WriteLine('{');
                         writer.Indent++;
 
+                        INamedTypeSymbol? containingType = null;
+                        if (fullName is not null) containingType = compilation.GetTypeByMetadataName(fullName);
+
                         foreach (var attr in child.Attributes())
                         {
                             if (attr.Name.Namespace == CommandNamespace) continue;
@@ -267,6 +292,25 @@ namespace Cider.Generator
                                 writer.Write(" = global::Cider.Assets.AssetManager.");
                                 writer.Write(value.Substring("asset://".Length));
                                 writer.WriteLine(',');
+                            }
+
+                            else if (containingType is not null)
+                            {
+                                var member = SearchMember(containingType, attr.Name.LocalName);
+
+                                var memberType = (member as IPropertySymbol)?.Type ?? (member as IFieldSymbol)?.Type;
+
+                                if (memberType is not null)
+                                {
+                                    writer.Write(attr.Name.LocalName);
+                                    writer.Write(" = ");
+                                    writer.Write(memberType.GetFullyQualifiedName());
+                                    writer.Write(".Parse(\"");
+                                    writer.Write(value);
+                                    writer.WriteLine("\"),");
+                                }
+
+                                else writer.WriteErrorMessage($"Current containingType: {containingType}; member: {member}");
                             }
 
                             else
@@ -330,7 +374,7 @@ namespace Cider.Generator
                                 break;
 
                             default:
-                                writer.WriteErrorMessage();
+                                writer.WriteErrorMessage($"Current element: {element}, child: {child}");
                                 return;
                         }
                     }

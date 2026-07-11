@@ -1,5 +1,6 @@
 using Cider.Attributes;
 using Cider.Components;
+using Cider.Render;
 using System;
 using System.Drawing;
 
@@ -25,5 +26,11 @@ namespace Cider.Project
 
         [SettingGroup(Display)]
         public Color BackgroundColor { get; init; } = Color.Black;
+
+        [SettingGroup(Display)]
+        public Size LogicalSize { get; init; }
+
+        [SettingGroup(Display)]
+        public LogicalPresentationMode LogicalPresentationMode { get; init; }
     }
 }

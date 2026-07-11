@@ -72,7 +72,7 @@ namespace Cider.Converters
             }
             else
             {
-                throw new FormatException("Only hex color format is supported.");
+                return Color.FromName(converter._value);
             }
         }
     }

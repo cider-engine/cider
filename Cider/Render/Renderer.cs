@@ -67,6 +67,40 @@ namespace Cider.Render
             }
         }
 
+        public Size LogicalSize
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                SDLHelpers.EnsureOnMainThread();
+
+                unsafe
+                {
+                    int width, height;
+                    SDLHelpers.ThrowIfFalse(SDL_GetRenderLogicalPresentation(_renderer, &width, &height, null));
+
+                    return new(width, height);
+                }
+            }
+        }
+
+        public LogicalPresentationMode LogicalPresentationMode
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                SDLHelpers.EnsureOnMainThread();
+
+                unsafe
+                {
+                    SDL_RendererLogicalPresentation mode;
+                    SDLHelpers.ThrowIfFalse(SDL_GetRenderLogicalPresentation(_renderer, null, null, &mode));
+
+                    return (LogicalPresentationMode)mode;
+                }
+            }
+        }
+
         internal unsafe Renderer(Window window) : this(window.Pointer)
         {}
 
@@ -90,6 +124,12 @@ namespace Cider.Render
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
             SDLHelpers.ThrowIfFalse(SDL_SetRenderTarget(_renderer, texture?.Pointer));
+        }
+
+        public unsafe void SetLogicalPresentation(Size size, LogicalPresentationMode mode)
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+            SDLHelpers.ThrowIfFalse(SDL_SetRenderLogicalPresentation(_renderer, size.Width, size.Height, (SDL_RendererLogicalPresentation)mode));
         }
 
         public unsafe void DrawLine(Vector2 point1, Vector2 point2)

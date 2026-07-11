@@ -14,11 +14,26 @@ namespace Cider.Render
     [Flags]
     public enum FontStyleFlags : uint
     {
-        Normal,
-        Bold = 0b1,
-        Italic = 0b10,
-        Underline = 0b100,
-        StrikeThrough = 0b1000
+        Normal = TTF_FontStyleFlags.TTF_STYLE_NORMAL,
+        Bold = TTF_FontStyleFlags.TTF_STYLE_BOLD,
+        Italic = TTF_FontStyleFlags.TTF_STYLE_ITALIC,
+        Underline = TTF_FontStyleFlags.TTF_STYLE_UNDERLINE,
+        StrikeThrough = TTF_FontStyleFlags.TTF_STYLE_STRIKETHROUGH
+    }
+
+    public enum FontLineJoin
+    {
+        Round = 0,
+        Bevel = 1,
+        Miter = 2,
+        MiterFixed= 3
+    }
+
+    public enum FontLineCap
+    {
+        Butt = 0,
+        Round,
+        Square
     }
 
     public class FontVariant : IDisposable
@@ -61,6 +76,27 @@ namespace Cider.Render
             }
         }
 
+        public bool IsSDFEnabled
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                unsafe
+                {
+                    return TTF_GetFontSDF(_font);
+                }
+            }
+
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                unsafe
+                {
+                    SDLHelpers.ThrowIfFalse(TTF_SetFontSDF(_font, value));
+                }
+            }
+        }
+
         public FontStyleFlags FontStyle
         {
             get
@@ -80,6 +116,100 @@ namespace Cider.Render
                     TTF_SetFontStyle(_font, (TTF_FontStyleFlags)value);
                 }
             }
+        }
+
+        public int Outline
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                unsafe
+                {
+                    return TTF_GetFontOutline(_font);
+                }
+            }
+
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                unsafe
+                {
+                    TTF_SetFontOutline(_font, value);
+                }
+            }
+        }
+
+        public unsafe FontLineJoin OutlineLineJoin
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                fixed (byte* unmanaged = TTF_PROP_FONT_OUTLINE_LINE_JOIN_NUMBER)
+                    return (FontLineJoin)SDL3.SDL_GetNumberProperty(GetProperties(), unmanaged, default);
+            }
+
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                fixed (byte* unmanaged = TTF_PROP_FONT_OUTLINE_LINE_JOIN_NUMBER)
+                    SDLHelpers.ThrowIfFalse(SDL3.SDL_SetNumberProperty(GetProperties(), unmanaged, (long)value));
+            }
+        }
+
+        public unsafe FontLineCap OutlineLineCap
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                fixed (byte* unmanaged = TTF_PROP_FONT_OUTLINE_LINE_CAP_NUMBER)
+                    return (FontLineCap)SDL3.SDL_GetNumberProperty(GetProperties(), unmanaged, default);
+            }
+
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                fixed (byte* unmanaged = TTF_PROP_FONT_OUTLINE_LINE_CAP_NUMBER)
+                    SDLHelpers.ThrowIfFalse(SDL3.SDL_SetNumberProperty(GetProperties(), unmanaged, (long)value));
+            }
+        }
+
+        public unsafe long OutlineMiterLimit
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                fixed (byte* unmanaged = TTF_PROP_FONT_OUTLINE_MITER_LIMIT_NUMBER)
+                    return SDL3.SDL_GetNumberProperty(GetProperties(), unmanaged, default);
+            }
+
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                fixed (byte* unmanaged = TTF_PROP_FONT_OUTLINE_MITER_LIMIT_NUMBER)
+                    SDLHelpers.ThrowIfFalse(SDL3.SDL_SetNumberProperty(GetProperties(), unmanaged, value));
+            }
+        }
+
+        public unsafe int CharSpacing
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                return TTF_GetFontCharSpacing(_font);
+            }
+
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                SDLHelpers.ThrowIfFalse(TTF_SetFontCharSpacing(_font, value));
+            }
+        }
+
+        unsafe SDL_PropertiesID GetProperties()
+        {
+            var properties = TTF_GetFontProperties(_font);
+            SDLHelpers.ThrowIfZero((uint)properties);
+            return properties;
         }
 
         protected virtual void Dispose(bool disposing)

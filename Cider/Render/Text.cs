@@ -103,6 +103,13 @@ namespace Cider.Render
                 SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_GetTextSize(_text, w, h));
         }
 
+        public unsafe void Update()
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+
+            SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_UpdateText(_text));
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)

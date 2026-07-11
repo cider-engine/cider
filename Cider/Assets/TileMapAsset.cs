@@ -1,10 +1,8 @@
 using Cider.Attributes;
 using DotTiled;
 using DotTiled.Serialization;
-using nkast.Aether.Physics2D.Common;
 using System;
 using System.IO;
-using System.Reflection.PortableExecutable;
 using System.Threading;
 using System.Threading.Tasks;
 

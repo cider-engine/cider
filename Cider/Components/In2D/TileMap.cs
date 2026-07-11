@@ -4,17 +4,12 @@ using Cider.Extensions;
 using Cider.Internals;
 using Cider.Render;
 using DotTiled;
-using DotTiled.Serialization.Tmj;
-using DotTiled.Serialization.Tmx;
-using nkast.Aether.Physics2D.Dynamics.Contacts;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
-using System.Xml;
 
 namespace Cider.Components.In2D
 {
@@ -155,17 +150,14 @@ namespace Cider.Components.In2D
 
             foreach (var layer in map.Layers)
             {
-                if (layer is not TileLayer tileLayer || layer.Visible is false || !tileLayer.Data.HasValue)
+                if (layer is TileLayer { Visible: true, Data: { HasValue: true, Value: var data } } tileLayer)
                 {
-                    continue;
+                    var tilesetEntries = data.Chunks is { HasValue: true, Value.Length: > 0 }
+                        ? EnumerateChunks(map, tileLayer, data, path)
+                        : EnumerateFiniteTiles(map, tileLayer, data, path);
+
+                    entries.AddRange(tilesetEntries);
                 }
-
-                var data = tileLayer.Data.Value;
-                var tilesetEntries = data.Chunks.HasValue && data.Chunks.Value.Length > 0
-                    ? EnumerateChunks(map, tileLayer, data, path)
-                    : EnumerateFiniteTiles(map, tileLayer, data, path);
-
-                entries.AddRange(tilesetEntries);
             }
 
             return entries;
@@ -174,8 +166,8 @@ namespace Cider.Components.In2D
             {
                 var width = layer.Width;
                 var height = layer.Height;
-                var globalTileIDs = data.GlobalTileIDs.HasValue ? data.GlobalTileIDs.Value : Array.Empty<uint>();
-                var flippingFlags = data.FlippingFlags.HasValue ? data.FlippingFlags.Value : Array.Empty<FlippingFlags>();
+                var globalTileIDs = data.GlobalTileIDs.HasValue ? data.GlobalTileIDs.Value : [];
+                var flippingFlags = data.FlippingFlags.HasValue ? data.FlippingFlags.Value : [];
 
                 for (var y = 0; y < height; y++)
                 {

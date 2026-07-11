@@ -85,7 +85,7 @@ namespace Cider.Components.In2D.Physics
             }
         }
 
-        protected override void OnFixedUpdate(TimeContext context)
+        private protected override void OnFixedUpdateInternal(TimeContext context)
         {
             // 从物理世界获取期望的全局位置和旋转
             var targetGlobalPosition = Body.Position.AsVector2();

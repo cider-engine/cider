@@ -52,6 +52,7 @@ namespace Cider.Generator.CiderXml
 
                     writer.WriteLine("""
                         using Cider.Extensions;
+
                         namespace Cider;
 
                         public static class GameHelper

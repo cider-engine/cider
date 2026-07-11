@@ -19,7 +19,7 @@ namespace Cider.Components.In2D.Controls
     {
 #nullable enable
         private Texture? _cachedTexture = null;
-        private FontVariant? _fontVariant = null;
+        private Task<FontVariant>? _fontVariant = null;
         private Text? _text = null;
 
         public FontAsset? Font
@@ -35,10 +35,11 @@ namespace Cider.Components.In2D.Controls
 
                 field = value;
 
-                Font?.Load()
-                    .ContinueWith(x => SetFontProperties(_fontVariant = x.Result.CreateVariant()),
-                        TaskScheduler.FromCurrentSynchronizationContext())
-                    .EnsureToBeSuccessful();
+                if (Game.IsInitialized)
+                    _fontVariant = Font?.Load()
+                        .ContinueWith(x => SetFontProperties(x.Result.CreateVariant()),
+                            TaskScheduler.FromCurrentSynchronizationContext())
+                        .EnsureToBeSuccessful();
             }
         }
 #nullable disable
@@ -50,15 +51,77 @@ namespace Cider.Components.In2D.Controls
             {
                 ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, 0, nameof(FontSize));
                 field = value;
+                DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+                if (_fontVariant is { IsCompletedSuccessfully: true } task) task.Result.FontSize = value;
             }
         } = 64;
 
-        [NotNull]
-        public string Text { get;
+        public FontStyleFlags FontStyle
+        {
+            get;
             set
             {
+                field = value;
+                DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+                if (_fontVariant is { IsCompletedSuccessfully: true } task) task.Result.FontStyle = value;
+            }
+        }
+
+        public int FontOutline
+        {
+            get;
+            set
+            {
+                ArgumentOutOfRangeException.ThrowIfNegative(value, nameof(FontOutline));
+                field = value;
+                DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+                if (_fontVariant is { IsCompletedSuccessfully: true } task) task.Result.Outline = value;
+            }
+        }
+
+        public FontLineJoin FontOutlineLineJoin
+        {
+            get;
+            set
+            {
+                field = value;
+                DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+                if (_fontVariant is { IsCompletedSuccessfully: true } task) task.Result.OutlineLineJoin = value;
+            }
+        }
+
+        public FontLineCap FontOutlineLineCap
+        {
+            get;
+            set
+            {
+                field = value;
+                DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+                if (_fontVariant is { IsCompletedSuccessfully: true } task) task.Result.OutlineLineCap = value;
+            }
+        }
+
+        public int FontCharSpacing
+        {
+            get;
+            set
+            {
+                field = value;
+                DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+                if (_fontVariant is { IsCompletedSuccessfully: true } task) task.Result.CharSpacing = value;
+            }
+        }
+
+        [NotNull]
+        public string Text
+        {
+            get;
+            set
+            {
+                var isDifferent = field != value;
                 field = value ?? throw new NullReferenceException();
                 DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+                if (_text is Text text && isDifferent) text.SetContent(value);
             }
         } = string.Empty;
 
@@ -69,13 +132,29 @@ namespace Cider.Components.In2D.Controls
         [EditorBrowsable(EditorBrowsableState.Never)]
         public string Content { get => Text; set => Text = value; }
 
-        public Color Foreground { get; set; } = Color.Black;
+        public Color Foreground
+        {
+            get;
+            set
+            {
+                field = value;
+                DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+                if (_text is Text text) text.Color = value;
+            }
+        } = Color.Black;
 
         public Color Background { get; set; } = Color.Transparent;
 
-        void SetFontProperties(FontVariant font)
+        FontVariant SetFontProperties(FontVariant font)
         {
             font.FontSize = FontSize;
+            font.FontStyle = FontStyle;
+            font.Outline = FontOutline;
+            font.OutlineLineJoin = FontOutlineLineJoin;
+            font.OutlineLineCap = FontOutlineLineCap;
+            font.CharSpacing = FontCharSpacing;
+
+            return font;
         }
 
         protected override void OnWindowChanged(Window oldWindow, Window newWindow)
@@ -115,26 +194,37 @@ namespace Cider.Components.In2D.Controls
 
             if (_cachedTexture is null)
             {
-                if (_fontVariant is null) return;
-
-                Text text;
-
-                if (_text is null)
-                    text = _text = new Text(context.Renderer.TextEngine.Value, _fontVariant, Text);
-
-                else
+                if (_fontVariant is null)
                 {
-                    text = _text;
-                    text.SetContent(Text);
+                    _fontVariant = Font.Load()
+                        .ContinueWith(x => SetFontProperties(x.Result.CreateVariant()),
+                            TaskScheduler.FromCurrentSynchronizationContext())
+                        .EnsureToBeSuccessful();
+
+                    return;
                 }
 
-                text.Color = Foreground;
+                else if (_fontVariant is { IsCompletedSuccessfully: true } task)
+                {
+                    var text = _text ??= new Text(context.Renderer.TextEngine.Value, task.Result, Text);
 
-                text.Measure(out int width, out int height);
-                _cachedTexture = new(context.Renderer, width, height, TextureAccess.Target);
+                    text.Color = Foreground;
 
-                using (context.PushTarget(_cachedTexture))
-                    text.Render(0, 0);
+                    text.Measure(out int width, out int height);
+
+                    if (width == 0 || height == 0) return;
+
+                    _cachedTexture = new(context.Renderer, width, height, TextureAccess.Target);
+
+                    //using (context.PushBlendMode(BlendMode.None))
+                    using (context.PushTarget(_cachedTexture))
+                    {
+                        context.FillColor(Background);
+                        text.Render(0, 0);
+                    }
+                }
+
+                else return;
             }
 
             var transform = GlobalTransform;

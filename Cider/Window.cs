@@ -69,7 +69,6 @@ namespace Cider
                 value.Window = this;
                 if (Game.IsInitialized)
                 {
-                    value.OnGlobalTransformChangedDispatcher(EventArgs.Empty);
                     value.OnLoadedDispatcher(value); // 如果游戏没有初始化，则在Initialize里调用
                 }
             }
@@ -99,7 +98,23 @@ namespace Cider
             }
         }
 
-        public Surface Icon
+        public unsafe Size Size
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                int width, height;
+                SDLHelpers.ThrowIfFalse(SDL_GetWindowSize(_window, &width, &height));
+                return new(width, height);
+            }
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                SDLHelpers.ThrowIfFalse(SDL_SetWindowSize(_window, value.Width, value.Height));
+            }
+        }
+#nullable enable
+        public Surface? Icon
         {
             get
             {
@@ -112,12 +127,12 @@ namespace Cider
                 SDLHelpers.EnsureOnMainThread();
                 unsafe
                 {
-                    SDLHelpers.ThrowIfFalse(SDL_SetWindowIcon(_window, value.Pointer));
+                    SDLHelpers.ThrowIfFalse(SDL_SetWindowIcon(_window, value!.Pointer));
                 }
                 field = value;
             }
         }
-
+#nullable restore
         internal unsafe SDL_Window* Pointer
         {
             get
@@ -338,132 +353,132 @@ namespace Cider
         /// <summary>
         /// 窗口处于全屏模式
         /// </summary>
-        Fullscreen = 0b1,
+        FullScreen = SDL_WindowFlags.SDL_WINDOW_FULLSCREEN,
 
         /// <summary>
         /// 窗口可与 OpenGL 上下文一起使用
         /// </summary>
-        OpenGL = 0b10,
+        OpenGL = SDL_WindowFlags.SDL_WINDOW_OPENGL,
 
         /// <summary>
         /// 窗口被遮挡
         /// </summary>
-        Occluded = 0b100,
+        Occluded = SDL_WindowFlags.SDL_WINDOW_OCCLUDED,
 
         /// <summary>
         /// 窗口既未映射到桌面上，也未显示在任务栏/停靠栏/窗口列表中；需要调用 SDL_ShowWindow() 才能使其可见
         /// </summary>
-        Hidden = 0b1000,
+        Hidden = SDL_WindowFlags.SDL_WINDOW_HIDDEN,
 
         /// <summary>
         /// 无窗口装饰
         /// </summary>
-        Borderless = 0b1_0000,
+        Borderless = SDL_WindowFlags.SDL_WINDOW_BORDERLESS,
 
         /// <summary>
         /// 窗口可以调整大小
         /// </summary>
-        Resizable = 0b10_0000,
+        Resizable = SDL_WindowFlags.SDL_WINDOW_RESIZABLE,
 
         /// <summary>
         /// 窗口已最小化
         /// </summary>
-        Minimized = 0b100_0000,
+        Minimized = SDL_WindowFlags.SDL_WINDOW_MINIMIZED,
 
         /// <summary>
         /// 窗口已最大化
         /// </summary>
-        Maximized = 0b1000_0000,
+        Maximized = SDL_WindowFlags.SDL_WINDOW_MAXIMIZED,
 
         /// <summary>
         /// 窗口已捕获鼠标输入
         /// </summary>
-        MouseGrabbed = 0b1_0000_0000,
+        MouseGrabbed = SDL_WindowFlags.SDL_WINDOW_MOUSE_GRABBED,
 
         /// <summary>
         /// 窗口具有输入焦点
         /// </summary>
-        InputFocus = 0b10_0000_0000,
+        InputFocus = SDL_WindowFlags.SDL_WINDOW_INPUT_FOCUS,
 
         /// <summary>
         /// 窗口具有鼠标焦点
         /// </summary>
-        MouseFocus = 0b100_0000_0000,
+        MouseFocus = SDL_WindowFlags.SDL_WINDOW_MOUSE_FOCUS,
 
         /// <summary>
         /// 窗口不是由 SDL 创建的
         /// </summary>
-        External = 0b1000_0000_0000,
+        External = SDL_WindowFlags.SDL_WINDOW_EXTERNAL,
 
         /// <summary>
         /// 窗口是模态的
         /// </summary>
-        Modal = 0b1_0000_0000_0000,
+        Modal = SDL_WindowFlags.SDL_WINDOW_MODAL,
 
         /// <summary>
         /// 如果可能，窗口使用高像素密度后备缓冲区
         /// </summary>
-        HighPixelDensity = 0b10_0000_0000_0000,
+        HighPixelDensity = SDL_WindowFlags.SDL_WINDOW_HIGH_PIXEL_DENSITY,
 
         /// <summary>
         /// 窗口已捕获鼠标（与 MouseGrabbed 无关）
         /// </summary>
-        MouseCapture = 0b100_0000_0000_0000,
+        MouseCapture = SDL_WindowFlags.SDL_WINDOW_MOUSE_CAPTURE,
 
         /// <summary>
         /// 窗口已启用相对模式
         /// </summary>
-        MouseRelativeMode = 0b1000_0000_0000_0000,
+        MouseRelativeMode = SDL_WindowFlags.SDL_WINDOW_MOUSE_RELATIVE_MODE,
 
         /// <summary>
         /// 窗口应始终位于其他窗口之上
         /// </summary>
-        AlwaysOnTop = 0b1_0000_0000_0000_0000,
+        AlwaysOnTop = SDL_WindowFlags.SDL_WINDOW_ALWAYS_ON_TOP,
 
         /// <summary>
         /// 窗口应被视为utility窗口，不显示在任务栏和窗口列表中
         /// </summary>
-        Utility = 0b10_0000_0000_0000_0000,
+        Utility = SDL_WindowFlags.SDL_WINDOW_UTILITY,
 
         /// <summary>
         /// 窗口应被视为tooltip，并且不会获得鼠标或键盘焦点，需要一个父窗口
         /// </summary>
-        Tooltip = 0b100_0000_0000_0000_0000,
+        Tooltip = SDL_WindowFlags.SDL_WINDOW_TOOLTIP,
 
         /// <summary>
         /// 窗口应被视为弹出菜单，需要一个父窗口
         /// </summary>
-        PopupMenu = 0b1000_0000_0000_0000_0000,
+        PopupMenu = SDL_WindowFlags.SDL_WINDOW_POPUP_MENU,
 
         /// <summary>
         /// 窗口已捕获键盘输入
         /// </summary>
-        KeyboardGrabbed = 0b1_0000_0000_0000_0000_0000,
+        KeyboardGrabbed = SDL_WindowFlags.SDL_WINDOW_KEYBOARD_GRABBED,
 
         /// <summary>
         /// 窗口处于填充文档模式（仅限 Emscripten），自 SDL 3.4.0 起
         /// </summary>
-        FillDocument = 0b10_0000_0000_0000_0000_0000,
+        FillDocument = 0x200000uL,
 
         /// <summary>
         /// 窗口可用于 Vulkan Surface
         /// </summary>
-        Vulkan = 0b1_0000_0000_0000_0000_0000_0000_0000,
+        Vulkan = SDL_WindowFlags.SDL_WINDOW_VULKAN,
 
         /// <summary>
         /// 窗口可用于 Metal View
         /// </summary>
-        Metal = 0b10_0000_0000_0000_0000_0000_0000_0000,
+        Metal = SDL_WindowFlags.SDL_WINDOW_METAL,
 
         /// <summary>
         /// 具有透明缓冲区的窗口
         /// </summary>
-        Transparent = 0b100_0000_0000_0000_0000_0000_0000_0000,
+        Transparent = SDL_WindowFlags.SDL_WINDOW_TRANSPARENT,
 
         /// <summary>
         /// 窗口不应可获得焦点
         /// </summary>
-        NotFocusable = 0b1000_0000_0000_0000_0000_0000_0000_0000,
+        NotFocusable = SDL_WindowFlags.SDL_WINDOW_NOT_FOCUSABLE,
     }
 
     public class TextInputOptions : SDLProperties

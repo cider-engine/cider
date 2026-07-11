@@ -53,6 +53,7 @@ namespace Cider.Generator.CiderXml
                         var sceneNamespace = @class.Substring(0, separatorIndex);
                         writer.WriteLine($$"""
                         using Cider.Extensions;
+
                         namespace {{sceneNamespace}};
                         """);
                     }
@@ -76,7 +77,7 @@ namespace Cider.Generator.CiderXml
                     writer.Indent = 0;
 
                     writer.WriteLine("""
-                                    ]);
+                                ]);
                             }
                         """);
 

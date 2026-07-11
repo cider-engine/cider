@@ -14,11 +14,15 @@ namespace Cider.Render
     {
         public required Renderer Renderer { get; init; }
 
+        public TimeContext? TimeContext { get; init; }
+
         public RenderTextureColorScope PushTextureColor(Texture texture, Color color) => new(texture, color);
 
         public RenderDrawColorScope PushDrawColor(Color color) => new(Renderer, color);
 
         public RenderTargetScope PushTarget(Texture target) => new(Renderer, target);
+
+        public RenderBlendModeScope PushBlendMode(BlendMode mode) => new(Renderer, mode);
 
         public void FillColor(Color color)
         {
@@ -125,6 +129,26 @@ namespace Cider.Render
         public readonly unsafe void Dispose()
         {
             SDLHelpers.ThrowIfFalse(SDL_SetRenderTarget(_renderer, _target));
+        }
+    }
+
+    public readonly ref struct RenderBlendModeScope : IDisposable
+    {
+        private unsafe readonly SDL_Renderer* _renderer;
+        private readonly SDL_BlendMode _mode;
+
+        public unsafe RenderBlendModeScope(Renderer renderer, BlendMode mode)
+        {
+            _renderer = renderer.Pointer;
+            SDL_BlendMode blendMode;
+            SDLHelpers.ThrowIfFalse(SDL_GetRenderDrawBlendMode(renderer.Pointer, &blendMode));
+            _mode = blendMode;
+            SDLHelpers.ThrowIfFalse(SDL_SetRenderDrawBlendMode(renderer.Pointer, (SDL_BlendMode)mode));
+        }
+
+        public readonly unsafe void Dispose()
+        {
+            SDLHelpers.ThrowIfFalse(SDL_SetRenderDrawBlendMode(_renderer, _mode));
         }
     }
 }

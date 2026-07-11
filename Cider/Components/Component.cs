@@ -52,6 +52,8 @@ namespace Cider.Components
 
                     if (Game.IsInitialized && scene4.Window is not null) OnLoadedDispatcher(scene4);
                 }
+
+                value?.OnGlobalTransformChangedDispatcher(EventArgs.Empty);
             }
         }
 
@@ -98,6 +100,7 @@ namespace Cider.Components
         internal virtual void OnUpdateDispatcher(TimeContext context)
         {
             if (CurrentWindow is null) return;
+            OnUpdateInternal(context);
             OnUpdate(context);
             foreach (var item in Children)
                 item.OnUpdateDispatcher(context);
@@ -106,16 +109,23 @@ namespace Cider.Components
         protected virtual void OnUpdate(TimeContext context)
         { }
 
+        private protected virtual void OnUpdateInternal(TimeContext context)
+        { }
+
         [Dispatcher]
         internal virtual void OnFixedUpdateDispatcher(TimeContext context)
         {
             if (CurrentWindow is null) return;
+            OnFixedUpdateInternal(context);
             OnFixedUpdate(context);
             foreach (var item in Children)
                 item.OnFixedUpdateDispatcher(context);
         }
 
         protected virtual void OnFixedUpdate(TimeContext context)
+        { }
+
+        private protected virtual void OnFixedUpdateInternal(TimeContext context)
         { }
 
         protected virtual void OnRender(RenderContext context)

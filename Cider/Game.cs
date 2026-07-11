@@ -126,15 +126,16 @@ namespace Cider
             SynchronizationContext.SetSynchronizationContext(CurrentSynchronizationContext = new CiderSynchronizationContext());
 
 
-            MainWindow = new Window(ProjectSettings.MainWindowTitle, 800, 600, ProjectSettings.MainWindowFlags)
+            MainWindow = new Window(ProjectSettings.MainWindowTitle, ProjectSettings.MainWindowSize.Width, ProjectSettings.MainWindowSize.Height, ProjectSettings.MainWindowFlags)
             {
                 Scene = ProjectSettings.MainScene
             };
 
-            CurrentScene.OnGlobalTransformChangedDispatcher(EventArgs.Empty);
+            MainWindow.Renderer.SetLogicalPresentation(ProjectSettings.LogicalSize, ProjectSettings.LogicalPresentationMode);
+
             _initialized = true;
-            CurrentScene.OnLoadedDispatcher(CurrentScene);
             MainWindow.Show();
+            CurrentScene.OnLoadedDispatcher(CurrentScene);
         }
 
         void Update(TimeContext context)
@@ -186,14 +187,15 @@ namespace Cider
 
         unsafe void Draw(Window window, TimeContext context)
         {
-            using (var colorScope = new RenderDrawColorScope(window.Renderer, Color.CornflowerBlue))
+            using (var colorScope = new RenderDrawColorScope(window.Renderer, ProjectSettings.BackgroundColor))
             {
                 SDLHelpers.ThrowIfFalse(SDL_RenderClear(window.Renderer.Pointer));
             }
 
             window.Scene.OnRenderDispatcher(new()
             {
-                Renderer = window.Renderer
+                Renderer = window.Renderer,
+                TimeContext = context
             });
 
             SDLHelpers.ThrowIfFalse(SDL_RenderPresent(window.Renderer.Pointer));

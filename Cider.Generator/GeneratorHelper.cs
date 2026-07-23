@@ -120,9 +120,11 @@ namespace Cider.Generator
                                 {
                                     case > SpecialType.System_Char and < SpecialType.System_String:
                                         writer.Write(child.Name.LocalName);
-                                        writer.Write(" = ");
+                                        writer.Write(" = checked((global::System.");
+                                        writer.Write(memberType.Name);
+                                        writer.Write(')');
                                         writer.Write(child.Value);
-                                        writer.WriteLine(",");
+                                        writer.WriteLine("),");
                                         break;
 
                                     case SpecialType.System_String:

@@ -18,8 +18,7 @@ namespace Cider.Components.In2D
 #nullable enable
         private Texture? _target;
         private Task<Texture>[]? _textures;
-        private List<TileRenderEntry>? _entries;
-        private MapBounds? _bounds;
+        private (List<TileRenderEntry> entries, RectangleF bounds)? _loadedData;
         private bool _readyToRender;
 
         public TileMapAsset? Map
@@ -35,8 +34,7 @@ namespace Cider.Components.In2D
                 DisposableHelpers.DisposeAndSetNull(ref _target);
 
                 _textures = null;
-                _entries = null;
-                _bounds = null;
+                _loadedData = null;
             }
         }
 
@@ -59,23 +57,22 @@ namespace Cider.Components.In2D
 
             else if (_textures is { IsAllSuccess: true } tasks)
             {
-                var entries = _entries ?? throw new NullReferenceException();
-                var bounds = _bounds ?? throw new NullReferenceException();
+                var (entries, bounds) = _loadedData ?? throw new NullReferenceException();
 
                 using (context.PushTarget(_target!))
                 {
                     context.FillColor(Color.Transparent);
 
-                    var offset = new Vector2(bounds.MinX, bounds.MinY);
+                    var offset = new Vector2(bounds.X, bounds.Y);
 
                     for (var i = 0; i < entries.Count; i++)
                     {
                         var entry = entries[i];
 
-                        if (tasks[i] is not Task<Texture> { IsCompletedSuccessfully: true } textureTask) continue;
+                        //if (tasks[i] is not Task<Texture> { IsCompletedSuccessfully: true } textureTask) continue;
 
                         context.RenderTexture(
-                            textureTask.Result,
+                            tasks[i].Result,
                             entry.Position - offset,
                             entry.SourceRectangle,
                             rotationInDegrees: 0,
@@ -89,13 +86,14 @@ namespace Cider.Components.In2D
             }
 
             else if (Map?.Load() is { IsCompletedSuccessfully: true } task)
-                    _textures = CalculateAndLoadTextures(context, task.Result);
+            {
+                _textures = CalculateAndLoadTextures(context, task.Result);
+            }
         }
 
         private Task<Texture>[] CalculateAndLoadTextures(RenderContext context, Map map)
         {
-            var entries = _entries ??= BuildRenderEntries(map, Map!.Path);
-            var bounds = _bounds ??= CalculateBounds(entries);
+            var (entries, bounds) = _loadedData ??= BuildLoadedData(map, Map!.Path);
 
             EnsureTarget(context.Renderer, bounds);
 
@@ -106,10 +104,10 @@ namespace Cider.Components.In2D
             return tasks;
         }
 
-        private void EnsureTarget(Renderer renderer, MapBounds bounds)
+        private void EnsureTarget(Renderer renderer, RectangleF bounds)
         {
-            var width = Math.Max(1, (int)MathF.Ceiling(bounds.MaxX - bounds.MinX));
-            var height = Math.Max(1, (int)MathF.Ceiling(bounds.MaxY - bounds.MinY));
+            var width = Math.Max(1, (int)MathF.Ceiling(bounds.Width));
+            var height = Math.Max(1, (int)MathF.Ceiling(bounds.Height));
 
             if (_target is not null && _target.OwnerRenderer == renderer && _target.Width == width && _target.Height == height)
             {
@@ -120,49 +118,35 @@ namespace Cider.Components.In2D
             _target = new Texture(renderer, width, height, TextureAccess.Target);
         }
 
-        private static MapBounds CalculateBounds(List<TileRenderEntry> entries)
-        {
-            if (entries.Count == 0)
-            {
-                return new MapBounds(0, 0, 1, 1);
-            }
-
-            var first = entries[0];
-            var minX = first.Position.X;
-            var minY = first.Position.Y;
-            var maxX = first.Position.X + first.SourceRectangle.Width;
-            var maxY = first.Position.Y + first.SourceRectangle.Height;
-
-            foreach (var entry in entries)
-            {
-                minX = MathF.Min(minX, entry.Position.X);
-                minY = MathF.Min(minY, entry.Position.Y);
-                maxX = MathF.Max(maxX, entry.Position.X + entry.SourceRectangle.Width);
-                maxY = MathF.Max(maxY, entry.Position.Y + entry.SourceRectangle.Height);
-            }
-
-            return new MapBounds(minX, minY, maxX, maxY);
-        }
-
-        private static List<TileRenderEntry> BuildRenderEntries(Map map, string path)
+        private static (List<TileRenderEntry> entries, RectangleF bounds) BuildLoadedData(Map map, string path)
         {
             var entries = new List<TileRenderEntry>();
+            var bounds = RectangleF.Empty;
+            var hasBounds = false;
 
             foreach (var layer in map.Layers)
             {
                 if (layer is TileLayer { Visible: true, Data: { HasValue: true, Value: var data } } tileLayer)
                 {
-                    var tilesetEntries = data.Chunks is { HasValue: true, Value.Length: > 0 }
-                        ? EnumerateChunks(map, tileLayer, data, path)
-                        : EnumerateFiniteTiles(map, tileLayer, data, path);
-
-                    entries.AddRange(tilesetEntries);
+                    if (data.Chunks is { HasValue: true, Value.Length: > 0 })
+                    {
+                        EnumerateChunks(map, tileLayer, data, path, entries, ref bounds, ref hasBounds);
+                    }
+                    else
+                    {
+                        EnumerateFiniteTiles(map, tileLayer, data, path, entries, ref bounds, ref hasBounds);
+                    }
                 }
             }
 
-            return entries;
+            if (!hasBounds)
+            {
+                bounds = new RectangleF(0, 0, 1, 1);
+            }
 
-            static IEnumerable<TileRenderEntry> EnumerateFiniteTiles(Map mapValue, TileLayer layer, DotTiled.Data data, string path)
+            return (entries, bounds);
+
+            static void EnumerateFiniteTiles(Map mapValue, TileLayer layer, DotTiled.Data data, string path, List<TileRenderEntry> entries, ref RectangleF bounds, ref bool hasBounds)
             {
                 var width = layer.Width;
                 var height = layer.Height;
@@ -174,18 +158,18 @@ namespace Cider.Components.In2D
                     for (var x = 0; x < width; x++)
                     {
                         var index = (y * width) + x;
-                        if (index >= globalTileIDs.Length) yield break;
+                        if (index >= globalTileIDs.Length) return;
 
                         var globalTileID = globalTileIDs[index];
                         if (globalTileID == 0) continue;
 
                         var flippingFlag = index < flippingFlags.Length ? flippingFlags[index] : FlippingFlags.None;
-                        yield return CreateEntry(mapValue, layer, x, y, globalTileID, flippingFlag, path);
+                        AddEntry(CreateEntry(mapValue, layer, x, y, globalTileID, flippingFlag, path), entries, ref bounds, ref hasBounds);
                     }
                 }
             }
 
-            static IEnumerable<TileRenderEntry> EnumerateChunks(Map mapValue, TileLayer layer, DotTiled.Data data, string path)
+            static void EnumerateChunks(Map mapValue, TileLayer layer, DotTiled.Data data, string path, List<TileRenderEntry> entries, ref RectangleF bounds, ref bool hasBounds)
             {
                 foreach (var chunk in data.Chunks.Value)
                 {
@@ -197,16 +181,39 @@ namespace Cider.Components.In2D
                         for (var x = 0; x < chunk.Width; x++)
                         {
                             var index = (y * chunk.Width) + x;
-                            if (index >= chunkGlobalTileIDs.Length) yield break;
+                            if (index >= chunkGlobalTileIDs.Length) return;
 
                             var globalTileID = chunkGlobalTileIDs[index];
                             if (globalTileID == 0) continue;
 
                             var flippingFlag = index < chunkFlippingFlags.Length ? chunkFlippingFlags[index] : FlippingFlags.None;
-                            yield return CreateEntry(mapValue, layer, chunk.X + x, chunk.Y + y, globalTileID, flippingFlag, path);
+                            AddEntry(CreateEntry(mapValue, layer, chunk.X + x, chunk.Y + y, globalTileID, flippingFlag, path), entries, ref bounds, ref hasBounds);
                         }
                     }
                 }
+            }
+
+            static void AddEntry(TileRenderEntry entry, List<TileRenderEntry> entries, ref RectangleF bounds, ref bool hasBounds)
+            {
+                entries.Add(entry);
+
+                var left = entry.Position.X;
+                var top = entry.Position.Y;
+                var right = left + entry.SourceRectangle.Width;
+                var bottom = top + entry.SourceRectangle.Height;
+
+                if (!hasBounds)
+                {
+                    bounds = RectangleF.FromLTRB(left, top, right, bottom);
+                    hasBounds = true;
+                    return;
+                }
+
+                bounds = RectangleF.FromLTRB(
+                    MathF.Min(bounds.Left, left),
+                    MathF.Min(bounds.Top, top),
+                    MathF.Max(bounds.Right, right),
+                    MathF.Max(bounds.Bottom, bottom));
             }
         }
 
@@ -218,7 +225,7 @@ namespace Cider.Components.In2D
             var source = tileset.GetSourceRectangleForLocalTileID(localTileID);
             var sourceRectangle = new RectangleF(source.X, source.Y, source.Width, source.Height);
             var position = GetTilePosition(map, layer, tileX, tileY);
-            var texturePath = GetTilesetTexturePath(map, tileset, mapPath);
+            var texturePath = GetTilesetTexturePath(tileset, mapPath);
             var texture = GetTextureAsset(texturePath);
 
             return new TileRenderEntry(texture, sourceRectangle, position, ToFlipMode(flippingFlags));
@@ -255,7 +262,7 @@ namespace Cider.Components.In2D
             return bestMatch;
         }
 
-        private static string GetTilesetTexturePath(Map map, Tileset tileset, string? mapPath)
+        private static string GetTilesetTexturePath(Tileset tileset, string? mapPath)
         {
             if (!tileset.Image.HasValue)
             {
@@ -307,7 +314,5 @@ namespace Cider.Components.In2D
         }
 
         private readonly record struct TileRenderEntry(TextureAsset Texture, RectangleF SourceRectangle, Vector2 Position, FlipMode FlipMode);
-
-        private readonly record struct MapBounds(float MinX, float MinY, float MaxX, float MaxY);
     }
 }

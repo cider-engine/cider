@@ -1,10 +1,14 @@
+using Cider.Components.In2D;
 using nkast.Aether.Physics2D.Dynamics;
 using System;
+using System.Numerics;
 
-namespace Cider.Components.In2D.Physics
+namespace Cider.Physics
 {
-    public abstract class Shape2D : Component2D
+
+    public abstract class Shape2D
     {
+        public Vector2 Position { get; set; }
 #nullable enable
         public abstract Body? Body { get; }
 #nullable disable

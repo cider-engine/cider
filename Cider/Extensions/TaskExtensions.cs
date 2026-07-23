@@ -12,24 +12,24 @@ namespace Cider.Extensions
             public void EnsureSuccess()
             {
                 if (task.IsCompletedSuccessfully) return;
-                Game.Instance.TryRaiseException(task.Exception ?? new Exception("The task is not completed successfully."));
+                Game.Instance.TryRaiseException(task.Exception ?? new CiderGameException("The task is not completed successfully.") as Exception);
             }
 
             public void EnsureSuccessOrCancel()
             {
                 if (task.IsCompletedSuccessfully || task.IsCanceled) return;
-                Game.Instance.TryRaiseException(task.Exception ?? new Exception("The task is not completed successfully or canceled."));
+                Game.Instance.TryRaiseException(task.Exception ?? new CiderGameException("The task is not completed successfully or canceled.") as Exception);
             }
 
             public Task<T> EnsureToBeSuccessful()
             {
-                task.ContinueWith(x => x.EnsureSuccess(), TaskScheduler.FromCurrentSynchronizationContext());
+                task.ContinueWith(x => x.EnsureSuccess(), Game.GetTaskScheduler());
                 return task;
             }
 
             public Task<T> EnsureToBeSuccessfulOrCanceled()
             {
-                task.ContinueWith(x => x.EnsureSuccessOrCancel(), TaskScheduler.FromCurrentSynchronizationContext());
+                task.ContinueWith(x => x.EnsureSuccessOrCancel(), Game.GetTaskScheduler());
                 return task;
             }
         }
@@ -39,24 +39,24 @@ namespace Cider.Extensions
             public void EnsureSuccess()
             {
                 if (task.IsCompletedSuccessfully) return;
-                Game.Instance.TryRaiseException(task.Exception ?? new Exception("The task is not completed successfully."));
+                Game.Instance.TryRaiseException(task.Exception ?? new CiderGameException("The task is not completed successfully.") as Exception);
             }
 
             public void EnsureSuccessOrCancel()
             {
                 if (task.IsCompletedSuccessfully || task.IsCanceled) return;
-                Game.Instance.TryRaiseException(task.Exception ?? new Exception("The task is not completed successfully or canceled."));
+                Game.Instance.TryRaiseException(task.Exception ?? new CiderGameException("The task is not completed successfully or canceled.") as Exception);
             }
 
             public Task EnsureToBeSuccessful()
             {
-                task.ContinueWith(x => x.EnsureSuccess(), TaskScheduler.FromCurrentSynchronizationContext());
+                task.ContinueWith(x => x.EnsureSuccess(), Game.GetTaskScheduler());
                 return task;
             }
 
             public Task EnsureToBeSuccessfulOrCanceled()
             {
-                task.ContinueWith(x => x.EnsureSuccessOrCancel(), TaskScheduler.FromCurrentSynchronizationContext());
+                task.ContinueWith(x => x.EnsureSuccessOrCancel(), Game.GetTaskScheduler());
                 return task;
             }
         }

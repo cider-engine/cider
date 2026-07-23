@@ -1,12 +1,16 @@
 using Cider.Extensions;
 using nkast.Aether.Physics2D.Dynamics;
 using System;
+using System.Collections.Generic;
+using System.Text;
 
-namespace Cider.Components.In2D.Physics
+namespace Cider.Physics
 {
-    public class CircleShape2D : Shape2D
+    public class RectangleShape2D : Shape2D
     {
-        public float Radius { get; set; }
+        public float Width { get; set; }
+
+        public float Height { get; set; }
 
         public float Density { get; set; } = 1.0f;
 
@@ -19,7 +23,7 @@ namespace Cider.Components.In2D.Physics
         {
             if (_fixture is not null)
                 throw new InvalidOperationException("Shape is already attached to a body.");
-            _fixture = body.CreateCircle(Radius, Density, Position.AsPhysicsVector2());
+            _fixture = body.CreateRectangle(Width, Height, Density, Position.AsPhysicsVector2());
             _fixture.IsSensor = isSensor;
         }
 

@@ -2,7 +2,7 @@
 	<Import Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'browser'" Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 	<Import Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'" Project="Sdk.props" Sdk="Microsoft.NET.Sdk.WebAssembly" />
 
-	<PropertyGroup Condition="!$(TargetFramework.Contains('-'))"> <!--不为-android -browser这样的平台限定框架-->
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'browser' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">
 		<OutputType>WinExe</OutputType>
 	</PropertyGroup>
 
@@ -19,20 +19,23 @@
 	<ItemGroup>
 		<CiderAssets Include="$(CiderAssetsPath)\**\*" />
 
-		<CiderAssetsWithoutMeta Include="@(CiderAssets)" />
-		<CiderAssetsWithoutMeta Remove="**\*.meta" />
+		<_CiderAssetsWithoutMeta Include="@(CiderAssets)" />
+		<_CiderAssetsWithoutMeta Remove="**\*.meta" />
 
-		<None Include="@(CiderAssetsWithoutMeta)" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="@(_CiderAssetsWithoutMeta)">
+			<!--Browser Assets由StaticWebAssetsSdk处理-->
+			<CopyToOutputDirectory Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'browser'">PreserveNewest</CopyToOutputDirectory>
+		</Content>
 		
 		<CompilerVisibleProperty Include="MSBuildProjectDirectory" />
 
 		<AdditionalFiles Include="**\*.cider" />
-		<AdditionalFiles Include="**\*.meta" />
+		<AdditionalFiles Include="$(CiderAssetsPath)\**\*.meta" />
 
 		<Compile Remove="Platform\**\*.cs" />
 	</ItemGroup>
 
-	<!--Android-->
+	<!--Android Start-->
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<MonoAndroidResourcePrefix Condition="$(MonoAndroidResourcePrefix) == ''">Platform\Android\Resources</MonoAndroidResourcePrefix>
 		<AndroidManifest Condition="$(AndroidManifest) == ''">Platform\Android\AndroidManifest.xml</AndroidManifest>
@@ -41,16 +44,19 @@
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<Compile Include="Platform\Android\**\*.cs" />
 		
-		<AndroidAsset Include="@(CiderAssetsWithoutMeta)" />
+		<AndroidAsset Include="@(_CiderAssetsWithoutMeta)" />
 		<AndroidAsset Remove="**\*.meta" />
 		<AndroidAsset Remove="**\*.cider" />
 	</ItemGroup>
+	<!--Android End-->
 	
-	<!--Browser-->
+	<!--Browser Start-->
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'">
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
 		<WasmEnableExceptionHandling>false</WasmEnableExceptionHandling>
+		<ResolveStaticWebAssetsInputsDependsOn>$(ResolveStaticWebAssetsInputsDependsOn);AddExtraStaticWebAssets;</ResolveStaticWebAssetsInputsDependsOn>
+		<ExtraStaticAssetsRoot>$(MSBuildProjectDirectory)\$(CiderAssetsPath)\</ExtraStaticAssetsRoot>
 	</PropertyGroup>
 	
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'">
@@ -58,9 +64,38 @@
 		
 		<StaticWebAssetFingerprintPattern Include="JS" Pattern="*.js" Expression="#[.{fingerprint}]!" />
 		<NativeFileReference Include="lib\*.a" />
-		<!--<WasmFilesToIncludeInFileSystem Include="Assets/**/*" />-->
+		<!--<WasmFilesToIncludeInFileSystem Include="" />-->
+
+		<!--Used by SDL_CreateWindowWithProperties-->
+		<EmccExportedRuntimeMethod Include="requestFullscreen" />
 	</ItemGroup>
-	
+
+	<Target Name="AddExtraStaticWebAssets" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'">
+		<DefineStaticWebAssets
+			CandidateAssets="@(_CiderAssetsWithoutMeta)"
+			SourceId="$(PackageId)"
+			SourceType="Discovered"
+			AssetKind="All"
+			AssetMode="All"
+			AssetRole="Primary"
+			ContentRoot="$(ExtraStaticAssetsRoot)"
+			BasePath="$(StaticWebAssetBasePath)">
+			<Output TaskParameter="Assets" ItemName="_ExtraStaticWebAsset" />
+		</DefineStaticWebAssets>
+
+		<DefineStaticWebAssetEndpoints
+			  CandidateAssets="@(_ExtraStaticWebAsset)"
+			  ContentTypeMappings="@(StaticWebAssetContentTypeMapping)"
+			  ExistingEndpoints="">
+			<Output TaskParameter="Endpoints" ItemName="_ExtraStaticWebAssetEndpoint" />
+		</DefineStaticWebAssetEndpoints>
+
+		<ItemGroup>
+			<StaticWebAsset Include="@(_ExtraStaticWebAsset)" />
+			<StaticWebAssetEndpoint Include="@(_ExtraStaticWebAssetEndpoint)" />
+		</ItemGroup>
+	</Target>
+	<!--Browser End-->
 	
 	<UsingTask Condition="$(CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\..\Cider.Task\bin\$(Configuration)\netstandard2.0\Cider.Task.dll" />
 	<UsingTask Condition="!$(CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\tasks\Cider.Task.dll" />

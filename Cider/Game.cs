@@ -35,7 +35,7 @@ namespace Cider
 
         private double _fpsAccumulator;
 
-        private readonly TaskCompletionSource<Exception> _exception = new();
+        private readonly TaskCompletionSource _gameProcess = new();
 
         public static Game Instance { get; private set; }
 
@@ -71,21 +71,16 @@ namespace Cider
         {
             if (OperatingSystem.IsBrowser()) throw new PlatformNotSupportedException("use RunAsync instead.");
             var result = SDL_RunApp(0, null, &Main, nint.Zero);
-            if (_exception.Task.IsCompletedSuccessfully)
+            if (_gameProcess.Task.Exception is { } e)
             {
-                Console.Error.WriteLine(_exception.Task.Result);
-                throw new Exception("an exception was thrown.", _exception.Task.Result);
+                Console.Error.WriteLine(e);
+                throw new CiderGameException("an exception was thrown.", e);
             }
             return result;
         }
 
         public async Task<int> RunAsync()
         {
-            if (!OperatingSystem.IsBrowser())
-            {
-                return Run();
-            }
-
             int result;
 
             unsafe
@@ -94,19 +89,21 @@ namespace Cider
             }
             try
             {
-                var e = await _exception.Task;
-                Console.Error.WriteLine(e);
-                throw new Exception("An exception was thrown.", e);
-            }
-            catch (OperationCanceledException)
-            {
+                await _gameProcess.Task;
                 return result;
+            }
+            catch (Exception e)
+            {
+                if (_gameProcess.Task.IsCanceled)
+                    return result;
+
+                throw new CiderGameException("an exception was thrown.", e);
             }
         }
 
         public bool TryRaiseException(Exception exception)
         {
-            return _exception.TrySetException(exception);
+            return _gameProcess.TrySetException(exception);
         }
 
         public Game ConfigureServices(Func<Game, IServiceProvider> serviceProviderFactory)
@@ -115,6 +112,8 @@ namespace Cider
             Services = serviceProviderFactory.Invoke(this);
             return this;
         }
+
+        public static TaskScheduler GetTaskScheduler() => OperatingSystem.IsBrowser() ? TaskScheduler.Default : TaskScheduler.FromCurrentSynchronizationContext();
 
         void Initialize()
         {
@@ -155,30 +154,20 @@ namespace Cider
             {
                 var currentScene = window.Scene;
 
-                foreach (var item in currentScene.BodiesToRemove2D)
-                {
-                    currentScene.World2D.Remove(item);
-                }
-
-                currentScene.BodiesToRemove2D.Clear();
+                currentScene.OnEarlyUpdate();
 
                 _accumulator += context.DeltaTime.TotalSeconds;
 
                 while (_accumulator >= _fixedTimeStep)
                 {
-                    currentScene.World2D.Step((float)_fixedTimeStep);
+                    currentScene.OnPhysicsStep((float)_fixedTimeStep);
                     _accumulator -= _fixedTimeStep;
                     currentScene.OnFixedUpdateDispatcher(new(TimeSpan.FromSeconds(_fixedTimeStep)));
                 }
 
                 currentScene.OnUpdateDispatcher(context);
 
-                foreach (var item in currentScene.BodiesToAdd2D)
-                {
-                    currentScene.World2D.Add(item);
-                }
-
-                currentScene.BodiesToAdd2D.Clear();
+                currentScene.OnLateUpdate();
 
                 Draw(window, context);
             }
@@ -187,9 +176,22 @@ namespace Cider
 
         unsafe void Draw(Window window, TimeContext context)
         {
-            using (var colorScope = new RenderDrawColorScope(window.Renderer, ProjectSettings.BackgroundColor))
+            using (var colorScope = new RenderDrawColorScope(window.Renderer, ProjectSettings.ClearColor))
             {
                 SDLHelpers.ThrowIfFalse(SDL_RenderClear(window.Renderer.Pointer));
+            }
+
+            using (var colorScope = new RenderDrawColorScope(window.Renderer, ProjectSettings.BackgroundColor))
+            {
+                var size = window.Renderer.LogicalSize is { IsEmpty: false } logicalSize ? logicalSize : window.Size;
+                SDL_FRect rect = new()
+                {
+                    x = 0,
+                    y = 0,
+                    w = size.Width,
+                    h = size.Height
+                };
+                SDLHelpers.ThrowIfFalse(SDL_RenderFillRect(window.Renderer.Pointer, &rect));
             }
 
             window.Scene.OnRenderDispatcher(new()
@@ -221,7 +223,7 @@ namespace Cider
             }
             catch (Exception e)
             {
-                Instance._exception.SetResult(e);
+                Instance._gameProcess.TrySetException(e);
                 return SDL_AppResult.SDL_APP_FAILURE;
             }
         }
@@ -243,7 +245,7 @@ namespace Cider
             }
             catch (Exception e)
             {
-                Instance._exception.SetResult(e);
+                Instance._gameProcess.TrySetException(e);
                 return SDL_AppResult.SDL_APP_FAILURE;
             }
         }
@@ -334,7 +336,7 @@ namespace Cider
                                     }
                                     catch (Exception exc)
                                     {
-                                        Instance._exception.SetResult(exc);
+                                        Instance._gameProcess.TrySetException(exc);
                                         return SDL_AppResult.SDL_APP_FAILURE;
                                     }
                                 }
@@ -345,7 +347,7 @@ namespace Cider
             }
             catch (Exception exc)
             {
-                Instance._exception.SetResult(exc);
+                Instance._gameProcess.TrySetException(exc);
                 return SDL_AppResult.SDL_APP_FAILURE;
             }
         }
@@ -356,7 +358,7 @@ namespace Cider
             Debug.Assert(result == SDL_AppResult.SDL_APP_SUCCESS);
             SDL3_ttf.TTF_Quit();
             SDL3_mixer.MIX_Quit();
-            Instance._exception.TrySetCanceled();
+            Instance._gameProcess.TrySetResult();
         }
     }
 }

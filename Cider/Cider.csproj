@@ -4,7 +4,7 @@
       <PackageVersion>0.0.3-alpha</PackageVersion>
       <Authors>cider-engine</Authors>
       <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-      <DefineConstants>OVERRIDE_WASM</DefineConstants>
+	  <LangVersion>preview</LangVersion>
     </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Aether.Physics2D" Version="2.2.0" />

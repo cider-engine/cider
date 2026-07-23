@@ -26,7 +26,7 @@ namespace Cider.Internals
                 taskWithDisposable?.ContinueWith(static x =>
                 {
                     if (x.IsCompletedSuccessfully) x.Result.Dispose();
-                }, TaskScheduler.FromCurrentSynchronizationContext());
+                }, Game.GetTaskScheduler());
                 taskWithDisposable = null;
             }
         }
@@ -50,7 +50,7 @@ namespace Cider.Internals
                         _1.Dispose();
                         _2.Dispose();
                     }
-                }, TaskScheduler.FromCurrentSynchronizationContext());
+                }, Game.GetTaskScheduler());
                 taskWithDisposable = null;
             }
         }
@@ -70,7 +70,7 @@ namespace Cider.Internals
                     taskWithDisposable?.ContinueWith(static x =>
                     {
                         if (x.IsCompletedSuccessfully) x.Result.Dispose();
-                    }, TaskScheduler.FromCurrentSynchronizationContext());
+                    }, Game.GetTaskScheduler());
                 }
             }
 

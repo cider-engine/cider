@@ -2,6 +2,7 @@ using Cider.Components;
 using Cider.Data.In2D;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 namespace Cider.Input
@@ -23,7 +24,7 @@ namespace Cider.Input
 
         public Vector2 Position { get; set; }
 
-        public void SetComponent(Component control) => _component = control ?? throw new NullReferenceException();
+        public void SetComponent([NotNull] Component control) => _component = control ?? throw new NullReferenceException();
 
         public Component? GetComponent() => _component;
 

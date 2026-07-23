@@ -76,10 +76,14 @@ namespace Cider.Components
         internal void OnAttachToSceneDispatcher(Scene root)
         {
             Root = root;
+            OnAttachToSceneInternal(root);
             OnAttachToScene(root);
             foreach (var item in Children)
                 item.OnAttachToSceneDispatcher(root);
         }
+
+        private protected virtual void OnAttachToSceneInternal(Scene root)
+        { }
 
         protected virtual void OnAttachToScene(Scene root)
         { }
@@ -145,9 +149,13 @@ namespace Cider.Components
         {
             foreach (var item in Children)
                 item.OnDetachFromSceneDispatcher(root);
+            OnDetachFromSceneInternal(root);
             OnDetachFromScene(root);
             Root = null;
         }
+
+        private protected virtual void OnDetachFromSceneInternal(Scene root)
+        { }
 
         protected virtual void OnDetachFromScene(Scene root)
         { }

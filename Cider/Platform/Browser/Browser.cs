@@ -52,22 +52,15 @@ namespace Cider.Platform.Browser
                 context.close = &Close;
             }
 
-            var id = Interlocked.Increment(ref IOStreamUnderlyingStreamId);
+            var id = IOStreamUnderlyingStreamId++; // 浏览器环境不需要使用Interlocked.Increment
 
             var memoryStream = MemoryStreamManagaer.GetStream();
 
             using var contentStream = await response.Content.ReadAsStreamAsync(token);
 
-            while (true)
-            {
-                var memory = memoryStream.GetMemory(1024);
-                var length = await contentStream.ReadAsync(memory, token);
-                memoryStream.Advance(length);
-                if (length <= 0)
-                    break;
-            }
+            await contentStream.CopyToAsync(memoryStream, token);
 
-            memoryStream.Seek(0, SeekOrigin.Begin);
+            memoryStream.Position = 0;
 
             IOStreamUnderlyingStreams.Add(id, memoryStream);
 
@@ -86,6 +79,7 @@ namespace Cider.Platform.Browser
                 }
                 catch (Exception)
                 {
+                    Debug.Assert(false);
                     return -1;
                 }
             }
@@ -106,11 +100,12 @@ namespace Cider.Platform.Browser
                         SDL_IOWhence.SDL_IO_SEEK_SET => SeekOrigin.Begin,
                         SDL_IOWhence.SDL_IO_SEEK_CUR => SeekOrigin.Current,
                         SDL_IOWhence.SDL_IO_SEEK_END => SeekOrigin.End,
-                        _ => throw new Exception()
+                        _ => throw new CiderGameException()
                     });
                 }
                 catch (Exception)
                 {
+                    Debug.Assert(false);
                     return -1;
                 }
             }
@@ -135,6 +130,7 @@ namespace Cider.Platform.Browser
                 catch (Exception)
                 {
                     *status = SDL_IOStatus.SDL_IO_STATUS_ERROR;
+                    Debug.Assert(false);
                     return 0;
                 }
             }
@@ -159,6 +155,7 @@ namespace Cider.Platform.Browser
                 catch (Exception)
                 {
                     *status = SDL_IOStatus.SDL_IO_STATUS_ERROR;
+                    Debug.Assert(false);
                     return 0;
                 }
             }
@@ -179,6 +176,7 @@ namespace Cider.Platform.Browser
                 catch (Exception)
                 {
                     *status = SDL_IOStatus.SDL_IO_STATUS_ERROR;
+                    Debug.Assert(false);
                     return false;
                 }
             }
@@ -200,6 +198,7 @@ namespace Cider.Platform.Browser
                 }
                 catch (Exception)
                 {
+                    Debug.Assert(false);
                     return false;
                 }
             }

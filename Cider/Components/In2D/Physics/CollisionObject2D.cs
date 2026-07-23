@@ -1,6 +1,8 @@
+using Cider.Collections;
 using Cider.Data;
 using Cider.Data.In2D;
 using Cider.Extensions;
+using Cider.Physics;
 using nkast.Aether.Physics2D.Dynamics;
 using nkast.Aether.Physics2D.Dynamics.Contacts;
 using System;
@@ -16,22 +18,18 @@ namespace Cider.Components.In2D.Physics
                 Tag = this
             };
 
-            Children.ComponentAdded += (owner, child) =>
+            Shapes.ItemAdded += (collection, shape) =>
             {
-                if (child is Shape2D shape)
-                {
-                    OnShape2DAdded(shape);
-                }
+                OnShape2DAdded(shape);
             };
 
-            Children.ComponentRemoved += (owner, child) =>
+            Shapes.ItemRemoved += (collection, shape) =>
             {
-                if (child is Shape2D shape)
-                {
-                    OnShape2DRemoved(shape);
-                }
+                OnShape2DRemoved(shape);
             };
         }
+
+        public ItemObservableCollection<Shape2D> Shapes { get; } = new();
 
         protected virtual void OnShape2DAdded(Shape2D shape)
         {
@@ -45,14 +43,14 @@ namespace Cider.Components.In2D.Physics
 
         internal Body Body { get; }
 
-        protected override void OnAttachToScene(Scene root)
+        private protected override void OnAttachToSceneInternal(Scene root)
         {
             Body.OnCollision += OnCollision;
             Body.OnSeparation += OnSeparation;
             root.EnqueueBodyToAdd2D(Body);
         }
 
-        protected override void OnDetachFromScene(Scene root)
+        private protected override void OnDetachFromSceneInternal(Scene root)
         {
             root.EnqueueBodyToRemove2D(Body);
             Body.OnCollision -= OnCollision;

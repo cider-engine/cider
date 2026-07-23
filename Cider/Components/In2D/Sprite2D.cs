@@ -21,25 +21,21 @@ namespace Cider.Components.In2D
             get;
             set
             {
+                if (field != value) _cachedRenderRegion = null;
                 field = value;
-                if (value is null) _cachedRenderRegion = null;
-                else if (CurrentWindow is Window window)
-                {
-                    value.LoadTexture(window.Renderer).EnsureToBeSuccessful();
-                }
             }
         }
 #nullable disable
 
-        public bool IsCentered { get; set { field = value; UpdateRenderRegion(); } } = true;
+        public bool IsCentered { get; set { field = value; _cachedRenderRegion = null; } } = false;
 
         public bool FlipHorizontally { get; set; } = false;
 
         public bool FlipVertically { get; set; } = false;
 
-        public bool RegionEnabled { get; set { field = value; UpdateRenderRegion(); } } = false;
+        public bool RegionEnabled { get; set { field = value; _cachedRenderRegion = null; } } = false;
 
-        public RectangleF RegionRectangle { get; set { field = value; UpdateRenderRegion(); } } = new();
+        public RectangleF RegionRectangle { get; set { field = value; _cachedRenderRegion = null; } } = RectangleF.Empty;
 
         public int FrameIndex
         {
@@ -50,7 +46,8 @@ namespace Cider.Components.In2D
                     throw new ArgumentOutOfRangeException(nameof(FrameIndex));
 
                 field = value;
-                UpdateRenderRegion();
+
+                _cachedRenderRegion = null;
             }
         }
 
@@ -63,7 +60,8 @@ namespace Cider.Components.In2D
                     throw new ArgumentOutOfRangeException(nameof(HorizontalFrameCount));
 
                 field = value;
-                UpdateRenderRegion();
+
+                _cachedRenderRegion = null;
             }
         } = 1;
 
@@ -76,32 +74,16 @@ namespace Cider.Components.In2D
                     throw new ArgumentOutOfRangeException(nameof(VerticalFrameCount));
 
                 field = value;
-                UpdateRenderRegion();
+
+                _cachedRenderRegion = null;
             }
         } = 1;
 
-        protected override void OnWindowChanged(Window oldWindow, Window newWindow)
+        private void UpdateRenderRegion(Renderer renderer)
         {
             if (Texture is null) return;
-            //if (oldWindow is not null)
-            //{
-            //    Texture.UnloadTexture(oldWindow.Renderer);
-            //}
-            if (newWindow is not null)
-            {
-                Texture.LoadTexture(newWindow.Renderer).ContinueWith(x =>
-                {
-                    x.EnsureSuccess();
-                    UpdateRenderRegion();
-                }, TaskScheduler.FromCurrentSynchronizationContext());
-            }
-        }
 
-        private void UpdateRenderRegion()
-        {
-            if (CurrentWindow is null || Texture is null) return;
-
-            if (Texture?.LoadTexture(CurrentWindow?.Renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
+            if (Texture?.LoadTexture(renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
             {
                 var texture = task.Result;
 
@@ -148,29 +130,35 @@ namespace Cider.Components.In2D
         {
             if (Texture is null) return;
 
-            if (Texture?.LoadTexture(context.Renderer) is Task<Texture> { IsCompletedSuccessfully: true } task && _cachedRenderRegion is RectangleF rect)
+            if (Texture?.LoadTexture(context.Renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
             {
-                var transform = GlobalTransform;
+                if (_cachedRenderRegion is RectangleF rect)
+                {
+                    var transform = GlobalTransform;
 
-                context.RenderTexture(
-                    texture: task.Result,
+                    context.RenderTexture(
+                        texture: task.Result,
 
-                    position: IsCentered ? transform.Position - new Vector2(rect.Width / 2f, rect.Height / 2f) : transform.Position,
+                        position: IsCentered ? transform.Position - new Vector2(rect.Width / 2f, rect.Height / 2f) : transform.Position,
 
-                    sourceRectangle: rect,
+                        sourceRectangle: rect,
 
-                    rotationInDegrees: transform.RotationInDegrees,
+                        rotationInDegrees: transform.RotationInDegrees,
 
-                    scale: transform.Scale,
+                        scale: transform.Scale,
 
-                    origin: IsCentered ? new(rect.Width / 2f, rect.Height / 2f) : Vector2.Zero,
+                        origin: IsCentered ? new(rect.Width / 2f, rect.Height / 2f) : Vector2.Zero,
 
-                    flipMode: (FlipHorizontally
-                        ? FlipMode.FlipHorizontally
-                        : FlipMode.None) |
-                    (FlipVertically
-                        ? FlipMode.FlipVertically
-                        : FlipMode.None));
+                        flipMode: (FlipHorizontally
+                            ? FlipMode.FlipHorizontally
+                            : FlipMode.None) |
+                        (FlipVertically
+                            ? FlipMode.FlipVertically
+                            : FlipMode.None));
+                }
+
+                else
+                    UpdateRenderRegion(context.Renderer);
             }
         }
     }

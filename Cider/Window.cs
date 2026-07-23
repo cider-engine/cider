@@ -10,7 +10,7 @@ using System.Drawing;
 using System.Runtime.CompilerServices;
 using static SDL.SDL3;
 
-#if OVERRIDE_WASM
+#if true
 using SpecificWindowFlags = ulong;
 #else
 using SpecificWindowFlags = SDL.SDL_WindowFlags;
@@ -142,10 +142,9 @@ namespace Cider
             }
         }
 
-#if OVERRIDE_WASM
         [global::System.Runtime.InteropServices.DllImport("SDL3", CallingConvention = global::System.Runtime.InteropServices.CallingConvention.Cdecl, ExactSpelling = true)]
-        private unsafe static extern SDL_Window* SDL_CreateWindow(byte* title, int w, int h, ulong flags);
-#endif
+        private unsafe static extern SDL_Window* SDL_CreateWindow(byte* title, int w, int h, SpecificWindowFlags flags);
+
         public unsafe Window(string title, int width, int height, WindowFlags flags)
         {
             if (OperatingSystem.IsBrowser() && AllWindows.Count > 0) throw new PlatformNotSupportedException("browser doesn't support multiple windows.");

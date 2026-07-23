@@ -3,7 +3,6 @@ using Cider.Internals;
 using Cider.Render;
 using SDL;
 using System;
-using System.Collections.Generic;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,12 +32,10 @@ namespace Cider.Assets
                     using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
                     res.EnsureSuccessStatusCode();
                     var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
-#pragma warning disable CA1416
-                    return await Task.Run(() => LoadInBrowser(context, id));
-#pragma warning restore CA1416
+                    return LoadInBrowser(context, id);
                 }
 
-                else return await Task.Run(() => new Surface(path));
+                else return new Surface(path);
             }
 
             [SupportedOSPlatform("browser")]
@@ -71,17 +68,13 @@ namespace Cider.Assets
                     res.EnsureSuccessStatusCode();
                     var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
 #pragma warning disable CA1416
-                    return await Task.Run(() => LoadInBrowser(context, id, renderer));
+                    return LoadInBrowser(context, id, renderer);
 #pragma warning restore CA1416
                 }
 
                 else
                 {
-#if ANDROID
-                    return new(renderer, await asset.LoadSurface()); // 可复用不卸载Surface
-#else
-                    return await Task.Run(() => new Texture(renderer, path));
-#endif
+                    return new Texture(renderer, path);
                 }
             }
 
@@ -110,7 +103,7 @@ namespace Cider.Assets
                 x.task.ContinueWith(static task =>
                 {
                     if (task.IsCompletedSuccessfully) task.Result.Dispose();
-                }, TaskScheduler.FromCurrentSynchronizationContext());
+                }, Game.GetTaskScheduler());
                 renderer.Textures.Remove(this);
             }
         }

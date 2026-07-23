@@ -38,7 +38,7 @@ namespace Cider.Components.In2D.Controls
                 if (Game.IsInitialized)
                     _fontVariant = Font?.Load()
                         .ContinueWith(x => SetFontProperties(x.Result.CreateVariant()),
-                            TaskScheduler.FromCurrentSynchronizationContext())
+                            Game.GetTaskScheduler())
                         .EnsureToBeSuccessful();
             }
         }
@@ -198,7 +198,7 @@ namespace Cider.Components.In2D.Controls
                 {
                     _fontVariant = Font.Load()
                         .ContinueWith(x => SetFontProperties(x.Result.CreateVariant()),
-                            TaskScheduler.FromCurrentSynchronizationContext())
+                            Game.GetTaskScheduler())
                         .EnsureToBeSuccessful();
 
                     return;

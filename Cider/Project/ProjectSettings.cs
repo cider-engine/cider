@@ -25,7 +25,10 @@ namespace Cider.Project
         public Size MainWindowSize { get; init; }
 
         [SettingGroup(Display)]
-        public Color BackgroundColor { get; init; } = Color.Black;
+        public Color BackgroundColor { get; set; } = Color.Black;
+
+        [SettingGroup(Display)]
+        public Color ClearColor { get; set; } = Color.Black;
 
         [SettingGroup(Display)]
         public Size LogicalSize { get; init; }

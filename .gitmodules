@@ -4,3 +4,6 @@
 [submodule "external/DotTiled"]
 	path = external/DotTiled
 	url = git@github.com:cider-engine/DotTiled.git
+[submodule "external/Aether.Physics2D"]
+	path = external/Aether.Physics2D
+	url = git@github.com:cider-engine/Aether.Physics2D.git

@@ -7,14 +7,14 @@
 	  <LangVersion>preview</LangVersion>
     </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Aether.Physics2D" Version="2.2.0" />
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
-    <PackageReference Include="ppy.SDL3-CS" Version="2026.629.0" />
-    <PackageReference Include="ppy.SDL3_image-CS" Version="2026.629.0" />
-    <PackageReference Include="ppy.SDL3_mixer-CS" Version="2026.629.0" />
-    <PackageReference Include="ppy.SDL3_ttf-CS" Version="2026.629.0" />
+    <PackageReference Include="ppy.SDL3-CS" Version="2026.722.0" />
+    <PackageReference Include="ppy.SDL3_image-CS" Version="2026.722.0" />
+    <PackageReference Include="ppy.SDL3_mixer-CS" Version="2026.722.0" />
+    <PackageReference Include="ppy.SDL3_ttf-CS" Version="2026.722.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\external\Aether.Physics2D\Physics2D\Aether.Physics2D.csproj" />
     <ProjectReference Include="..\external\DotTiled\src\DotTiled\DotTiled.csproj" />
   </ItemGroup>
 </Project>

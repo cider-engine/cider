@@ -97,14 +97,24 @@ namespace Cider.Generator
                             var member = SearchMember(type, child.Name.LocalName);
                             if (member is null)
                             {
-                                writer.WriteErrorMessage($"Member (property or field) {child.Name.LocalName} could not be found in type {type.Name}");
+                                writer.WriteErrorMessage($"Member (property or field or event) {child.Name.LocalName} could not be found in type {type.Name}");
                                 return;
+                            }
+
+                            if (member.Kind == SymbolKind.Event)
+                            {
+                                writer.Write("Invoke = _this => _this.");
+                                writer.Write(child.Name.LocalName);
+                                writer.Write(" += ");
+                                writer.Write(child.Value);
+                                writer.WriteLine(',');
+                                continue;
                             }
 
                             var memberType = (member as IPropertySymbol)?.Type ?? (member as IFieldSymbol)?.Type;
                             if (memberType is null)
                             {
-                                writer.WriteErrorMessage($"Member {member.Name} is not a property nor field of type {type.Name}");
+                                writer.WriteErrorMessage($"Member {member.Name} is neither property, field of type {type.Name}");
                                 return;
                             }
 
@@ -299,6 +309,16 @@ namespace Cider.Generator
                             else if (containingType is not null)
                             {
                                 var member = SearchMember(containingType, attr.Name.LocalName);
+
+                                if (member is { Kind: SymbolKind.Event })
+                                {
+                                    writer.Write("Invoke = _this => _this.");
+                                    writer.Write(attr.Name.LocalName);
+                                    writer.Write(" += ");
+                                    writer.Write(value);
+                                    writer.WriteLine(',');
+                                    continue;
+                                }
 
                                 var memberType = (member as IPropertySymbol)?.Type ?? (member as IFieldSymbol)?.Type;
 

@@ -1,6 +1,7 @@
 using Cider.Internals;
 using SDL;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -43,6 +44,34 @@ namespace Cider.Audio
         {
             _mixer = SDLHelpers.ThrowIfPtrIsNull(MIX_CreateMixerDevice((SDL_AudioDeviceID)id, null));
             if (!MixerDictionary.TryAdd((nint)_mixer, this)) throw new CiderGameException();
+        }
+
+        public unsafe float FrequencyRatio
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                return SDLHelpers.ThrowIfZero(MIX_GetMixerFrequencyRatio(_mixer));
+            }
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                SDLHelpers.ThrowIfFalse(MIX_SetMixerFrequencyRatio(_mixer, value));
+            }
+        }
+
+        public unsafe float Gain
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                return SDLHelpers.ThrowIfZero(MIX_GetMixerGain(_mixer));
+            }
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                SDLHelpers.ThrowIfFalse(MIX_SetMixerGain(_mixer, value));
+            }
         }
 
         public void Play(AudioClip audio)

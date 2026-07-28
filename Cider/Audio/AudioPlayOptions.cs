@@ -6,9 +6,9 @@ namespace Cider.Audio
 {
     public class AudioPlayOptions : SDLProperties
     {
-        public long LoopTimes
+        public int Loops
         {
-            get => GetNumberProperty(MIX_PROP_PLAY_LOOPS_NUMBER);
+            get => (int)GetNumberProperty(MIX_PROP_PLAY_LOOPS_NUMBER);
             set => SetNumberProperty(MIX_PROP_PLAY_LOOPS_NUMBER, value);
         }
 
@@ -84,9 +84,9 @@ namespace Cider.Audio
             set => SetBooleanProperty(MIX_PROP_PLAY_HALT_WHEN_EXHAUSTED_BOOLEAN, value);
         }
 
-        public long StartOrder
+        public int StartOrder
         {
-            get => GetNumberProperty(MIX_PROP_PLAY_START_ORDER_NUMBER);
+            get => (int)GetNumberProperty(MIX_PROP_PLAY_START_ORDER_NUMBER);
             set => SetNumberProperty(MIX_PROP_PLAY_START_ORDER_NUMBER, value);
         }
     }

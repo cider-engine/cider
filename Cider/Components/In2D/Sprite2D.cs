@@ -81,8 +81,6 @@ namespace Cider.Components.In2D
 
         private void UpdateRenderRegion(Renderer renderer)
         {
-            if (Texture is null) return;
-
             if (Texture?.LoadTexture(renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
             {
                 var texture = task.Result;

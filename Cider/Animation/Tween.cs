@@ -37,7 +37,7 @@ namespace Cider.Animation
 
         Task Task { get; }
 
-        bool Loop { get; set; }
+        bool IsLooping { get; set; }
 
         PlaybackDirection Direction { get; set; }
 
@@ -84,7 +84,7 @@ namespace Cider.Animation
 
         public event Action? Completed;
 
-        public bool Loop { get; set; }
+        public bool IsLooping { get; set; }
 
         public PlaybackDirection Direction
         {
@@ -149,7 +149,7 @@ namespace Cider.Animation
 
             _elapsed += _forward ? delta : -delta;
 
-            if (Loop && Direction == PlaybackDirection.Normal)
+            if (IsLooping && Direction == PlaybackDirection.Normal)
             {
                 _elapsed = EnsureInPeriod(_elapsed);
                 UpdateValue();
@@ -166,7 +166,7 @@ namespace Cider.Animation
                     _elapsed = Duration;
                 }
 
-                else if (Loop)
+                else if (IsLooping)
                 {
                     _elapsed = TimeSpan.Zero;
                 }
@@ -186,7 +186,7 @@ namespace Cider.Animation
                 {
                     _forward = true;
                     _elapsed = TimeSpan.Zero;
-                    if (!Loop)
+                    if (!IsLooping)
                     {
                         Complete();
                         return;
@@ -196,14 +196,14 @@ namespace Cider.Animation
                 else if (Direction == PlaybackDirection.Reverse)
                 {
                     _elapsed = TimeSpan.Zero;
-                    if (!Loop)
+                    if (!IsLooping)
                     {
                         Complete();
                         return;
                     }
                 }
 
-                else if (Loop) _elapsed = Duration;
+                else if (IsLooping) _elapsed = Duration;
 
                 else
                 {

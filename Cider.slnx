@@ -4,5 +4,6 @@
   <Project Path="Cider.Task/Cider.Task.csproj" Id="f508a87c-e43d-4323-9702-a48ee491ee63" />
   <Project Path="Cider.Test/Cider.Test.csproj" Id="518e2e53-e3b5-45df-bcb1-2f01cb3bf3b6" />
   <Project Path="Cider/Cider.csproj" />
+  <Project Path="external/Aether.Physics2D/Physics2D/Aether.Physics2D.csproj" />
   <Project Path="external/DotTiled/src/DotTiled/DotTiled.csproj" />
 </Solution>

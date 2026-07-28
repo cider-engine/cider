@@ -92,6 +92,20 @@ namespace Cider.Audio
             }
         }
 
+        public unsafe int Loops
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                return MIX_GetTrackLoops(_track);
+            }
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                MIX_SetTrackLoops(_track, value);
+            }
+        }
+
         public unsafe long PlaybackPositionFrames
         {
             get

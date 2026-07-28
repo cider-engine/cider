@@ -1,3 +1,4 @@
+using Cider.Assets;
 using Cider.Attributes;
 using Cider.Components;
 using Cider.Render;
@@ -23,7 +24,10 @@ namespace Cider.Project
 
         [SettingGroup(Display)]
         public Size MainWindowSize { get; init; }
-
+#nullable enable
+        [SettingGroup(Display)]
+        public TextureAsset? MainWindowIcon { get; init; }
+#nullable disable
         [SettingGroup(Display)]
         public Color BackgroundColor { get; set; } = Color.Black;
 

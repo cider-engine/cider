@@ -62,8 +62,14 @@ namespace Cider.Generator.CiderXml
                     writer.WriteLine($$"""
                         public partial class {{sceneClass}} : global::{{fullName}}
                         {
+                            partial void BeforeLoadChildren();
+
+                            partial void AfterLoadChildren();
+
                             public {{sceneClass}}()
                             {
+                                BeforeLoadChildren();
+
                                 Children.AddRange([
                         """);
 
@@ -78,6 +84,8 @@ namespace Cider.Generator.CiderXml
 
                     writer.WriteLine("""
                                 ]);
+
+                                AfterLoadChildren();
                             }
                         """);
 

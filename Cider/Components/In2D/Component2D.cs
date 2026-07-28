@@ -43,7 +43,7 @@ namespace Cider.Components.In2D
                 {
                     CurrentTransform2D = GlobalTransform
                 };
-                OnGlobalTransformChanged(args);
+                OnGlobalTransformChangedInternal(args);
                 var toBeRestored = args.CurrentTransform2D;
                 foreach (var item in Children)
                 {
@@ -72,13 +72,18 @@ namespace Cider.Components.In2D
 
         public event EventHandler<Component, MouseMovedEventArgs> MouseLeave;
 
+        private protected override EventArgs CreateGlobalTransformArgsFromCurrent() => new Transform2DChangedEventArgs()
+        {
+            CurrentTransform2D = GlobalTransform
+        };
+
         internal override void OnGlobalTransformChangedDispatcher(EventArgs args)
         {
             if (args is Transform2DChangedEventArgs args2D)
             {
                 _parentGlobalTransform = args2D.CurrentTransform2D;
                 args2D.ApplyTransform(Transform);
-                OnGlobalTransformChanged(args2D);
+                OnGlobalTransformChangedInternal(args2D);
 
                 var toBeRestored = args2D.CurrentTransform2D;
                 foreach (var item in Children)
@@ -95,7 +100,7 @@ namespace Cider.Components.In2D
                 {
                     CurrentTransform2D = Transform
                 };
-                OnGlobalTransformChanged(newArgs2D);
+                OnGlobalTransformChangedInternal(newArgs2D);
 
                 var toBeRestored = newArgs2D.CurrentTransform2D;
                 foreach (var item in Children)

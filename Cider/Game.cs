@@ -132,6 +132,12 @@ namespace Cider
 
             MainWindow.Renderer.SetLogicalPresentation(ProjectSettings.LogicalSize, ProjectSettings.LogicalPresentationMode);
 
+            ProjectSettings.MainWindowIcon?.LoadSurface().ContinueWith(x =>
+            {
+                x.EnsureSuccess();
+                MainWindow.Icon = x.Result;
+            }, GetTaskScheduler());
+
             _initialized = true;
             MainWindow.Show();
             CurrentScene.OnLoadedDispatcher(CurrentScene);

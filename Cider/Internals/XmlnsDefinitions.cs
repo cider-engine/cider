@@ -13,6 +13,9 @@ using Cider.Attributes;
 [assembly: XmlnsDefinition(XmlnsStatics.Engine, "Cider.Project")]
 
 
+[assembly: XmlnsDefinition(XmlnsStatics.Engine, "Cider.Physics")]
+
+
 [assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Drawing.Size))]
 [assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Drawing.SizeF))]
 [assembly: XmlnsDirectType(XmlnsStatics.Engine, typeof(System.Drawing.Point))]

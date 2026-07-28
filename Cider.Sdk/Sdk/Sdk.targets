@@ -1,17 +1,23 @@
 <Project>
-	<Import Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'browser'" Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
-	<Import Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'" Project="Sdk.props" Sdk="Microsoft.NET.Sdk.WebAssembly" />
+	<PropertyGroup>
+		<_IsOnBrowser>false</_IsOnBrowser>
+		<_IsOnBrowser Condition="(!$(TargetFrameworks.Contains('-browser')) And $(BuildToBrowser) == 'true') Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'">true</_IsOnBrowser>
+		<_CiderTest>false</_CiderTest>
+		<_CiderTest Condition="$(CiderTest) == 'true'">true</_CiderTest>
+	</PropertyGroup>
+	<Import Condition="!$(_IsOnBrowser)" Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+	<Import Condition="$(_IsOnBrowser)" Project="Sdk.props" Sdk="Microsoft.NET.Sdk.WebAssembly" />
 
-	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'browser' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == '' And !$(_IsOnBrowser)">
 		<OutputType>WinExe</OutputType>
 	</PropertyGroup>
 
-	<ItemGroup Condition="$(CiderTest)">
+	<ItemGroup Condition="$(_CiderTest)">
 		<ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Cider\Cider.csproj" />
 		<ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Cider.Generator\Cider.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
-	<ItemGroup Condition="!$(CiderTest)">
+	<ItemGroup Condition="!$(_CiderTest)">
 		<PackageReference Include="Cider" Version="$(CiderVersion)" />
 		<PackageReference Include="Cider.Generator" Version="$(CiderVersion)" />
 	</ItemGroup>
@@ -24,7 +30,7 @@
 
 		<Content Include="@(_CiderAssetsWithoutMeta)">
 			<!--Browser Assets由StaticWebAssetsSdk处理-->
-			<CopyToOutputDirectory Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'browser'">PreserveNewest</CopyToOutputDirectory>
+			<CopyToOutputDirectory Condition="!$(_IsOnBrowser)">PreserveNewest</CopyToOutputDirectory>
 		</Content>
 		
 		<CompilerVisibleProperty Include="MSBuildProjectDirectory" />
@@ -51,15 +57,15 @@
 	<!--Android End-->
 	
 	<!--Browser Start-->
-	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'">
+	<PropertyGroup Condition="$(_IsOnBrowser)">
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
 		<WasmEnableExceptionHandling>false</WasmEnableExceptionHandling>
-		<ResolveStaticWebAssetsInputsDependsOn>$(ResolveStaticWebAssetsInputsDependsOn);AddExtraStaticWebAssets;</ResolveStaticWebAssetsInputsDependsOn>
+		<ResolveStaticWebAssetsInputsDependsOn>$(ResolveStaticWebAssetsInputsDependsOn);AddExtraStaticWebAssets</ResolveStaticWebAssetsInputsDependsOn>
 		<ExtraStaticAssetsRoot>$(MSBuildProjectDirectory)\$(CiderAssetsPath)\</ExtraStaticAssetsRoot>
 	</PropertyGroup>
 	
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'">
+	<ItemGroup Condition="$(_IsOnBrowser)">
 		<Compile Include="Platform\Browser\**\*.cs" />
 		
 		<StaticWebAssetFingerprintPattern Include="JS" Pattern="*.js" Expression="#[.{fingerprint}]!" />
@@ -70,7 +76,7 @@
 		<EmccExportedRuntimeMethod Include="requestFullscreen" />
 	</ItemGroup>
 
-	<Target Name="AddExtraStaticWebAssets" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'">
+	<Target Name="AddExtraStaticWebAssets" Condition="$(_IsOnBrowser)">
 		<DefineStaticWebAssets
 			CandidateAssets="@(_CiderAssetsWithoutMeta)"
 			SourceId="$(PackageId)"
@@ -97,13 +103,18 @@
 	</Target>
 	<!--Browser End-->
 	
-	<UsingTask Condition="$(CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\..\Cider.Task\bin\$(Configuration)\netstandard2.0\Cider.Task.dll" />
-	<UsingTask Condition="!$(CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\tasks\Cider.Task.dll" />
+	<UsingTask Condition="$(_CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\..\Cider.Task\bin\$(Configuration)\netstandard2.0\Cider.Task.dll" />
+	<UsingTask Condition="!$(_CiderTest)" TaskName="AssetTask" AssemblyFile="$(MSBuildThisFileDirectory)..\tasks\Cider.Task.dll" />
+
+	<Target Name="CheckConfiguration" BeforeTargets="BeforeBuild">
+		<Warning Condition="$(TargetFrameworks.Contains('-browser')) And $(BuildToBrowser) != ''"
+			Text="The property BuildToBrowser will be ignored when browser is in TargetFrameworks." />
+	</Target>
 
 	<Target Name="AssetMetaPreprocess" BeforeTargets="BeforeBuild">
 		<AssetTask Assets="@(CiderAssets)" />
 	</Target>
 
-	<Import Condition="!$(TargetFramework.Contains('browser'))" Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-	<Import Condition="$(TargetFramework.Contains('browser'))" Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.WebAssembly" />
+	<Import Condition="!$(_IsOnBrowser)" Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+	<Import Condition="$(_IsOnBrowser)" Project="Sdk.targets" Sdk="Microsoft.NET.Sdk.WebAssembly" />
 </Project>

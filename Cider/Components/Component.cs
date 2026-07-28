@@ -16,7 +16,7 @@ namespace Cider.Components
             get;
             internal set
             {
-                if (this is Scene) throw new InvalidOperationException();
+                if (this is Scene) throw new InvalidOperationException("Scene cannot have Parent");
                 if (field is Scene scene1)
                 {
                     if (scene1.Window is Window window)
@@ -53,7 +53,7 @@ namespace Cider.Components
                     if (Game.IsInitialized && scene4.Window is not null) OnLoadedDispatcher(scene4);
                 }
 
-                value?.OnGlobalTransformChangedDispatcher(EventArgs.Empty);
+                OnGlobalTransformChangedDispatcher(value?.CreateGlobalTransformArgsFromCurrent() ?? EventArgs.Empty);
             }
         }
 
@@ -181,13 +181,19 @@ namespace Cider.Components
             }
         }
 
-        protected virtual void OnGlobalTransformChanged(EventArgs args)
+        private protected virtual EventArgs CreateGlobalTransformArgsFromCurrent() => EventArgs.Empty;
+
+        private protected virtual void OnGlobalTransformChangedInternal(EventArgs args)
         {}
 
+        /// <summary>
+        /// 通知当前节点与子节点父节点的全局变换可能发生改变
+        /// </summary>
+        /// <param name="args"></param>
         [Dispatcher]
         internal virtual void OnGlobalTransformChangedDispatcher(EventArgs args)
         {
-            OnGlobalTransformChanged(args);
+            OnGlobalTransformChangedInternal(args);
             foreach (var item in Children)
             {
                 item.OnGlobalTransformChangedDispatcher(args);

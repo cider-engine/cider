@@ -66,7 +66,7 @@ namespace Cider.Components.In2D.Physics
         {
         }
 
-        protected override void OnGlobalTransformChanged(EventArgs args)
+        private protected override void OnGlobalTransformChangedInternal(EventArgs args)
         {
             var globalTransform = ((Transform2DChangedEventArgs)args).CurrentTransform2D;
             var globalPosition = globalTransform.Position;

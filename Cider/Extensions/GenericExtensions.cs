@@ -1,9 +1,9 @@
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.ComponentModel;
 
 namespace Cider.Extensions
 {
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public static class GenericExtensions
     {
         extension<T>(T item)

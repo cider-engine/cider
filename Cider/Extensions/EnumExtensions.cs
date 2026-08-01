@@ -4,14 +4,14 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Cider.Extensions
 {
-    public static class EnumExtensions
+    internal static class EnumExtensions
     {
         extension(SDL_WindowID id)
         {
 #nullable enable
-            internal bool TryGetWindow([NotNullWhen(true)] out Window? window) => Window.AllWindows.TryGetValue(new((uint)(id)), out window);
+            public bool TryGetWindow([NotNullWhen(true)] out Window? window) => Window.AllWindows.TryGetValue(new((uint)(id)), out window);
 
-            internal Window? RelativeWindow
+            public Window? RelativeWindow
             {
                 get
                 {

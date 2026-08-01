@@ -27,7 +27,7 @@ namespace Cider.Components.In2D
         }
 #nullable disable
 
-        public bool IsCentered { get; set { field = value; _cachedRenderRegion = null; } } = false;
+        public bool IsCentered { get; set { field = value; _cachedRenderRegion = null; } } = true;
 
         public bool FlipHorizontally { get; set; } = false;
 
@@ -119,9 +119,9 @@ namespace Cider.Components.In2D
             if (Texture is null || _cachedRenderRegion is null) return false;
             var rect = _cachedRenderRegion.Value;
             if (IsCentered)
-                return RectangleHitTest(result, rect.Width, rect.Height, rect.Width / 2f, rect.Height / 2f);
+                return result.RectangleHitTest(rect.Width, rect.Height, rect.Width / 2, rect.Height / 2);
 
-            else return RectangleHitTest(result, rect.Width, rect.Height);
+            else return result.RectangleHitTest(rect.Width, rect.Height);
         }
 
         protected override void OnRender(RenderContext context)
@@ -137,7 +137,7 @@ namespace Cider.Components.In2D
                     context.RenderTexture(
                         texture: task.Result,
 
-                        position: IsCentered ? transform.Position - new Vector2(rect.Width / 2f, rect.Height / 2f) : transform.Position,
+                        position: IsCentered ? transform.Position - transform.Scale * new Vector2(rect.Width / 2, rect.Height / 2) : transform.Position,
 
                         sourceRectangle: rect,
 
@@ -145,7 +145,7 @@ namespace Cider.Components.In2D
 
                         scale: transform.Scale,
 
-                        origin: IsCentered ? new(rect.Width / 2f, rect.Height / 2f) : Vector2.Zero,
+                        originInSource: IsCentered ? new Vector2(rect.Width / 2, rect.Height / 2) : Vector2.Zero,
 
                         flipMode: (FlipHorizontally
                             ? FlipMode.FlipHorizontally

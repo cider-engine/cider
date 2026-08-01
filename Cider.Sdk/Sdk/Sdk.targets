@@ -66,10 +66,12 @@
 	</PropertyGroup>
 	
 	<ItemGroup Condition="$(_IsOnBrowser)">
+		<PackageReference Include="Cider.NativeAssets.WebAssembly" Version="$(CiderVersion)" />
+		
 		<Compile Include="Platform\Browser\**\*.cs" />
 		
 		<StaticWebAssetFingerprintPattern Include="JS" Pattern="*.js" Expression="#[.{fingerprint}]!" />
-		<NativeFileReference Include="lib\*.a" />
+		<!--<NativeFileReference Include="*.a" />-->
 		<!--<WasmFilesToIncludeInFileSystem Include="" />-->
 
 		<!--Used by SDL_CreateWindowWithProperties-->

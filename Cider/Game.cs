@@ -29,7 +29,7 @@ namespace Cider
 
         private long _lastTick;
 
-        public int CurrentFPS { get; private set; }
+        public int CurrentFps { get; private set; }
 
         private int _frameCount;
 
@@ -57,6 +57,8 @@ namespace Cider
         public CiderSynchronizationContext CurrentSynchronizationContext { get; private set; }
 
         public IServiceProvider Services { get; private set; }
+
+        public event EventHandler<Game, int> FpsChanged;
 
         public Game(ProjectSettings settings)
         {
@@ -150,7 +152,7 @@ namespace Cider
 
             if (_fpsAccumulator >= 1.0)
             {
-                CurrentFPS = (int)Math.Round(_frameCount / _fpsAccumulator);
+                FpsChanged?.Invoke(this, CurrentFps = (int)Math.Round(_frameCount / _fpsAccumulator));
                 _frameCount = 0;
                 _fpsAccumulator = 0;
             }
@@ -329,6 +331,10 @@ namespace Cider
                     #endregion
 
                     #region Keyboard Event
+                    case SDL_EventType.SDL_EVENT_KEY_DOWN:
+                        {
+                            break;
+                        }
                     #endregion
 
                     default:

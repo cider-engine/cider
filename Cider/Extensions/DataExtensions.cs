@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Cider.Extensions
 {
-    public static class DataExtensions
+    internal static class DataExtensions
     {
         extension(nkast.Aether.Physics2D.Common.Vector2 vector)
         {
@@ -42,7 +42,7 @@ namespace Cider.Extensions
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public nkast.Aether.Physics2D.Common.Vector2 AsPhysicsVector2() => new(vector.X, vector.Y);
+            internal nkast.Aether.Physics2D.Common.Vector2 AsPhysicsVector2() => new(vector.X, vector.Y);
 
             public static Vector2 Parse(string value)
             {

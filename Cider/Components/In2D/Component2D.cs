@@ -7,6 +7,11 @@ using System.Numerics;
 
 namespace Cider.Components.In2D
 {
+#nullable enable
+    public delegate void GotFocusEventHandler(Component2D sender, Component2D? lostFocusComponent);
+    public delegate void LostFocusEventHandler(Component2D sender, Component2D? gotFocusComponent);
+#nullable restore
+
     public class Component2D : Component
     {
         public Vector2 Position
@@ -62,6 +67,10 @@ namespace Cider.Components.In2D
 
         public bool IsMouseOver { get; internal set; }
 
+        public bool IsFocused { get; internal set; }
+
+        public bool Focusable { get; private set; }
+
         public event EventHandler<Component, MouseButtonEventArgs> MouseDown;
 
         public event EventHandler<Component, MouseButtonEventArgs> MouseUp;
@@ -71,6 +80,10 @@ namespace Cider.Components.In2D
         public event EventHandler<Component, MouseMovedEventArgs> MouseEnter;
 
         public event EventHandler<Component, MouseMovedEventArgs> MouseLeave;
+
+        public event GotFocusEventHandler GotFocus;
+
+        public event LostFocusEventHandler LostFocus;
 
         private protected override EventArgs CreateGlobalTransformArgsFromCurrent() => new Transform2DChangedEventArgs()
         {
@@ -128,6 +141,12 @@ namespace Cider.Components.In2D
             }
         }
 
+        private protected override void OnDetachFromSceneInternal(Scene root)
+        {
+            if (IsFocused) InputManager.ClearFocus();
+            base.OnDetachFromSceneInternal(root);
+        }
+
 #nullable enable
         protected internal virtual void OnMouseDown(Component sender, MouseButtonEventArgs args)
         {
@@ -153,34 +172,15 @@ namespace Cider.Components.In2D
         {
             MouseLeave?.Invoke(sender, args);
         }
-#nullable disable
 
-        internal static bool RectangleHitTest(HitTestResult result, float unscaledWidth, float unscaledHeight, float offsetX = 0, float offsetY = 0)
+        protected internal virtual void OnGotFocus(Component2D sender, Component2D? lostFocusComponent)
         {
-            var transform = result.CurrentTransform2D;
-            var vector = result.Position;
+            GotFocus?.Invoke(sender, lostFocusComponent);
+        }
 
-            // 去平移：相对 transform 的位置
-            var local = vector - transform.Position;
-
-            // 去旋转：按 -rotation 旋转回本地方向
-            local = local.Rotate(-transform.RotationInRadians);
-
-            // 避免除以零（缩放为0视为不可点击）
-            const float eps = 1e-6f;
-            if (Math.Abs(transform.Scale.X) < eps || Math.Abs(transform.Scale.Y) < eps)
-                return false;
-
-            // 去缩放：得到本地坐标
-            local = new Vector2(local.X / transform.Scale.X, local.Y / transform.Scale.Y);
-
-            // 判断是否在矩形 [0, Width] x [0, Height] 内
-            if (local.X >= 0 - offsetX && local.Y >= 0 - offsetY && local.X <= unscaledWidth - offsetX && local.Y <= unscaledHeight - offsetY)
-            {
-                return true;
-            }
-
-            return false;
+        protected internal virtual void OnLostFocus(Component2D sender, Component2D? gotFocusComponent)
+        {
+            LostFocus?.Invoke(sender, gotFocusComponent);
         }
     }
 }

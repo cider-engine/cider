@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 namespace Cider.Extensions
 {
+    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
     public static class CollectionExtensions
     {
         extension<T>(T[] array)
@@ -35,7 +36,7 @@ namespace Cider.Extensions
         {
             public void Add(ReadOnlySpan<T> items)
             {
-                list.Capacity = items.Length;
+                list.Capacity = list.Count + items.Length;
                 list.AddRange(items);
             }
         }
@@ -44,7 +45,7 @@ namespace Cider.Extensions
         {
             public void Add(ReadOnlySpan<Component> items)
             {
-                components.Capacity = items.Length;
+                components.Capacity = components.Count + items.Length;
                 components.AddRange(items);
             }
         }

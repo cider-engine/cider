@@ -55,6 +55,7 @@ namespace Cider.Generator.CiderXml
                         using Cider.Extensions;
 
                         namespace {{sceneNamespace}};
+
                         """);
                     }
 

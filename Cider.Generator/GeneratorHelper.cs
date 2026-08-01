@@ -128,13 +128,47 @@ namespace Cider.Generator
 
                             else switch (memberType.SpecialType)
                                 {
+                                    case SpecialType.System_Boolean:
+                                        writer.Write(child.Name.LocalName);
+                                        writer.Write(" = ");
+                                        writer.Write(child.Value.Trim().ToLowerInvariant());
+                                        writer.WriteLine(",");
+                                        break;
+
+                                    case SpecialType.System_Char:
+                                        writer.Write(child.Name.LocalName);
+                                        writer.Write(" = '");
+                                        writer.Write(child.Value);
+                                        writer.WriteLine("',");
+                                        break;
+
                                     case > SpecialType.System_Char and < SpecialType.System_String:
                                         writer.Write(child.Name.LocalName);
-                                        writer.Write(" = checked((global::System.");
-                                        writer.Write(memberType.Name);
-                                        writer.Write(')');
-                                        writer.Write(child.Value);
-                                        writer.WriteLine("),");
+                                        writer.Write(" = ");
+                                        writer.Write(child.Value.Trim());
+                                        switch (memberType.SpecialType)
+                                        {
+                                            case SpecialType.System_Int64:
+                                                writer.Write('L');
+                                                break;
+
+                                            case SpecialType.System_UInt64:
+                                                writer.Write("uL");
+                                                break;
+
+                                            case SpecialType.System_Decimal:
+                                                writer.Write('m');
+                                                break;
+
+                                            case SpecialType.System_Single:
+                                                writer.Write('f');
+                                                break;
+
+                                            case SpecialType.System_Double:
+                                                writer.Write('d');
+                                                break;
+                                        }
+                                        writer.WriteLine(',');
                                         break;
 
                                     case SpecialType.System_String:
@@ -152,13 +186,6 @@ namespace Cider.Generator
                                             writer.Write(child.Value);
                                             writer.WriteLine("\",");
                                         }
-                                        break;
-
-                                    case SpecialType.System_Char:
-                                        writer.Write(child.Name.LocalName);
-                                        writer.Write(" = '");
-                                        writer.Write(child.Value);
-                                        writer.WriteLine("',");
                                         break;
 
 
@@ -248,6 +275,18 @@ namespace Cider.Generator
                         }
                     }
                 }
+
+                else if (element.Name.Namespace == CommandNamespace)
+                {
+                    writer.WriteErrorMessage($"Error command namespace of element: {element.Name.LocalName}");
+                    return;
+                }
+
+                else
+                {
+                    writer.WriteErrorMessage($"Unknown namespace: {element.Name.NamespaceName}");
+                    return;
+                }
             }
 
             else
@@ -255,36 +294,41 @@ namespace Cider.Generator
                 {
                     if (mappings.TryGetValue(child.Name.NamespaceName, out var dict))
                     {
-                        string? fullName = null;
-                        if (dict.TryGetValue(child.Name.LocalName, out fullName))
+                        if (!dict.TryGetValue(child.Name.LocalName, out string? fullName))
                         {
-                            if (child.Attribute(CommandWithClass) is XAttribute attr1)
-                            {
-                                if (child.Attribute(CommandWithName) is XAttribute attr2)
-                                {
-                                    writer.WriteLine($"(this.{attr2.Value} = new global::{attr1.Value}()");
-                                    namedFields?.Add($"internal global::{attr1.Value} {attr2.Value};");
-                                }
-
-                                else writer.WriteLine($"(({fullName})new global::{attr1.Value}()");
-                            }
-
-                            else if (child.Attribute(CommandWithName) is XAttribute attr2)
-                            {
-                                writer.WriteLine($"(this.{attr2.Value} = new global::{fullName}()");
-                                namedFields?.Add($"internal global::{fullName} {attr2.Value};");
-                            }
-
-                            else writer.WriteLine($"(new global::{fullName}()");
+                            writer.WriteErrorMessage($"The type: {child.Name.LocalName} is not registered in the namespace: {child.Name.NamespaceName}");
+                            return;
                         }
 
-                        else writer.WriteLine("(new()");
+                        if (child.Attribute(CommandWithClass) is XAttribute attr1)
+                        {
+                            if (child.Attribute(CommandWithName) is XAttribute attr2)
+                            {
+                                writer.WriteLine($"(this.{attr2.Value} = new global::{attr1.Value}()");
+                                namedFields?.Add($"internal global::{attr1.Value} {attr2.Value};");
+                            }
+
+                            else writer.WriteLine($"(({fullName})new global::{attr1.Value}()");
+                        }
+
+                        else if (child.Attribute(CommandWithName) is XAttribute attr2)
+                        {
+                            writer.WriteLine($"(this.{attr2.Value} = new global::{fullName}()");
+                            namedFields?.Add($"internal global::{fullName} {attr2.Value};");
+                        }
+
+                        else writer.WriteLine($"(new global::{fullName}()");
 
                         writer.WriteLine('{');
                         writer.Indent++;
 
-                        INamedTypeSymbol? containingType = null;
-                        if (fullName is not null) containingType = compilation.GetTypeByMetadataName(fullName);
+                        INamedTypeSymbol? containingType = compilation.GetTypeByMetadataName(fullName);
+
+                        if (containingType is null)
+                        {
+                            writer.WriteErrorMessage($"Cannot find the type: {fullName}");
+                            return;
+                        }
 
                         foreach (var attr in child.Attributes())
                         {
@@ -326,31 +370,155 @@ namespace Cider.Generator
                                 {
                                     writer.Write(attr.Name.LocalName);
                                     writer.Write(" = ");
-                                    writer.Write(memberType.GetFullyQualifiedName());
-                                    writer.Write(".Parse(\"");
-                                    writer.Write(value);
-                                    writer.WriteLine("\"),");
+
+                                    switch (memberType.SpecialType)
+                                    {
+                                        case SpecialType.System_Boolean:
+                                            writer.Write(value.Trim().ToLowerInvariant());
+                                            writer.WriteLine(",");
+                                            break;
+
+                                        case SpecialType.System_Char:
+                                            writer.Write('\'');
+                                            writer.Write(value);
+                                            writer.WriteLine("',");
+                                            break;
+
+                                        case > SpecialType.System_Char and < SpecialType.System_String:
+                                            writer.Write(value.Trim());
+
+                                            switch (memberType.SpecialType)
+                                            {
+                                                case SpecialType.System_Int64:
+                                                    writer.Write('L');
+                                                    break;
+
+                                                case SpecialType.System_UInt64:
+                                                    writer.Write("uL");
+                                                    break;
+
+                                                case SpecialType.System_Decimal:
+                                                    writer.Write('m');
+                                                    break;
+
+                                                case SpecialType.System_Single:
+                                                    writer.Write('f');
+                                                    break;
+
+                                                case SpecialType.System_Double:
+                                                    writer.Write('d');
+                                                    break;
+                                            }
+
+                                            writer.WriteLine(',');
+
+                                            break;
+
+                                        case SpecialType.System_String:
+                                            writer.Write("@\"");
+                                            writer.Write(value);
+                                            writer.WriteLine("\",");
+                                            break;
+
+                                        default:
+                                            writer.Write(memberType.GetFullyQualifiedName());
+                                            writer.Write(".Parse(\"");
+                                            writer.Write(value);
+                                            writer.WriteLine("\"),");
+                                            break;
+                                    }
                                 }
 
-                                else writer.WriteErrorMessage($"Current containingType: {containingType}; member: {member}");
-                            }
-
-                            else
-                            {
-                                writer.Write(attr.Name.LocalName);
-                                writer.Write(" = new global::Cider.Converters.StringValueConverter(\"");
-                                writer.Write(value);
-                                writer.WriteLine("\"),");
+                                else
+                                {
+                                    writer.WriteErrorMessage($"Cannot find the type of member: {member}; current containingType: {containingType}");
+                                    return;
+                                }
                             }
                         }
 
                         if (child.HasElements) ProcessElement(child, mappings, writer, namedFields, compilation, true);
-
-                        else if (!string.IsNullOrWhiteSpace(child.Value))
+                        // 不是为null就return了吗咋这里还报nullable
+                        else if (!string.IsNullOrWhiteSpace(child.Value) && containingType!.GetAttributes().SingleOrDefault(static x => x.AttributeClass?.GetFullyQualifiedName() == "global::Cider.Attributes.ContentAttribute") is AttributeData attribute)
                         {
-                            writer.Write("Content = new global::Cider.Converters.StringValueConverter(\"");
-                            writer.Write(child.Value);
-                            writer.WriteLine("\"),");
+                            if (attribute.ConstructorArguments[0].Value is string contentProperty)
+                            {
+                                var member = SearchMember(containingType, contentProperty);
+
+                                var memberType = (member as IPropertySymbol)?.Type ?? (member as IFieldSymbol)?.Type;
+
+                                if (memberType is not null)
+                                {
+                                    writer.Write($"{contentProperty} = ");
+                                    switch (memberType.SpecialType)
+                                    {
+                                        case SpecialType.System_Boolean:
+                                            writer.Write(child.Value.Trim().ToLowerInvariant());
+                                            writer.WriteLine(",");
+                                            break;
+
+                                        case SpecialType.System_Char:
+                                            writer.Write('\'');
+                                            writer.Write(child.Value);
+                                            writer.WriteLine("',");
+                                            break;
+
+                                        case > SpecialType.System_Char and < SpecialType.System_String:
+                                            writer.Write(child.Value.Trim());
+
+                                            switch (memberType.SpecialType)
+                                            {
+                                                case SpecialType.System_Int64:
+                                                    writer.Write('L');
+                                                    break;
+
+                                                case SpecialType.System_UInt64:
+                                                    writer.Write("uL");
+                                                    break;
+
+                                                case SpecialType.System_Decimal:
+                                                    writer.Write('m');
+                                                    break;
+
+                                                case SpecialType.System_Single:
+                                                    writer.Write('f');
+                                                    break;
+
+                                                case SpecialType.System_Double:
+                                                    writer.Write('d');
+                                                    break;
+                                            }
+
+                                            writer.WriteLine(',');
+
+                                            break;
+
+                                        case SpecialType.System_String:
+                                            writer.Write("@\"");
+                                            writer.Write(child.Value);
+                                            writer.WriteLine("\",");
+                                            break;
+
+                                        default:
+                                            writer.Write(memberType.GetFullyQualifiedName());
+                                            writer.Write(".Parse(\"");
+                                            writer.Write(child.Value);
+                                            writer.WriteLine("\"),");
+                                            break;
+                                    }
+                                }
+
+                                else
+                                {
+                                    writer.WriteErrorMessage($"Cannot find the type of member: {member}; current containingType: {containingType}");
+                                    return;
+                                }
+                            }
+
+                            else
+                            {
+                                writer.WriteErrorMessage($"The ContentAttribute {attribute.AttributeClass} has no correct argument");
+                            }
                         }
 
                         writer.Indent--;
@@ -399,6 +567,12 @@ namespace Cider.Generator
                                 writer.WriteErrorMessage($"Current element: {element}, child: {child}");
                                 return;
                         }
+                    }
+
+                    else
+                    {
+                        writer.WriteErrorMessage($"Unknown namespace: {child.Name.NamespaceName}");
+                        return;
                     }
                 }
         }

@@ -38,7 +38,7 @@ namespace Cider.Extensions
         }
     }
 
-    public ref struct UnmanagedUtf8
+    internal ref struct UnmanagedUtf8
     {
         public unsafe byte* Pointer;
 

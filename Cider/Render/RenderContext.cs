@@ -39,16 +39,16 @@ namespace Cider.Render
             RenderTexture(Renderer.WhiteSinglePixelTexture.Value, position, null, rotationInDegrees, new(width * scale.X, height * scale.Y), Vector2.Zero, FlipMode.None);
         }
 
-        public void RenderTexture(Texture texture, Vector2 position, RectangleF? sourceRectangle, float rotationInDegrees, Vector2 scale, Vector2 origin, FlipMode flipMode)
+        public void RenderTexture(Texture texture, Vector2 position, RectangleF? sourceRectangle, float rotationInDegrees, Vector2 scale, Vector2 originInSource, FlipMode flipMode)
         {
             var destination = sourceRectangle is RectangleF rect
                 ? new RectangleF(position.X, position.Y, rect.Width * scale.X, rect.Height * scale.Y)
                 : new RectangleF(position.X, position.Y, texture.Width * scale.X, texture.Height * scale.Y);
 
-            RenderTexture(texture, sourceRectangle, destination, rotationInDegrees, origin, flipMode);
+            RenderTexture(texture, sourceRectangle, destination, rotationInDegrees, originInSource * scale, flipMode);
         }
 
-        public unsafe void RenderTexture(Texture texture, RectangleF? sourceRectangle, RectangleF? destinationRectangle, float rotationInDegrees, Vector2 origin, FlipMode flipMode)
+        public unsafe void RenderTexture(Texture texture, RectangleF? sourceRectangle, RectangleF? destinationRectangle, float rotationInDegrees, Vector2 originInDestination, FlipMode flipMode)
         {
             SDL_FRect source;
 
@@ -64,8 +64,8 @@ namespace Cider.Render
 
             SDL_FPoint center = new()
             {
-                x = origin.X,
-                y = origin.Y,
+                x = originInDestination.X,
+                y = originInDestination.Y,
             };
             SDLHelpers.ThrowIfFalse(SDL_RenderTextureRotated(Renderer.Pointer, texture.Pointer, sourceRectangle.HasValue ? &source : null, destinationRectangle.HasValue ? &destination : null, rotationInDegrees, &center, (SDL_FlipMode)flipMode));
         }

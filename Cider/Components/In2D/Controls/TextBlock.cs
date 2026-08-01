@@ -6,7 +6,6 @@ using Cider.Input;
 using Cider.Internals;
 using Cider.Render;
 using System;
-using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Numerics;
@@ -15,6 +14,7 @@ using System.Threading.Tasks;
 namespace Cider.Components.In2D.Controls
 {
     [UnstableApi]
+    [Content(nameof(Text))]
     public class TextBlock : Control
     {
 #nullable enable
@@ -125,13 +125,6 @@ namespace Cider.Components.In2D.Controls
             }
         } = string.Empty;
 
-        /// <summary>
-        /// <see cref="Text"/>属性的别名
-        /// </summary>
-        [NotNull]
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public string Content { get => Text; set => Text = value; }
-
         public Color Foreground
         {
             get;
@@ -185,7 +178,7 @@ namespace Cider.Components.In2D.Controls
         protected override bool HitTest(HitTestResult result)
         {
             if (Font is null || _cachedTexture is null) return false;
-            return RectangleHitTest(result, _cachedTexture.Width, _cachedTexture.Height); // 可点击必定已渲染，复用Texture的Width和Height
+            return result.RectangleHitTest(_cachedTexture.Width, _cachedTexture.Height); // 可点击必定已渲染，复用Texture的Width和Height
         }
 
         protected override void OnRender(RenderContext context)

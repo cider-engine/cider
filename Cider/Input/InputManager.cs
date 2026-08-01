@@ -10,7 +10,7 @@ namespace Cider.Input
     public delegate void MouseMovedEventHandler(Window? window, MouseMovedEventArgs args);
     public delegate void MouseButtonEventHandler(Window? window, MouseButtonEventArgs args);
 
-    public static class InputManager
+    public static partial class InputManager
     {
 #nullable disable
         public static event MouseMovedEventHandler MouseMoved;
@@ -138,14 +138,51 @@ namespace Cider.Input
 
             if (result.GetComponent() is Component component)
             {
+                Component2D? focusedComponent = null;
+
                 foreach (var item in component.EnumerateToRoot())
                 {
                     if (item is Component2D c2d)
                     {
                         c2d.OnMouseDown(component, args);
+                        if (c2d.Focusable)
+                        {
+                            focusedComponent ??= c2d;
+                        }
                     }
                 }
+
+                if (focusedComponent is not null)
+                    SetFocus(focusedComponent);
             }
+        }
+        private static readonly WeakReference<Component2D> _focusedComponentRefrence = new(null!);
+
+        public static Component2D? FocusedComponent => _focusedComponentRefrence.TryGetTarget(out var target) ? target : null;
+
+        private static void SetFocus(Component2D? gettingFocusComponent)
+        {
+            _focusedComponentRefrence.TryGetTarget(out Component2D? losingFocusComponent);
+
+            if (ReferenceEquals(gettingFocusComponent, losingFocusComponent)) return;
+
+            losingFocusComponent?.IsFocused = false;
+
+            gettingFocusComponent?.IsFocused = true;
+
+            losingFocusComponent?.OnLostFocus(losingFocusComponent, gettingFocusComponent);
+
+            gettingFocusComponent?.OnGotFocus(gettingFocusComponent, losingFocusComponent);
+        }
+
+        public static void ClearFocus() => SetFocus(null);
+    }
+
+    partial class InputManager
+    {
+        internal static void RaiseKeyDown(Window? window, in SDL_KeyboardEvent e)
+        {
+
         }
     }
 }

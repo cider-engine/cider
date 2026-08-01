@@ -15,7 +15,7 @@ namespace Cider.Components.In2D
 
         protected override bool HitTest(HitTestResult result)
         {
-            return RectangleHitTest(result, Width, Height);
+            return result.RectangleHitTest(Width, Height);
         }
 
         protected override void OnRender(RenderContext context)

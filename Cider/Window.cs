@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using System.Runtime.Versioning;
 using static SDL.SDL3;
 
 #if true
@@ -274,6 +275,18 @@ namespace Cider
             }
         }
 
+        public void ShowMessageBox(MessageBoxType type, ReadOnlySpan<char> title, ReadOnlySpan<char> message)
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+            SDLHelpers.EnsureOnMainThread();
+            unsafe
+            {
+                using var titlePtr = title.ToUnmanagedUtf8();
+                using var messagePtr = message.ToUnmanagedUtf8();
+                SDLHelpers.ThrowIfFalse(SDL_ShowSimpleMessageBox((SDL_MessageBoxFlags)type, titlePtr.Pointer, messagePtr.Pointer, _window));
+            }
+        }
+
 
         public event EventHandler<Window, WindowCloseRequestedEventArgs> CloseRequested;
 
@@ -457,6 +470,7 @@ namespace Cider
         /// <summary>
         /// 窗口处于填充文档模式（仅限 Emscripten），自 SDL 3.4.0 起
         /// </summary>
+        [SupportedOSPlatform("browser")]
         FillDocument = 0x200000uL,
 
         /// <summary>
@@ -500,5 +514,12 @@ namespace Cider
         Number = SDL_TextInputType.SDL_TEXTINPUT_TYPE_NUMBER,
         NumberPasswordHidden = SDL_TextInputType.SDL_TEXTINPUT_TYPE_NUMBER_PASSWORD_HIDDEN,
         NumberPasswordVisible = SDL_TextInputType.SDL_TEXTINPUT_TYPE_NUMBER_PASSWORD_VISIBLE
+    }
+
+    public enum MessageBoxType : uint
+    {
+        Error = SDL_MessageBoxFlags.SDL_MESSAGEBOX_ERROR,
+        Warning = SDL_MessageBoxFlags.SDL_MESSAGEBOX_WARNING,
+        Information = SDL_MessageBoxFlags.SDL_MESSAGEBOX_INFORMATION
     }
 }

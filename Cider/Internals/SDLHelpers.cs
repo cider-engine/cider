@@ -11,7 +11,24 @@ namespace Cider.Internals
             if (!SDL3.SDL_IsMainThread())
                 throw new GameRuntimeException("should run on main thread.");
         }
+#nullable enable
+        public static bool TryGetError([NotNullWhen(true)] out GameRuntimeException? exception)
+        {
+            if (SDL3.SDL_GetError() is string error)
+            {
+                exception = new GameRuntimeException(error);
+                return true;
+            }
 
+            else
+            {
+                exception = null;
+                return false;
+            }
+        }
+
+        public static GameRuntimeException GetError() => new(SDL3.SDL_GetError());
+#nullable restore
         [DoesNotReturn]
         public static void Throw() =>
             throw new GameRuntimeException(SDL3.SDL_GetError());

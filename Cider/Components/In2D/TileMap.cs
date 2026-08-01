@@ -77,7 +77,7 @@ namespace Cider.Components.In2D
                             entry.SourceRectangle,
                             rotationInDegrees: 0,
                             scale: Vector2.One,
-                            origin: Vector2.Zero,
+                            originInSource: Vector2.Zero,
                             flipMode: entry.FlipMode);
                     }
                 }

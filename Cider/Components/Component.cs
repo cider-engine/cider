@@ -57,6 +57,7 @@ namespace Cider.Components
             }
         }
 
+        // 在OnAttachToSceneDispatcher和OnDetachFromSceneDispatcher中自动更新
         public Scene? Root { get; private set; }
 
         public Window? CurrentWindow => Root?.Window;
@@ -101,7 +102,7 @@ namespace Cider.Components
         { }
 
         [Dispatcher]
-        internal virtual void OnUpdateDispatcher(TimeContext context)
+        internal void OnUpdateDispatcher(TimeContext context)
         {
             if (CurrentWindow is null) return;
             OnUpdateInternal(context);
@@ -117,7 +118,7 @@ namespace Cider.Components
         { }
 
         [Dispatcher]
-        internal virtual void OnFixedUpdateDispatcher(TimeContext context)
+        internal void OnFixedUpdateDispatcher(TimeContext context)
         {
             if (CurrentWindow is null) return;
             OnFixedUpdateInternal(context);
@@ -136,7 +137,7 @@ namespace Cider.Components
         {}
 
         [Dispatcher]
-        internal virtual void OnRenderDispatcher(RenderContext context)
+        internal void OnRenderDispatcher(RenderContext context)
         {
             if (!IsVisible) return;
             OnRender(context);
@@ -145,7 +146,7 @@ namespace Cider.Components
         }
 
         [Dispatcher]
-        internal virtual void OnDetachFromSceneDispatcher(Scene root)
+        internal void OnDetachFromSceneDispatcher(Scene root)
         {
             foreach (var item in Children)
                 item.OnDetachFromSceneDispatcher(root);

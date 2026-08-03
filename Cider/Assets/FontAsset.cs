@@ -16,7 +16,6 @@ namespace Cider.Assets
     [SupportedAssetTypes(".ttf", ".otf")]
     public class FontAsset : Asset<FontAsset>
     {
-#nullable enable
         public const float DefaultPtSize = 18;
 
         private Task<Font>? _cachedFontLoader = null;
@@ -38,9 +37,8 @@ namespace Cider.Assets
                     using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
                     res.EnsureSuccessStatusCode();
                     var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
-#pragma warning disable CA1416
-                    return await Task.Run(() => LoadInBrowser(context, id, ptsize));
-#pragma warning restore CA1416
+
+                    return LoadInBrowser(context, id, ptsize);
                 }
 
                 else return await Task.Run(() => new Font(path, ptsize));

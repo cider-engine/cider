@@ -4,14 +4,14 @@ using System.Numerics;
 
 namespace Cider.Internals
 {
-    public static class SDLHelpers
+    internal static class SDLHelpers
     {
         public static void EnsureOnMainThread()
         {
             if (!SDL3.SDL_IsMainThread())
                 throw new GameRuntimeException("should run on main thread.");
         }
-#nullable enable
+
         public static bool TryGetError([NotNullWhen(true)] out GameRuntimeException? exception)
         {
             if (SDL3.SDL_GetError() is string error)
@@ -27,49 +27,49 @@ namespace Cider.Internals
             }
         }
 
-        public static GameRuntimeException GetError() => new(SDL3.SDL_GetError());
-#nullable restore
+        public static GameRuntimeException GetError() => new(SDL3.SDL_GetError() ?? "");
+
         [DoesNotReturn]
         public static void Throw() =>
-            throw new GameRuntimeException(SDL3.SDL_GetError());
+            throw new GameRuntimeException(SDL3.SDL_GetError() ?? "");
 
         public static unsafe T* ThrowIfPtrIsNull<T>(T* ptr) where T : unmanaged
         {
             if (ptr == null)
-                throw new GameRuntimeException(SDL3.SDL_GetError());
+                throw new GameRuntimeException(SDL3.SDL_GetError() ?? "");
             return ptr;
         }
 
         public static unsafe T** ThrowIfPtrIsNull<T>(T** ptr) where T : unmanaged
         {
             if (ptr == null)
-                throw new GameRuntimeException(SDL3.SDL_GetError());
+                throw new GameRuntimeException(SDL3.SDL_GetError() ?? "");
             return ptr;
         }
 
         public static void ThrowIfTrue([DoesNotReturnIf(true)] bool condition)
         {
             if (condition)
-                throw new GameRuntimeException(SDL3.SDL_GetError());
+                throw new GameRuntimeException(SDL3.SDL_GetError() ?? "");
         }
 
         public static void ThrowIfFalse([DoesNotReturnIf(false)] bool condition)
         {
             if (!condition)
-                throw new GameRuntimeException(SDL3.SDL_GetError());
+                throw new GameRuntimeException(SDL3.SDL_GetError() ?? "");
         }
 
         public static T ThrowIfNegative<T>(T number) where T : INumber<T>
         {
             if (T.IsNegative(number))
-                throw new GameRuntimeException(SDL3.SDL_GetError());
+                throw new GameRuntimeException(SDL3.SDL_GetError() ?? "");
             return number;
         }
 
         public static T ThrowIfZero<T>(T number) where T : INumber<T>
         {
             if (T.IsZero(number))
-                throw new GameRuntimeException(SDL3.SDL_GetError());
+                throw new GameRuntimeException(SDL3.SDL_GetError() ?? "");
             return number;
         }
     }

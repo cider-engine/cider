@@ -10,7 +10,6 @@ namespace Cider.Input
 {
     public class HitTestResult : IDisposable
     {
-#nullable enable
         private static readonly HitTestResult singleton = new();
 
         public static HitTestResult GetScopedSingleton(Vector2 position)

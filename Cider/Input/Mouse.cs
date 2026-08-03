@@ -2,7 +2,6 @@ using Cider.Extensions;
 using SDL;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Text;
 
@@ -19,11 +18,7 @@ namespace Cider.Input
             }
         }
 
-#nullable enable
-        public static unsafe bool TryGetFocusedWindow([NotNullWhen(true)] out Window? window)
-        {
-            return SDL3.SDL_GetWindowID(SDL3.SDL_GetMouseFocus()).TryGetWindow(out window);
-        }
+        public static unsafe Window? FocusedWindow => SDL3.SDL_GetWindowID(SDL3.SDL_GetMouseFocus()).RelativeWindow;
     }
 
     public readonly record struct MouseMovedEventArgs(Vector2 Position,
@@ -43,7 +38,7 @@ namespace Cider.Input
     {
         public const uint TouchId = unchecked((uint)-1);
         public readonly bool IsTouch => Id == TouchId;
-        public static implicit operator MouseId(SDL_MouseID id) => new((uint)id);
+        public readonly bool IsInvalid => Id == 0;
     }
 
     public enum MouseButton

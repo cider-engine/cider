@@ -12,7 +12,6 @@ namespace Cider.Assets
     [SupportedAssetTypes(".wav", ".mp3", ".ogg", ".flac")]
     public class AudioAsset : Asset<AudioAsset>
     {
-#nullable enable
         private Task<AudioClip>? _cachedAudioLoader = null;
         private CancellationTokenSource _source = new();
 
@@ -34,9 +33,8 @@ namespace Cider.Assets
                     res.EnsureSuccessStatusCode();
 
                     var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
-#pragma warning disable CA1416
-                    return await Task.Run(() => LoadInBrowser(context, id, mixer));
-#pragma warning restore CA1416
+
+                    return LoadInBrowser(context, id, mixer);
                 }
 
                 else return await Task.Run(() => new AudioClip(path, mixer));

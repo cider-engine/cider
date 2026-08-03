@@ -13,11 +13,9 @@ using System.Threading.Tasks;
 
 namespace Cider.Components.In2D.Controls
 {
-    [UnstableApi]
     [Content(nameof(Text))]
     public class TextBlock : Control
     {
-#nullable enable
         private Texture? _cachedTexture = null;
         private Task<FontVariant>? _fontVariant = null;
         private Text? _text = null;
@@ -42,7 +40,6 @@ namespace Cider.Components.In2D.Controls
                         .EnsureToBeSuccessful();
             }
         }
-#nullable disable
 
         public float FontSize
         {
@@ -150,11 +147,12 @@ namespace Cider.Components.In2D.Controls
             return font;
         }
 
-        protected override void OnWindowChanged(Window oldWindow, Window newWindow)
+        private protected override void OnWindowChangedInternal(Window? oldWindow, Window? newWindow)
         {
             DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
             //DisposableHelpers.DisposeAndSetNull(ref _fontVariant);
             DisposableHelpers.DisposeAndSetNull(ref _text);
+            base.OnWindowChangedInternal(oldWindow, newWindow);
         }
 
         public bool TryMeasureSize(out float unscaledWidth, out float unscaledHeight)

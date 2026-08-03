@@ -4,7 +4,7 @@ using static SDL.SDL3_mixer;
 
 namespace Cider.Audio
 {
-    public class AudioPlayOptions : SDLProperties
+    public class AudioPlayOptions : PropertyBase
     {
         public int Loops
         {

@@ -1,14 +1,13 @@
 using Cider.Components;
 using Cider.Components.In2D;
-using SDL;
 using System;
 using System.Collections.Generic;
 
 namespace Cider.Input
 {
-#nullable enable
-    public delegate void MouseMovedEventHandler(Window? window, MouseMovedEventArgs args);
-    public delegate void MouseButtonEventHandler(Window? window, MouseButtonEventArgs args);
+    public delegate void MouseMovedEventHandler(Window? window, in MouseMovedEventArgs args);
+    public delegate void MouseButtonEventHandler(Window? window, in MouseButtonEventArgs args);
+    public delegate void KeyboardEventHandler(Window? window, in KeyboardEventArgs args);
 
     public static partial class InputManager
     {
@@ -21,168 +20,175 @@ namespace Cider.Input
 #nullable enable
         private static readonly HashSet<Component2D> visitedMouseMovedComponents = new(256); // 深度
 
-        internal static void RaiseMouseMoved(Window? window, in SDL_MouseMotionEvent e)
+        internal static void RaiseMouseMoved(Window? window, in MouseMovedEventArgs args)
         {
-            var args = new MouseMovedEventArgs(
-                Position: new(e.x, e.y),
-                Movement: new(e.xrel, e.yrel),
-                Timestamp: e.timestamp,
-                MouseId: e.which,
-                ButtonState: (MouseButtonFlags)e.state);
+            var context = new ComponentEventContext();
 
-            MouseMoved?.Invoke(window, args);
-
-            if (window is null) return;
-
-            Component2D? mouseLeave = null;
-
-            Component2D? mouseEnter = null;
-
-            using (var result = HitTestResult.GetScopedSingleton(args.Position - args.Movement))
+            if (window is { Scene: { } scene })
             {
-                window.Scene.HitTestDispatcher(result);
+                Component2D? mouseLeave = null;
+
+                Component2D? mouseEnter = null;
+
+                using (var result = HitTestResult.GetScopedSingleton(args.Position - args.Movement))
+                {
+                    scene.HitTestDispatcher(result);
+
+                    if (result.GetComponent() is Component component)
+                    {
+                        mouseLeave = component as Component2D;
+                        foreach (var item in component.EnumerateToRoot())
+                        {
+                            if (item is Component2D c2d)
+                            {
+                                c2d.OnMouseMoved(component, args, ref context);
+                                visitedMouseMovedComponents.Add(c2d);
+                            }
+                        }
+                    }
+                }
+
+                using (var result = HitTestResult.GetScopedSingleton(args.Position))
+                {
+                    window.Scene.HitTestDispatcher(result);
+
+                    if (result.GetComponent() is Component component)
+                    {
+                        mouseEnter = component as Component2D;
+                        foreach (var item in component.EnumerateToRoot())
+                        {
+                            if (item is Component2D c2d)
+                            {
+                                if (visitedMouseMovedComponents.Contains(c2d)) break;
+                                c2d.OnMouseMoved(component, args, ref context);
+                            }
+                        }
+                    }
+                }
+
+                visitedMouseMovedComponents.Clear();
+
+                if (mouseLeave != mouseEnter)
+                {
+                    mouseLeave?.IsMouseOver = false;
+                    mouseLeave?.OnMouseLeave(mouseLeave, args);
+
+                    mouseEnter?.IsMouseOver = true;
+                    mouseEnter?.OnMouseEnter(mouseEnter, args);
+                }
+            }
+
+            if (!context.Handled)
+                MouseMoved?.Invoke(window, args);
+        }
+
+        internal static void RaiseMouseUp(Window? window, in MouseButtonEventArgs args)
+        {
+            var context = new ComponentEventContext();
+
+            if (window is { Scene: { } scene })
+            {
+                using var result = HitTestResult.GetScopedSingleton(args.Position);
+
+                scene.HitTestDispatcher(result);
 
                 if (result.GetComponent() is Component component)
                 {
-                    mouseLeave = component as Component2D;
                     foreach (var item in component.EnumerateToRoot())
                     {
                         if (item is Component2D c2d)
                         {
-                            c2d.OnMouseMoved(component, args);
-                            visitedMouseMovedComponents.Add(c2d);
+                            c2d.OnMouseUp(component, args, ref context);
                         }
                     }
                 }
             }
 
-            using (var result = HitTestResult.GetScopedSingleton(args.Position))
+            if (!context.Handled)
+                MouseUp?.Invoke(window, args);
+        }
+
+        internal static void RaiseMouseDown(Window? window, in MouseButtonEventArgs args)
+        {
+            var context = new ComponentEventContext();
+
+            if (window is { Scene: { } scene })
             {
-                window.Scene.HitTestDispatcher(result);
+                using var result = HitTestResult.GetScopedSingleton(args.Position);
+
+                scene.HitTestDispatcher(result);
 
                 if (result.GetComponent() is Component component)
                 {
-                    mouseEnter = component as Component2D;
+                    Component2D? focusedComponent = null;
+
                     foreach (var item in component.EnumerateToRoot())
                     {
                         if (item is Component2D c2d)
                         {
-                            if (visitedMouseMovedComponents.Contains(c2d)) break;
-                            c2d.OnMouseMoved(component, args);
+                            c2d.OnMouseDown(component, args, ref context);
+                            if (c2d.Focusable)
+                            {
+                                focusedComponent ??= c2d;
+                            }
                         }
                     }
+
+                    if (focusedComponent is not null)
+                        window.SetFocus(focusedComponent);
                 }
             }
 
-            visitedMouseMovedComponents.Clear();
-
-            if (mouseLeave != mouseEnter)
-            {
-                mouseLeave?.IsMouseOver = false;
-                mouseLeave?.OnMouseLeave(mouseLeave, args);
-
-                mouseEnter?.IsMouseOver = true;
-                mouseEnter?.OnMouseEnter(mouseEnter, args);
-            }
+            if (!context.Handled)
+                MouseDown?.Invoke(window, args);
         }
 
-        internal static void RaiseMouseUp(Window? window, in SDL_MouseButtonEvent e)
-        {
-            var args = new MouseButtonEventArgs(
-                Position: new(e.x, e.y),
-                Timestamp: e.timestamp,
-                MouseId: e.which,
-                Button: (MouseButton)e.button,
-                IsDown: e.down,
-                ClickTimes: e.clicks
-            );
-
-            MouseUp?.Invoke(window, args);
-
-            if (window is null) return;
-
-            using var result = HitTestResult.GetScopedSingleton(args.Position);
-
-            window.Scene.HitTestDispatcher(result);
-
-            if (result.GetComponent() is Component component)
-            {
-                foreach (var item in component.EnumerateToRoot())
-                {
-                    if (item is Component2D c2d)
-                    {
-                        c2d.OnMouseUp(component, args);
-                    }
-                }
-            }
-        }
-
-        internal static void RaiseMouseDown(Window? window, in SDL_MouseButtonEvent e)
-        {
-            var args = new MouseButtonEventArgs(
-                Position: new(e.x, e.y),
-                Timestamp: e.timestamp,
-                MouseId: e.which,
-                Button: (MouseButton)e.button,
-                IsDown: e.down,
-                ClickTimes: e.clicks
-            );
-
-            MouseDown?.Invoke(window, args);
-
-            if (window is null) return;
-
-            using var result = HitTestResult.GetScopedSingleton(args.Position);
-
-            window.Scene.HitTestDispatcher(result);
-
-            if (result.GetComponent() is Component component)
-            {
-                Component2D? focusedComponent = null;
-
-                foreach (var item in component.EnumerateToRoot())
-                {
-                    if (item is Component2D c2d)
-                    {
-                        c2d.OnMouseDown(component, args);
-                        if (c2d.Focusable)
-                        {
-                            focusedComponent ??= c2d;
-                        }
-                    }
-                }
-
-                if (focusedComponent is not null)
-                    SetFocus(focusedComponent);
-            }
-        }
-        private static readonly WeakReference<Component2D> _focusedComponentRefrence = new(null!);
-
-        public static Component2D? FocusedComponent => _focusedComponentRefrence.TryGetTarget(out var target) ? target : null;
-
-        private static void SetFocus(Component2D? gettingFocusComponent)
-        {
-            _focusedComponentRefrence.TryGetTarget(out Component2D? losingFocusComponent);
-
-            if (ReferenceEquals(gettingFocusComponent, losingFocusComponent)) return;
-
-            losingFocusComponent?.IsFocused = false;
-
-            gettingFocusComponent?.IsFocused = true;
-
-            losingFocusComponent?.OnLostFocus(losingFocusComponent, gettingFocusComponent);
-
-            gettingFocusComponent?.OnGotFocus(gettingFocusComponent, losingFocusComponent);
-        }
-
-        public static void ClearFocus() => SetFocus(null);
+        public static Component2D? FocusedComponent => Keyboard.FocusedWindow?.FocusedComponent;
     }
 
     partial class InputManager
     {
-        internal static void RaiseKeyDown(Window? window, in SDL_KeyboardEvent e)
-        {
+#nullable disable
+        public static event KeyboardEventHandler KeyDown;
 
+        public static event KeyboardEventHandler KeyUp;
+#nullable enable
+        internal static void RaiseKeyDown(Window? window, in KeyboardEventArgs args)
+        {
+            var context = new ComponentEventContext();
+
+            if (window is { FocusedComponent: { } component })
+            {
+                foreach (var item in component.EnumerateToRoot())
+                {
+                    if (item is Component2D c2d)
+                    {
+                        c2d.OnKeyDown(component, args, ref context);
+                    }
+                }
+            }
+
+            if (!context.Handled)
+                KeyDown?.Invoke(window, args);
+        }
+
+        internal static void RaiseKeyUp(Window? window, in KeyboardEventArgs args)
+        {
+            var context = new ComponentEventContext();
+
+            if (window is { FocusedComponent: { } component })
+            {
+                foreach (var item in component.EnumerateToRoot())
+                {
+                    if (item is Component2D c2d)
+                    {
+                        c2d.OnKeyUp(component, args, ref context);
+                    }
+                }
+            }
+
+            if (!context.Handled)
+                KeyUp?.Invoke(window, args);
         }
     }
 }

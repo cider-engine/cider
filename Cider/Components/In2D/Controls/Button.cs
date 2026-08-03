@@ -1,21 +1,22 @@
 using Cider.Input;
+using nkast.Aether.Physics2D.Dynamics.Contacts;
 using System;
 
 namespace Cider.Components.In2D.Controls
 {
     public class Button : TextBlock
     {
-        protected internal override void OnMouseUp(Component sender, MouseButtonEventArgs args)
+        protected internal override void OnMouseUp(Component sender, in MouseButtonEventArgs args, ref ComponentEventContext context)
         {
-            OnClick(this, args);
-            base.OnMouseUp(sender, args);
+            OnClick(this, args, ref context);
+            base.OnMouseUp(sender, args, ref context);
         }
 
-        protected virtual void OnClick(Component sender, MouseButtonEventArgs args)
+        protected virtual void OnClick(Component sender, in MouseButtonEventArgs args, ref ComponentEventContext context)
         {
-            Click?.Invoke(sender, args);
+            Click?.Invoke(sender, args, ref context);
         }
-
-        public event EventHandler<Component, MouseButtonEventArgs> Click;
+#nullable disable
+        public event ComponentMouseButtonEventHandler Click;
     }
 }

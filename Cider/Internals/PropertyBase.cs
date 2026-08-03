@@ -6,12 +6,12 @@ using System.Runtime.InteropServices.Marshalling;
 
 namespace Cider.Internals
 {
-    public class SDLProperties : IDisposable
+    public class PropertyBase : IDisposable
     {
         protected readonly SDL_PropertiesID id;
         protected bool disposedValue;
 
-        public SDLProperties()
+        public PropertyBase()
         {
             id = SDL3.SDL_CreateProperties();
         }
@@ -60,7 +60,7 @@ namespace Cider.Internals
                 return SDL3.SDL_GetPointerProperty(id, ptr, default);
             }
         }
-#nullable enable
+
         protected unsafe string? GetStringProperty(ReadOnlySpan<byte> name)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -69,7 +69,7 @@ namespace Cider.Internals
                 return Utf8StringMarshaller.ConvertToManaged(SDL3.Unsafe_SDL_GetStringProperty(id, ptr, null));
             }
         }
-#nullable restore
+
         protected unsafe void SetBooleanProperty(ReadOnlySpan<byte> name, bool value)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -105,7 +105,7 @@ namespace Cider.Internals
                 SDL3.SDL_SetPointerProperty(id, ptr, value);
             }
         }
-#nullable enable
+
         protected unsafe void SetStringProperty(ReadOnlySpan<byte> name, string? value)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -119,7 +119,7 @@ namespace Cider.Internals
                 }
             }
         }
-#nullable restore
+
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
@@ -134,10 +134,10 @@ namespace Cider.Internals
             }
 
             [UnsafeAccessor(UnsafeAccessorKind.Field, Name = nameof(id))]
-            static extern ref SDL_PropertiesID GetPointer(SDLProperties @this);
+            static extern ref SDL_PropertiesID GetPointer(PropertyBase @this);
         }
 
-        ~SDLProperties()
+        ~PropertyBase()
         {
             Dispose(disposing: false);
         }

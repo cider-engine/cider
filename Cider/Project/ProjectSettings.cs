@@ -12,7 +12,7 @@ namespace Cider.Project
         const string Application = nameof(Application);
 
         [SettingGroup(Application)]
-        public Scene MainScene { get; init; }
+        public required Scene MainScene { get; init; }
 
         const string Display = nameof(Display);
 
@@ -24,10 +24,10 @@ namespace Cider.Project
 
         [SettingGroup(Display)]
         public Size MainWindowSize { get; init; }
-#nullable enable
+
         [SettingGroup(Display)]
         public TextureAsset? MainWindowIcon { get; init; }
-#nullable disable
+
         [SettingGroup(Display)]
         public Color BackgroundColor { get; set; } = Color.Black;
 

@@ -8,8 +8,8 @@ using Cider.Render;
 using Cider.Threading;
 using SDL;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -37,8 +37,12 @@ namespace Cider
 
         private readonly TaskCompletionSource _gameProcess = new();
 
-        public static Game Instance { get; private set; }
+        private readonly List<Action> _endOfFrameContinuations = new(64);
 
+        private bool _isEndOfFrame = false;
+#nullable disable
+        public static Game Instance { get; private set; }
+#nullable restore
         public static bool IsInitialized => Instance?._initialized ?? false;
 
         /// <summary>
@@ -51,7 +55,7 @@ namespace Cider
         }
 
         public ProjectSettings ProjectSettings { get; private set; }
-
+#nullable disable
         public Window MainWindow { get; private set; }
 
         public CiderSynchronizationContext CurrentSynchronizationContext { get; private set; }
@@ -59,7 +63,7 @@ namespace Cider
         public IServiceProvider Services { get; private set; }
 
         public event EventHandler<Game, int> FpsChanged;
-
+#nullable restore
         public Game(ProjectSettings settings)
         {
             //Instance?.Dispose();
@@ -127,10 +131,11 @@ namespace Cider
             SynchronizationContext.SetSynchronizationContext(CurrentSynchronizationContext = new CiderSynchronizationContext());
 
 
-            MainWindow = new Window(ProjectSettings.MainWindowTitle, ProjectSettings.MainWindowSize.Width, ProjectSettings.MainWindowSize.Height, ProjectSettings.MainWindowFlags)
-            {
-                Scene = ProjectSettings.MainScene
-            };
+            MainWindow = new Window(ProjectSettings.MainWindowTitle,
+                ProjectSettings.MainScene,
+                ProjectSettings.MainWindowSize.Width,
+                ProjectSettings.MainWindowSize.Height,
+                ProjectSettings.MainWindowFlags);
 
             MainWindow.Renderer.SetLogicalPresentation(ProjectSettings.LogicalSize, ProjectSettings.LogicalPresentationMode);
 
@@ -141,7 +146,6 @@ namespace Cider
             }, GetTaskScheduler());
 
             _initialized = true;
-            MainWindow.Show();
             CurrentScene.OnLoadedDispatcher(CurrentScene);
         }
 
@@ -157,9 +161,10 @@ namespace Cider
                 _fpsAccumulator = 0;
             }
 
-            Window.AllWindows.FlushRemove();
-            foreach (var window in Window.AllWindows.Values)
+            foreach (var window in Window.AllWindows)
             {
+                if (window.IsClosed) continue;
+
                 var currentScene = window.Scene;
 
                 currentScene.OnEarlyUpdate();
@@ -179,7 +184,11 @@ namespace Cider
 
                 Draw(window, context);
             }
-            Window.AllWindows.FlushAdd();
+
+            _isEndOfFrame = true;
+            foreach (var continuation in _endOfFrameContinuations) continuation.Invoke();
+            _endOfFrameContinuations.Clear();
+            _isEndOfFrame = false;
         }
 
         unsafe void Draw(Window window, TimeContext context)
@@ -246,9 +255,9 @@ namespace Cider
                 //    SynchronizationContext.SetSynchronizationContext(Instance.CurrentSynchronizationContext);
 
                 var currentTick = Stopwatch.GetTimestamp();
-                var context = new TimeContext(Stopwatch.GetElapsedTime(Instance!._lastTick, currentTick));
-                Instance!.Update(context);
-                Instance!._lastTick = currentTick;
+                var context = new TimeContext(Stopwatch.GetElapsedTime(Instance._lastTick, currentTick));
+                Instance.Update(context);
+                Instance._lastTick = currentTick;
                 return SDL_AppResult.SDL_APP_CONTINUE;
             }
             catch (Exception e)
@@ -281,19 +290,44 @@ namespace Cider
                     #region Mouse Event
                     case SDL_EventType.SDL_EVENT_MOUSE_MOTION:
                         {
-                            InputManager.RaiseMouseMoved(e->motion.windowID.RelativeWindow, e->motion);
+                            var @event = e->motion;
+                            var args = new MouseMovedEventArgs(
+                                Position: new(@event.x, @event.y),
+                                Movement: new(@event.xrel, @event.yrel),
+                                Timestamp: @event.timestamp,
+                                MouseId: new((uint)@event.which),
+                                ButtonState: (MouseButtonFlags)@event.state);
+                            InputManager.RaiseMouseMoved(@event.windowID.RelativeWindow, args);
                             break;
                         }
 
                     case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN:
                         {
-                            InputManager.RaiseMouseDown(e->button.windowID.RelativeWindow, e->button);
+                            var @event = e->button;
+                            var args = new MouseButtonEventArgs(
+                                Position: new(@event.x, @event.y),
+                                Timestamp: @event.timestamp,
+                                MouseId: new((uint)@event.which),
+                                Button: (MouseButton)@event.button,
+                                IsDown: @event.down,
+                                ClickTimes: @event.clicks
+                            );
+                            InputManager.RaiseMouseDown(@event.windowID.RelativeWindow, args);
                             break;
                         }
 
                     case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_UP:
                         {
-                            InputManager.RaiseMouseUp(e->button.windowID.RelativeWindow, e->button);
+                            var @event = e->button;
+                            var args = new MouseButtonEventArgs(
+                                Position: new(@event.x, @event.y),
+                                Timestamp: @event.timestamp,
+                                MouseId: new((uint)@event.which),
+                                Button: (MouseButton)@event.button,
+                                IsDown: @event.down,
+                                ClickTimes: @event.clicks
+                            );
+                            InputManager.RaiseMouseUp(@event.windowID.RelativeWindow, args);
                             break;
                         }
                     #endregion
@@ -301,31 +335,31 @@ namespace Cider
                     #region Window Event
                     case SDL_EventType.SDL_EVENT_WINDOW_SHOWN:
                         {
-                            if (e->window.windowID.TryGetWindow(out var window)) window.OnShown();
+                            e->window.windowID.RelativeWindow!.OnShown();
                             break;
                         }
 
                     case SDL_EventType.SDL_EVENT_WINDOW_HIDDEN:
                         {
-                            if (e->window.windowID.TryGetWindow(out var window)) window.OnHidden();
+                            e->window.windowID.RelativeWindow!.OnHidden();
                             break;
                         }
 
                     case SDL_EventType.SDL_EVENT_WINDOW_MOVED:
                         {
-                            if (e->window.windowID.TryGetWindow(out var window)) window.OnMoved(new(e->window.data1, e->window.data2));
+                            e->window.windowID.RelativeWindow!.OnMoved(new(e->window.data1, e->window.data2));
                             break;
                         }
 
                     case SDL_EventType.SDL_EVENT_WINDOW_RESIZED:
                         {
-                            if (e->window.windowID.TryGetWindow(out var window)) window.OnResized(new(e->window.data1, e->window.data2));
+                            e->window.windowID.RelativeWindow!.OnResized(new(e->window.data1, e->window.data2));
                             break;
                         }
 
                     case SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED:
                         {
-                            if (e->window.windowID.TryGetWindow(out var window)) window.TryClose();
+                            e->window.windowID.RelativeWindow!.TryClose();
                             break;
                         }
                     #endregion
@@ -333,6 +367,29 @@ namespace Cider
                     #region Keyboard Event
                     case SDL_EventType.SDL_EVENT_KEY_DOWN:
                         {
+                            var @event = e->key;
+                            var args = new KeyboardEventArgs(Timestamp: @event.timestamp,
+                                Code: (KeyCode)@event.scancode,
+                                Symbol: (KeySymbol)@event.key,
+                                Modifier: (KeyModifier)@event.mod,
+                                Raw: @event.raw,
+                                IsDown: @event.down,
+                                IsRepeat: @event.repeat);
+                            InputManager.RaiseKeyDown(@event.windowID.RelativeWindow, args);
+                            break;
+                        }
+
+                    case SDL_EventType.SDL_EVENT_KEY_UP:
+                        {
+                            var @event = e->key;
+                            var args = new KeyboardEventArgs(Timestamp: @event.timestamp,
+                                Code: (KeyCode)@event.scancode,
+                                Symbol: (KeySymbol)@event.key,
+                                Modifier: (KeyModifier)@event.mod,
+                                Raw: @event.raw,
+                                IsDown: @event.down,
+                                IsRepeat: @event.repeat);
+                            InputManager.RaiseKeyUp(@event.windowID.RelativeWindow, args);
                             break;
                         }
                     #endregion
@@ -371,6 +428,33 @@ namespace Cider
             SDL3_ttf.TTF_Quit();
             SDL3_mixer.MIX_Quit();
             Instance._gameProcess.TrySetResult();
+        }
+
+
+        public readonly struct EndOfFrameAwaitable
+        {
+            public EndOfFrameAwaiter GetAwaiter() => new();
+        }
+
+        public readonly struct EndOfFrameAwaiter : ICriticalNotifyCompletion
+        {
+            // 即时返回，已经在帧末时直接返回true，不会与遍历冲突
+            public bool IsCompleted => Instance._isEndOfFrame;
+
+            public void GetResult()
+            {
+                if (!IsCompleted) throw new InvalidOperationException("Calling GetResult when IsCompleted is false is invalid");
+            }
+
+            public void OnCompleted(Action continuation)
+            {
+                if (continuation is not null) Instance._endOfFrameContinuations.Add(continuation);
+            }
+
+            public void UnsafeOnCompleted(Action continuation)
+            {
+                if (continuation is not null) Instance._endOfFrameContinuations.Add(continuation);
+            }
         }
     }
 }

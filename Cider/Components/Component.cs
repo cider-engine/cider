@@ -8,7 +8,6 @@ namespace Cider.Components
 {
     public class Component
     {
-#nullable enable
         public string Name { get; set => field = value ?? throw new NullReferenceException(); } = string.Empty;
 
         public Component? Parent
@@ -61,7 +60,6 @@ namespace Cider.Components
         public Scene? Root { get; private set; }
 
         public Window? CurrentWindow => Root?.Window;
-#nullable disable
 
         public Component()
         {
@@ -200,13 +198,17 @@ namespace Cider.Components
                 item.OnGlobalTransformChangedDispatcher(args);
             }
         }
-#nullable enable
+
+        private protected virtual void OnWindowChangedInternal(Window? oldWindow, Window? newWindow)
+        {}
+
         protected virtual void OnWindowChanged(Window? oldWindow, Window? newWindow)
         {}
 
         [Dispatcher]
         internal void OnWindowChangedDispatcher(Window? oldWindow, Window? newWindow)
         {
+            OnWindowChangedInternal(oldWindow, newWindow);
             OnWindowChanged(oldWindow, newWindow);
 
             foreach (var item in Children)
@@ -239,5 +241,7 @@ namespace Cider.Components
 
             public readonly ToRootEnumerator GetEnumerator() => this;
         }
+
+        public Game.EndOfFrameAwaitable WaitForEndOfFrame() => new();
     }
 }

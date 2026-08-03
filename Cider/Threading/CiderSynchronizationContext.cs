@@ -1,4 +1,3 @@
-#nullable enable
 using SDL;
 using System;
 using System.Collections.Concurrent;

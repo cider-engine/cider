@@ -1,16 +1,23 @@
 using Cider.Attributes;
 using Cider.Data.In2D;
-using Cider.Extensions;
 using Cider.Input;
 using System;
+using System.Diagnostics;
 using System.Numerics;
 
 namespace Cider.Components.In2D
 {
-#nullable enable
+    public struct ComponentEventContext
+    {
+        public bool Handled { get; set; }
+    }
+    public delegate void ComponentMouseMovedEventHandler(Component sender, in MouseMovedEventArgs args, ref ComponentEventContext context);
+    public delegate void ComponentMouseEnterEventHandler(Component sender, in MouseMovedEventArgs args);
+    public delegate void ComponentMouseLeaveEventHandler(Component sender, in MouseMovedEventArgs args);
+    public delegate void ComponentMouseButtonEventHandler(Component sender, in MouseButtonEventArgs args, ref ComponentEventContext context);
+    public delegate void ComponentKeyboardEventHandler(Component sender, in KeyboardEventArgs args, ref ComponentEventContext context);
     public delegate void GotFocusEventHandler(Component2D sender, Component2D? lostFocusComponent);
     public delegate void LostFocusEventHandler(Component2D sender, Component2D? gotFocusComponent);
-#nullable restore
 
     public class Component2D : Component
     {
@@ -70,21 +77,25 @@ namespace Cider.Components.In2D
         public bool IsFocused { get; internal set; }
 
         public bool Focusable { get; private set; }
+#nullable disable
+        public event ComponentMouseButtonEventHandler MouseDown;
 
-        public event EventHandler<Component, MouseButtonEventArgs> MouseDown;
+        public event ComponentMouseButtonEventHandler MouseUp;
 
-        public event EventHandler<Component, MouseButtonEventArgs> MouseUp;
+        public event ComponentMouseMovedEventHandler MouseMoved;
 
-        public event EventHandler<Component, MouseMovedEventArgs> MouseMoved;
+        public event ComponentMouseEnterEventHandler MouseEnter;
 
-        public event EventHandler<Component, MouseMovedEventArgs> MouseEnter;
+        public event ComponentMouseLeaveEventHandler MouseLeave;
 
-        public event EventHandler<Component, MouseMovedEventArgs> MouseLeave;
+        public event ComponentKeyboardEventHandler KeyDown;
+
+        public event ComponentKeyboardEventHandler KeyUp;
 
         public event GotFocusEventHandler GotFocus;
 
         public event LostFocusEventHandler LostFocus;
-
+#nullable restore
         private protected override EventArgs CreateGlobalTransformArgsFromCurrent() => new Transform2DChangedEventArgs()
         {
             CurrentTransform2D = GlobalTransform
@@ -141,36 +152,49 @@ namespace Cider.Components.In2D
             }
         }
 
-        private protected override void OnDetachFromSceneInternal(Scene root)
+        private protected override void OnWindowChangedInternal(Window? oldWindow, Window? newWindow)
         {
-            if (IsFocused) InputManager.ClearFocus();
-            base.OnDetachFromSceneInternal(root);
+            if (IsFocused)
+            {
+                Debug.Assert(oldWindow?.FocusedComponent == this);
+                oldWindow?.ClearFocus();
+            }
+            base.OnWindowChangedInternal(oldWindow, newWindow);
         }
 
-#nullable enable
-        protected internal virtual void OnMouseDown(Component sender, MouseButtonEventArgs args)
+        protected internal virtual void OnMouseDown(Component sender, in MouseButtonEventArgs args, ref ComponentEventContext context)
         {
-            MouseDown?.Invoke(sender, args);
+            MouseDown?.Invoke(sender, args, ref context);
         }
 
-        protected internal virtual void OnMouseUp(Component sender, MouseButtonEventArgs args)
+        protected internal virtual void OnMouseUp(Component sender, in MouseButtonEventArgs args, ref ComponentEventContext context)
         {
-            MouseUp?.Invoke(sender, args);
+            MouseUp?.Invoke(sender, args, ref context);
         }
 
-        protected internal virtual void OnMouseMoved(Component sender, MouseMovedEventArgs args)
+        protected internal virtual void OnMouseMoved(Component sender, in MouseMovedEventArgs args, ref ComponentEventContext context)
         {
-            MouseMoved?.Invoke(sender, args);
+            MouseMoved?.Invoke(sender, args, ref context);
         }
 
-        protected internal virtual void OnMouseEnter(Component sender, MouseMovedEventArgs args)
+        protected internal virtual void OnMouseEnter(Component sender, in MouseMovedEventArgs args)
         {
             MouseEnter?.Invoke(sender, args);
         }
 
-        protected internal virtual void OnMouseLeave(Component sender, MouseMovedEventArgs args)
+        protected internal virtual void OnMouseLeave(Component sender, in MouseMovedEventArgs args)
         {
             MouseLeave?.Invoke(sender, args);
+        }
+
+        protected internal virtual void OnKeyDown(Component2D sender, in KeyboardEventArgs args, ref ComponentEventContext context)
+        {
+            KeyDown?.Invoke(sender, args, ref context);
+        }
+
+        protected internal virtual void OnKeyUp(Component sender, in KeyboardEventArgs args, ref ComponentEventContext context)
+        {
+            KeyUp?.Invoke(sender, args, ref context);
         }
 
         protected internal virtual void OnGotFocus(Component2D sender, Component2D? lostFocusComponent)

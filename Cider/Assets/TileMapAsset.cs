@@ -11,7 +11,6 @@ namespace Cider.Assets
     [SupportedAssetTypes(".tmx", ".tmj")]
     public class TileMapAsset : Asset<TileMapAsset>
     {
-#nullable enable
         private Task<Map>? _cachedTileMapLoader = null;
         private CancellationTokenSource _source = new();
 

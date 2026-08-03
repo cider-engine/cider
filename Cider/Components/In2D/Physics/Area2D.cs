@@ -42,7 +42,7 @@ namespace Cider.Components.In2D.Physics
         {
             BodyExited?.Invoke(sender, other);
         }
-
+#nullable disable
         public event BodyContactDelegate BodyEntered;
 
         public event BodyContactDelegate BodyExited;

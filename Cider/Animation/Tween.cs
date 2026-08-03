@@ -4,7 +4,6 @@ using System.Drawing;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
-#nullable enable
 namespace Cider.Animation
 {
 

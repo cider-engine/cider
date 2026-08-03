@@ -31,7 +31,7 @@ namespace Cider.Render
             }
         }
 
-        internal readonly Dictionary<TextureAsset, (CancellationTokenSource source, Task<Texture> task)> Textures = new();
+        internal readonly Dictionary<TextureAsset, Task<Texture>> Textures = new();
 
         public Lazy<ITextEngine> TextEngine
         {
@@ -119,7 +119,6 @@ namespace Cider.Render
             _textEngine = new(() => new RendererTextEngine(this));
         }
 
-#nullable enable
         public unsafe void SetRenderTarget(Texture? texture)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);

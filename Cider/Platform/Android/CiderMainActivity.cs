@@ -8,8 +8,9 @@ namespace Cider.Platform.Android
 {
     public class CiderMainActivity : SDLActivity
     {
+#nullable disable
         private Game _instance;
-
+#nullable restore
         protected override string[] GetLibraries() => ["SDL3", "SDL3_image", "SDL3_ttf", "SDL3_mixer"];
 
         protected virtual Game CreateGame() => throw new NotImplementedException();

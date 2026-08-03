@@ -15,9 +15,9 @@ namespace Cider.Audio
         private readonly unsafe MIX_Track* _track;
         private bool disposedValue;
         private AudioMixer ownerMixer;
-
+#nullable disable
         public event AudioTrackStoppedEventHandler Stopped;
-
+#nullable restore
         public AudioMixer OwnerMixer
         {
             get
@@ -45,7 +45,7 @@ namespace Cider.Audio
 
             SDLHelpers.ThrowIfFalse(SetTrackStoppedCallback(_track, (nint)callback, (nint)mixer.Pointer));
         }
-#nullable enable
+
         public AudioClip? TrackAudio
         {
             get
@@ -184,8 +184,8 @@ namespace Cider.Audio
                     {
                         ownerMixer.TrackDictionary.TryRemove((nint)_track, out _);
                     }
-                    ownerMixer = null;
-                    TrackAudio = null;
+                    ownerMixer = null!; // 解除引用，访问触发异常
+                    TrackAudio = null; // 解除引用，不负责释放音频数据
                 }
 
                 unsafe

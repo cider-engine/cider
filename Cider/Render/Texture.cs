@@ -92,7 +92,7 @@ namespace Cider.Render
             {
                 if (disposing)
                 {
-                    ownerRenderer = null;
+                    ownerRenderer = null!;
                 }
 
                 unsafe

@@ -15,7 +15,6 @@ namespace Cider.Components.In2D
 {
     public class TileMap : Component2D
     {
-#nullable enable
         private Texture? _target;
         private Task<Texture>[]? _textures;
         private (List<TileRenderEntry> entries, RectangleF bounds)? _loadedData;
@@ -38,13 +37,15 @@ namespace Cider.Components.In2D
             }
         }
 
-        protected override void OnWindowChanged(Window? oldWindow, Window? newWindow)
+        private protected override void OnWindowChangedInternal(Window? oldWindow, Window? newWindow)
         {
             _readyToRender = false;
 
             DisposableHelpers.DisposeAndSetNull(ref _target);
 
             _textures = null;
+
+            base.OnWindowChangedInternal(oldWindow, newWindow);
         }
 
         protected override void OnRender(RenderContext context)

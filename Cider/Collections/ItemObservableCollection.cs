@@ -8,7 +8,7 @@ namespace Cider.Collections
 {
     public class ItemObservableCollection<T> : Collection<T>, IEnumerable<T>
     {
-        private readonly List<T> _list; // 基类的IList为private，这里持有该list引用
+        private readonly List<T> _list; // 基类的引用为IList，没有Capacity属性，这里持有该list引用
 
         public ItemObservableCollection() : this(new())
         {
@@ -75,7 +75,7 @@ namespace Cider.Collections
         }
 
         public delegate void ItemChangedEventHandler(ItemObservableCollection<T> collection, T changedItem);
-
+#nullable disable
         public event ItemChangedEventHandler ItemAdded;
         public event ItemChangedEventHandler ItemRemoved;
     }

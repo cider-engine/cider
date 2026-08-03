@@ -17,7 +17,6 @@ namespace Cider.Assets
 
         public abstract T GetThis();
 
-#nullable enable
         public static bool operator ==(Asset<T>? a, Asset<T>? b)
         {
             if (ReferenceEquals(a, b)) return true;

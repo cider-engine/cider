@@ -7,7 +7,6 @@ namespace Cider.Internals
 {
     public static class DisposableHelpers
     {
-#nullable enable
         public static void DisposeAndSetNull<T>(ref T? disposable) where T : IDisposable
         {
             disposable?.Dispose();

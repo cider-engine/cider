@@ -4,7 +4,6 @@ using SDL;
 using System;
 using System.Runtime.CompilerServices;
 
-#nullable enable
 namespace Cider.Audio
 {
     public class AudioClip : IDisposable

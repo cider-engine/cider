@@ -9,7 +9,6 @@ namespace Cider.Assets
     [SupportedAssetTypes(".txt")]
     public class TextAsset : Asset<TextAsset>
     {
-#nullable enable
         private Task<string>? _cachedTextLoader = null;
         private CancellationTokenSource _source = new();
 

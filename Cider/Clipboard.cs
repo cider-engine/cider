@@ -24,7 +24,7 @@ namespace Cider
             var array = new string[typeNum];
             for (var i = 0; i < array.Length; i++)
             {
-                array[i] = Utf8StringMarshaller.ConvertToManaged(strings[i]);
+                array[i] = Utf8StringMarshaller.ConvertToManaged(strings[i])!;
             }
             SDL3.SDL_free(strings);
             return array;
@@ -44,7 +44,7 @@ namespace Cider
             using var unmanaged = mimeType.ToUnmanagedUtf8();
             return SDL3.SDL_HasClipboardData(unmanaged.Pointer);
         }
-#nullable enable
+
         public static unsafe ISpanOwner<byte>? GetData(string mimeType)
         {
             SDLHelpers.EnsureOnMainThread();

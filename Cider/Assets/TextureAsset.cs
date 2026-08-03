@@ -12,7 +12,6 @@ namespace Cider.Assets
     [SupportedAssetTypes(".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".ico", ".svg")]
     public class TextureAsset : Asset<TextureAsset>
     {
-#nullable enable
         private Task<Surface>? _cachedSurfaceLoader = null;
         private CancellationTokenSource _surfaceTokenSource = new();
 
@@ -35,7 +34,7 @@ namespace Cider.Assets
                     return LoadInBrowser(context, id);
                 }
 
-                else return new Surface(path);
+                else return await Task.Run(() => new Surface(path));
             }
 
             [SupportedOSPlatform("browser")]
@@ -48,41 +47,17 @@ namespace Cider.Assets
 
         public Task<Texture> LoadTexture(Renderer renderer)
         {
-            if (renderer.Textures.TryGetValue(this, out var x)) return x.task;
+            if (renderer.Textures.TryGetValue(this, out var x)) return x;
 
-            var source = new CancellationTokenSource();
+            var task = _Load(this, renderer);
 
-            var task = _Load(this, renderer, source.Token);
-
-            renderer.Textures[this] = (source, task);
+            renderer.Textures[this] = task;
 
             return task;
 
-            static async Task<Texture> _Load(TextureAsset asset, Renderer renderer, CancellationToken token)
+            static async Task<Texture> _Load(TextureAsset asset, Renderer renderer)
             {
-                var path = asset.Path;
-
-                if (OperatingSystem.IsBrowser())
-                {
-                    using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
-                    res.EnsureSuccessStatusCode();
-                    var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
-#pragma warning disable CA1416
-                    return LoadInBrowser(context, id, renderer);
-#pragma warning restore CA1416
-                }
-
-                else
-                {
-                    return new Texture(renderer, path);
-                }
-            }
-
-            [SupportedOSPlatform("browser")]
-            static unsafe Texture LoadInBrowser(SDL_IOStreamInterface context, int id, Renderer renderer)
-            {
-                var stream = SDLHelpers.ThrowIfPtrIsNull(SDL3.SDL_OpenIO(&context, (nint)(&id)));
-                return new(renderer, stream);
+                return new(renderer, await asset.LoadSurface());
             }
         }
 
@@ -98,9 +73,7 @@ namespace Cider.Assets
         {
             if (renderer.Textures.TryGetValue(this, out var x))
             {
-                x.source.Cancel();
-                x.source.Dispose();
-                x.task.ContinueWith(static task =>
+                x.ContinueWith(static task =>
                 {
                     if (task.IsCompletedSuccessfully) task.Result.Dispose();
                 }, Game.GetTaskScheduler());

@@ -10,7 +10,6 @@ namespace Cider.Physics
 
         public float Density { get; set; } = 1.0f;
 
-#nullable enable
         private Fixture? _fixture;
 
         public override Body? Body => _fixture?.Body;

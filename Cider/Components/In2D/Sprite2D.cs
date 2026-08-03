@@ -13,7 +13,6 @@ namespace Cider.Components.In2D
 {
     public class Sprite2D : Component2D
     {
-#nullable enable
         private RectangleF? _cachedRenderRegion = null;
 
         public TextureAsset? Texture
@@ -25,7 +24,6 @@ namespace Cider.Components.In2D
                 field = value;
             }
         }
-#nullable disable
 
         public bool IsCentered { get; set { field = value; _cachedRenderRegion = null; } } = true;
 

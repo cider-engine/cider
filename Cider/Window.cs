@@ -1,5 +1,5 @@
-using Cider.Collections;
 using Cider.Components;
+using Cider.Components.In2D;
 using Cider.Extensions;
 using Cider.Internals;
 using Cider.Render;
@@ -19,25 +19,35 @@ using SpecificWindowFlags = SDL.SDL_WindowFlags;
 
 namespace Cider
 {
-    public readonly record struct WindowId(uint Id);
+    public readonly record struct WindowId(uint Id)
+    {
+        public readonly bool IsInvalid => Id == 0;
+    }
 
     public class WindowCloseRequestedEventArgs : EventArgs
     {
         public bool Handled { get; set; }
     }
 
-    public class WindowEventArgs : EventArgs
-    {
-        public ulong Timestamp { get; init; }
-        public Window Window { get; init; }
-    }
-
     public class Window : IDisposable
     {
-        public static ChangeQueueableDictionary<WindowId, Window> AllWindows { get; } = new(EqualityComparer<WindowId>.Create((a, b) => a.Id == b.Id, x => x.Id.GetHashCode()));
+        private static readonly Dictionary<WindowId, Window> _allWindows = new(EqualityComparer<WindowId>.Create((a, b) => a == b, x => x.GetHashCode()));
+
+        public static ICollection<Window> AllWindows => _allWindows.Values;
+
+        public static Window? GetWindowFromId(WindowId id)
+        {
+            if (_allWindows.TryGetValue(id, out var window)) return window;
+            if (id.IsInvalid) return null;
+            unsafe
+            {
+                return new(id, SDL_GetWindowFromID((SDL_WindowID)id.Id), new());
+            }
+        }
 
         private bool disposedValue;
         private readonly unsafe SDL_Window* _window;
+        private readonly Renderer _renderer;
 
         public WindowId WindowId
         {
@@ -53,9 +63,8 @@ namespace Cider
             get
             {
                 ObjectDisposedException.ThrowIf(disposedValue, this);
-                return field;
+                return _renderer;
             }
-            private set;
         }
 
         public bool IsClosed => disposedValue;
@@ -73,7 +82,7 @@ namespace Cider
                     value.OnLoadedDispatcher(value); // 如果游戏没有初始化，则在Initialize里调用
                 }
             }
-        } = new(); // 初始空场景不调用生命周期函数
+        }
 
         public Point Position
         {
@@ -114,7 +123,7 @@ namespace Cider
                 SDLHelpers.ThrowIfFalse(SDL_SetWindowSize(_window, value.Width, value.Height));
             }
         }
-#nullable enable
+
         public Surface? Icon
         {
             get
@@ -133,7 +142,7 @@ namespace Cider
                 field = value;
             }
         }
-#nullable restore
+
         internal unsafe SDL_Window* Pointer
         {
             get
@@ -146,7 +155,7 @@ namespace Cider
         [global::System.Runtime.InteropServices.DllImport("SDL3", CallingConvention = global::System.Runtime.InteropServices.CallingConvention.Cdecl, ExactSpelling = true)]
         private unsafe static extern SDL_Window* SDL_CreateWindow(byte* title, int w, int h, SpecificWindowFlags flags);
 
-        public unsafe Window(string title, int width, int height, WindowFlags flags)
+        public unsafe Window(string title, Scene scene, int width, int height, WindowFlags flags)
         {
             if (OperatingSystem.IsBrowser() && AllWindows.Count > 0) throw new PlatformNotSupportedException("browser doesn't support multiple windows.");
 
@@ -156,13 +165,32 @@ namespace Cider
 
             WindowId = new((uint)SDL_GetWindowID(_window));
 
-            Renderer = new(_window);
+            _renderer = new(_window);
 
-            Scene.Window = this;
+            scene.Window = this;
+
+            Scene = scene;
 
             SDLHelpers.ThrowIfFalse(SDL_SetRenderVSync(Renderer.Pointer, 1)); // 默认强制垂直同步
 
-            AllWindows.EnqueueAdd(WindowId, this);
+            _allWindows.Add(WindowId, this);
+        }
+
+        private unsafe Window(WindowId id, SDL_Window* window, Scene scene)
+        {
+            _window = window;
+
+            WindowId = id;
+
+            _renderer = new(_window);
+
+            scene.Window = this;
+
+            Scene = scene;
+
+            SDLHelpers.ThrowIfFalse(SDL_SetRenderVSync(Renderer.Pointer, 1)); // 默认强制垂直同步
+
+            _allWindows.Add(WindowId, this);
         }
 
         public void Show()
@@ -254,7 +282,7 @@ namespace Cider
                 else SDLHelpers.ThrowIfFalse(SDL_SetTextInputArea(_window, null, cursorOffsetToTargetX));
             }
         }
-#nullable enable
+
         public void StartTextInput(TextInputOptions? options = null)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -288,6 +316,28 @@ namespace Cider
         }
 
 
+        private readonly WeakReference<Component2D> _focusedComponentRefrence = new(null!);
+
+        internal Component2D? FocusedComponent => _focusedComponentRefrence.TryGetTarget(out var target) ? target : null;
+
+        internal void SetFocus(Component2D? gettingFocusComponent)
+        {
+            _focusedComponentRefrence.TryGetTarget(out Component2D? losingFocusComponent);
+
+            if (ReferenceEquals(gettingFocusComponent, losingFocusComponent)) return;
+
+            losingFocusComponent?.IsFocused = false;
+
+            gettingFocusComponent?.IsFocused = true;
+
+            losingFocusComponent?.OnLostFocus(losingFocusComponent, gettingFocusComponent);
+
+            gettingFocusComponent?.OnGotFocus(gettingFocusComponent, losingFocusComponent);
+        }
+
+        internal void ClearFocus() => SetFocus(null);
+
+#nullable disable
         public event EventHandler<Window, WindowCloseRequestedEventArgs> CloseRequested;
 
         public event EventHandler<Window, EventArgs> Shown;
@@ -297,7 +347,7 @@ namespace Cider
         public event EventHandler<Window, Point> Moved;
 
         public event EventHandler<Window, Size> Resized;
-
+#nullable restore
 
         internal void OnShown() => Shown?.Invoke(this, EventArgs.Empty);
         internal void OnHidden() => Hidden?.Invoke(this, EventArgs.Empty);
@@ -319,22 +369,13 @@ namespace Cider
         {
             if (!disposedValue)
             {
-                // 手动Dispose时推入队列，GC回收时直接销毁
                 if (disposing)
                 {
-                    AllWindows.EnqueueRemove(WindowId, () =>
-                    {
-                        Renderer.Dispose();
-                        Renderer = null;
-                        unsafe
-                        {
-                            SDL_DestroyWindow(_window);
-                            GetPointer(this) = null;
-                        }
-                    });
+                    _allWindows.Remove(WindowId);
+                    Renderer.Dispose();
                 }
 
-                else unsafe
+                unsafe
                 {
                     SDL_DestroyWindow(_window);
                     GetPointer(this) = null;
@@ -494,7 +535,7 @@ namespace Cider
         NotFocusable = SDL_WindowFlags.SDL_WINDOW_NOT_FOCUSABLE,
     }
 
-    public class TextInputOptions : SDLProperties
+    public class TextInputOptions : PropertyBase
     {
         public TextInputType Type
         {

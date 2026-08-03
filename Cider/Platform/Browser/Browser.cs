@@ -19,7 +19,7 @@ namespace Cider.Platform.Browser
     public static class Browser
     {
         private static int IOStreamUnderlyingStreamId = int.MinValue;
-#nullable enable
+
         private static readonly Dictionary<int, RecyclableMemoryStream> IOStreamUnderlyingStreams = new();
 
         private static readonly RecyclableMemoryStreamManager MemoryStreamManagaer = new();

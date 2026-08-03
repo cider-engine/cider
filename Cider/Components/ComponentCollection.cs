@@ -8,7 +8,7 @@ namespace Cider.Components
 {
     public class ComponentCollection : Collection<Component>, IEnumerable<Component>
     {
-        private readonly List<Component> _list; // 基类的IList为private，这里持有该list引用
+        private readonly List<Component> _list; // 基类的引用为IList，没有Capacity属性，这里持有该list引用
 
         public Component Owner { get; }
 
@@ -27,8 +27,6 @@ namespace Cider.Components
             get => _list.Capacity;
             set => _list.Capacity = value;
         }
-
-        public new CollectionCopyEnumerator<Component> GetEnumerator() => new(this);
 
         public void AddRange(params ReadOnlySpan<Component> components)
         {
@@ -94,7 +92,7 @@ namespace Cider.Components
         }
 
         public delegate void ComponentChangedEventHandler(Component owner, Component changedComponent);
-
+#nullable disable
         public event ComponentChangedEventHandler ComponentAdded;
         public event ComponentChangedEventHandler ComponentRemoved;
     }

@@ -16,8 +16,6 @@ namespace Cider.Physics
 
         private Fixture? _fixture;
 
-        public override Body? Body => _fixture?.Body;
-
         public override void Attach(Body body, bool isSensor = false)
         {
             if (_fixture is not null)

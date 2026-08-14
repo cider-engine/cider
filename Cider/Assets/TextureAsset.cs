@@ -18,7 +18,7 @@ namespace Cider.Assets
         public TextureAsset(string path) : base(path)
         { }
 
-        public Task<Surface> LoadSurface()
+        public Task<Surface> LoadSurfaceAsync()
         {
             if (_cachedSurfaceLoader is not null) return _cachedSurfaceLoader;
 
@@ -40,12 +40,12 @@ namespace Cider.Assets
             [SupportedOSPlatform("browser")]
             static unsafe Surface LoadInBrowser(SDL_IOStreamInterface context, int id)
             {
-                var stream = SDLHelpers.ThrowIfPtrIsNull(SDL3.SDL_OpenIO(&context, (nint)(&id)));
+                var stream = SDLHelpers.ThrowIfPtrIsNull(SDL3.SDL_OpenIO(&context, id));
                 return new(stream);
             }
         }
 
-        public Task<Texture> LoadTexture(Renderer renderer)
+        public Task<Texture> LoadTextureAsync(Renderer renderer)
         {
             if (renderer.Textures.TryGetValue(this, out var x)) return x;
 
@@ -57,7 +57,7 @@ namespace Cider.Assets
 
             static async Task<Texture> _Load(TextureAsset asset, Renderer renderer)
             {
-                return new(renderer, await asset.LoadSurface());
+                return new(renderer, await asset.LoadSurfaceAsync());
             }
         }
 

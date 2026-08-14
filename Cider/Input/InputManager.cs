@@ -78,7 +78,7 @@ namespace Cider.Input
                 }
             }
 
-            if (!context.Handled)
+            if (!context.SuppressGlobalHandling)
                 MouseMoved?.Invoke(window, args);
         }
 
@@ -104,7 +104,7 @@ namespace Cider.Input
                 }
             }
 
-            if (!context.Handled)
+            if (!context.SuppressGlobalHandling)
                 MouseUp?.Invoke(window, args);
         }
 
@@ -139,7 +139,7 @@ namespace Cider.Input
                 }
             }
 
-            if (!context.Handled)
+            if (!context.SuppressGlobalHandling)
                 MouseDown?.Invoke(window, args);
         }
 
@@ -168,7 +168,7 @@ namespace Cider.Input
                 }
             }
 
-            if (!context.Handled)
+            if (!context.SuppressGlobalHandling)
                 KeyDown?.Invoke(window, args);
         }
 
@@ -187,7 +187,7 @@ namespace Cider.Input
                 }
             }
 
-            if (!context.Handled)
+            if (!context.SuppressGlobalHandling)
                 KeyUp?.Invoke(window, args);
         }
     }

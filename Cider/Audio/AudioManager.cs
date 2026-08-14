@@ -8,7 +8,7 @@ namespace Cider.Audio
     {
         public static async Task PlayWithDefaultMixer(AudioAsset asset)
         {
-            var audio = await asset.Load(AudioMixer.DefaultPlayback);
+            var audio = await asset.LoadAsync(AudioMixer.DefaultPlayback);
             AudioMixer.DefaultPlayback.Play(audio);
         }
     }

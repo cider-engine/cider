@@ -375,7 +375,7 @@ namespace Cider.Generator
                                     {
                                         case SpecialType.System_Boolean:
                                             writer.Write(value.Trim().ToLowerInvariant());
-                                            writer.WriteLine(",");
+                                            writer.WriteLine(',');
                                             break;
 
                                         case SpecialType.System_Char:
@@ -421,10 +421,21 @@ namespace Cider.Generator
                                             break;
 
                                         default:
-                                            writer.Write(memberType.GetFullyQualifiedName());
-                                            writer.Write(".Parse(\"");
-                                            writer.Write(value);
-                                            writer.WriteLine("\"),");
+                                            if (memberType.TypeKind == TypeKind.Enum)
+                                            {
+                                                writer.Write(memberType.GetFullyQualifiedName());
+                                                writer.Write('.');
+                                                writer.Write(value.Trim());
+                                                writer.WriteLine(',');
+                                            }
+
+                                            else
+                                            {
+                                                writer.Write(memberType.GetFullyQualifiedName());
+                                                writer.Write(".Parse(\"");
+                                                writer.Write(value);
+                                                writer.WriteLine("\"),");
+                                            }
                                             break;
                                     }
                                 }
@@ -452,9 +463,16 @@ namespace Cider.Generator
                                     writer.Write($"{contentProperty} = ");
                                     switch (memberType.SpecialType)
                                     {
+                                        case SpecialType.System_Enum:
+                                            writer.Write(memberType.GetFullyQualifiedName());
+                                            writer.Write('.');
+                                            writer.Write(child.Value.Trim());
+                                            writer.WriteLine(',');
+                                            break;
+
                                         case SpecialType.System_Boolean:
                                             writer.Write(child.Value.Trim().ToLowerInvariant());
-                                            writer.WriteLine(",");
+                                            writer.WriteLine(',');
                                             break;
 
                                         case SpecialType.System_Char:
@@ -500,10 +518,21 @@ namespace Cider.Generator
                                             break;
 
                                         default:
-                                            writer.Write(memberType.GetFullyQualifiedName());
-                                            writer.Write(".Parse(\"");
-                                            writer.Write(child.Value);
-                                            writer.WriteLine("\"),");
+                                            if (memberType.TypeKind == TypeKind.Enum)
+                                            {
+                                                writer.Write(memberType.GetFullyQualifiedName());
+                                                writer.Write('.');
+                                                writer.Write(child.Value.Trim());
+                                                writer.WriteLine(',');
+                                            }
+
+                                            else
+                                            {
+                                                writer.Write(memberType.GetFullyQualifiedName());
+                                                writer.Write(".Parse(\"");
+                                                writer.Write(child.Value);
+                                                writer.WriteLine("\"),");
+                                            }
                                             break;
                                     }
                                 }

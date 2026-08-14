@@ -79,7 +79,7 @@ namespace Cider.Components.In2D
 
         private void UpdateRenderRegion(Renderer renderer)
         {
-            if (Texture?.LoadTexture(renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
+            if (Texture?.LoadTextureAsync(renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
             {
                 var texture = task.Result;
 
@@ -126,7 +126,7 @@ namespace Cider.Components.In2D
         {
             if (Texture is null) return;
 
-            if (Texture?.LoadTexture(context.Renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
+            if (Texture?.LoadTextureAsync(context.Renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
             {
                 if (_cachedRenderRegion is RectangleF rect)
                 {

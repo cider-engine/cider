@@ -29,15 +29,20 @@ namespace Cider.Project
         public TextureAsset? MainWindowIcon { get; init; }
 
         [SettingGroup(Display)]
-        public Color BackgroundColor { get; set; } = Color.Black;
+        public Color MainWindowBackgroundColor { get; init; } = Color.Black;
 
         [SettingGroup(Display)]
-        public Color ClearColor { get; set; } = Color.Black;
+        public Color MainWindowClearColor { get; init; } = Color.Black;
 
         [SettingGroup(Display)]
         public Size LogicalSize { get; init; }
 
         [SettingGroup(Display)]
         public LogicalPresentationMode LogicalPresentationMode { get; init; }
+
+        const string UI = nameof(UI);
+
+        [SettingGroup(UI)]
+        public FontAsset? DefaultFallbackFont { get; init; }
     }
 }

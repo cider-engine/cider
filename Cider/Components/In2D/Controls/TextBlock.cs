@@ -13,16 +13,44 @@ using System.Threading.Tasks;
 
 namespace Cider.Components.In2D.Controls
 {
+    public enum TextRenderMode
+    {
+        Cached,
+        Direct
+    }
+
     [Content(nameof(Text))]
     public class TextBlock : Control
     {
+        private unsafe delegate* managed<TextBlock, RenderContext, void> _renderFunction = &OnDirectRender;
         private Texture? _cachedTexture = null;
         private Task<FontVariant>? _fontVariant = null;
         private Text? _text = null;
 
-        public FontAsset? Font
+        public TextRenderMode RenderMode
         {
             get;
+            set
+            {
+                field = value;
+
+                DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
+
+                unsafe
+                {
+                    _renderFunction = value switch
+                    {
+                        TextRenderMode.Cached => &OnCachedRender,
+                        TextRenderMode.Direct => &OnDirectRender,
+                        _ => throw new InvalidOperationException("The mode is invalid")
+                    };
+                }
+            }
+        } = TextRenderMode.Direct;
+
+        public FontAsset? Font
+        {
+            get => field ?? Game.Instance?.ProjectSettings.DefaultFallbackFont;
             set
             {
                 if (field == value) return;
@@ -34,12 +62,14 @@ namespace Cider.Components.In2D.Controls
                 field = value;
 
                 if (Game.IsInitialized)
-                    _fontVariant = Font?.Load()
+                    _fontVariant = Font?.LoadAsync()
                         .ContinueWith(x => SetFontProperties(x.Result.CreateVariant()),
                             Game.GetTaskScheduler())
                         .EnsureToBeSuccessful();
             }
         }
+
+        public const float DefaultFontSize = 64;
 
         public float FontSize
         {
@@ -51,7 +81,7 @@ namespace Cider.Components.In2D.Controls
                 DisposableHelpers.DisposeAndSetNull(ref _cachedTexture);
                 if (_fontVariant is { IsCompletedSuccessfully: true } task) task.Result.FontSize = value;
             }
-        } = 64;
+        } = DefaultFontSize;
 
         public FontStyleFlags FontStyle
         {
@@ -159,9 +189,9 @@ namespace Cider.Components.In2D.Controls
         {
             if (_text is Text text)
             {
-                text.Measure(out int width, out int height);
-                unscaledWidth = width;
-                unscaledHeight = height;
+                var size = text.Size;
+                unscaledWidth = size.Width;
+                unscaledHeight = size.Height;
                 return true;
             }
 
@@ -175,42 +205,49 @@ namespace Cider.Components.In2D.Controls
 
         protected override bool HitTest(HitTestResult result)
         {
-            if (Font is null || _cachedTexture is null) return false;
-            return result.RectangleHitTest(_cachedTexture.Width, _cachedTexture.Height); // 可点击必定已渲染，复用Texture的Width和Height
+            if (_text is { Size: { IsEmpty: false, Width: var width, Height: var height } })
+                return result.RectangleHitTest(width, height);
+
+            return false;
         }
 
-        protected override void OnRender(RenderContext context)
+        protected override unsafe void OnRender(RenderContext context)
         {
-            if (Font is null) return;
+            Game.Assert(_renderFunction != null);
+            _renderFunction(this, context);
+        }
 
-            if (_cachedTexture is null)
+        private static void OnCachedRender(TextBlock @this, RenderContext context)
+        {
+            if (@this.Font is null) return;
+
+            if (@this._cachedTexture is null)
             {
-                if (_fontVariant is null)
+                if (@this._fontVariant is null)
                 {
-                    _fontVariant = Font.Load()
-                        .ContinueWith(x => SetFontProperties(x.Result.CreateVariant()),
+                    @this._fontVariant = @this.Font.LoadAsync()
+                        .ContinueWith(x => @this.SetFontProperties(x.Result.CreateVariant()),
                             Game.GetTaskScheduler())
                         .EnsureToBeSuccessful();
 
                     return;
                 }
 
-                else if (_fontVariant is { IsCompletedSuccessfully: true } task)
+                else if (@this._fontVariant is { IsCompletedSuccessfully: true } task)
                 {
-                    var text = _text ??= new Text(context.Renderer.TextEngine.Value, task.Result, Text);
+                    var text = @this._text ??= new Text(context.Renderer.TextEngine.Value, task.Result, @this.Text);
 
-                    text.Color = Foreground;
+                    text.Color = @this.Foreground;
 
-                    text.Measure(out int width, out int height);
+                    var size = text.Size;
 
-                    if (width == 0 || height == 0) return;
+                    if (size.IsEmpty) return;
 
-                    _cachedTexture = new(context.Renderer, width, height, TextureAccess.Target);
+                    @this._cachedTexture = new(context.Renderer, size.Width, size.Height, TextureAccess.Target);
 
-                    //using (context.PushBlendMode(BlendMode.None))
-                    using (context.PushTarget(_cachedTexture))
+                    using (context.PushTarget(@this._cachedTexture))
                     {
-                        context.FillColor(Background);
+                        context.FillColor(@this.Background);
                         text.Render(0, 0);
                     }
                 }
@@ -218,9 +255,43 @@ namespace Cider.Components.In2D.Controls
                 else return;
             }
 
-            var transform = GlobalTransform;
+            var transform = @this.GlobalTransform;
             //context.FillRectangle(transform.Position, measuredWidth, measuredHeight, transform.RotationInDegrees, Background, transform.Scale);
-            context.RenderTexture(_cachedTexture, transform.Position, null, transform.RotationInDegrees, transform.Scale, Vector2.Zero, FlipMode.None);
+            context.RenderTexture(@this._cachedTexture, transform.Position, null, transform.RotationInDegrees, transform.Scale, Vector2.Zero, FlipMode.None);
+        }
+
+        private static void OnDirectRender(TextBlock @this, RenderContext context)
+        {
+            if (@this.Font is null) return;
+
+            if (@this._fontVariant is null)
+            {
+                @this._fontVariant = @this.Font.LoadAsync()
+                    .ContinueWith(x => @this.SetFontProperties(x.Result.CreateVariant()),
+                        Game.GetTaskScheduler())
+                    .EnsureToBeSuccessful();
+
+                return;
+            }
+
+            else if (@this._fontVariant is { IsCompletedSuccessfully: true } task)
+            {
+                var text = @this._text ??= new Text(context.Renderer.TextEngine.Value, task.Result, @this.Text);
+
+                text.Color = @this.Foreground;
+
+                var transform = @this.GlobalTransform;
+
+                Game.Assert(transform.RotationInRadians == 0, "Direct render does not support rotation");
+
+                Game.Assert(transform.Scale == Vector2.One, "Direct render doest not support scale");
+
+                var size = text.Size;
+
+                context.FillRectangle(transform.Position, size.Width, size.Height, 0, @this.Background, Vector2.One);
+
+                text.Render(transform.Position.X, transform.Position.Y);
+            }
         }
     }
 }

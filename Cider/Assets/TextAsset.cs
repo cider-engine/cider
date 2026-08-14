@@ -16,7 +16,7 @@ namespace Cider.Assets
         {
         }
 
-        public Task<string> Load()
+        public Task<string> LoadAsync()
         {
             if (_cachedTextLoader is not null) return _cachedTextLoader;
 

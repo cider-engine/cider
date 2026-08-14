@@ -18,7 +18,7 @@ namespace Cider.Assets
         {
         }
 
-        public Task<Map> Load()
+        public Task<Map> LoadAsync()
         {
             if (_cachedTileMapLoader is not null) return _cachedTileMapLoader;
 

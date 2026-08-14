@@ -24,7 +24,7 @@ namespace Cider.Assets
         public FontAsset(string path) : base(path)
         {}
 
-        public Task<Font> Load()
+        public Task<Font> LoadAsync()
         {
             if (_cachedFontLoader is not null) return _cachedFontLoader;
 
@@ -47,7 +47,7 @@ namespace Cider.Assets
             [SupportedOSPlatform("browser")]
             static unsafe Font LoadInBrowser(SDL_IOStreamInterface context, int id, float ptsize)
             {
-                var stream = SDLHelpers.ThrowIfPtrIsNull(SDL3.SDL_OpenIO(&context, (nint)(&id)));
+                var stream = SDLHelpers.ThrowIfPtrIsNull(SDL3.SDL_OpenIO(&context, id));
                 return new(stream, ptsize);
             }
         }

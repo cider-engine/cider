@@ -1,7 +1,6 @@
 using Cider.Internals;
 using SDL;
 using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using static SDL.SDL3_mixer;
@@ -106,17 +105,17 @@ namespace Cider.Audio
             }
         }
 
-        public unsafe long PlaybackPositionFrames
+        public unsafe SampleFrame PlaybackPositionFrames
         {
             get
             {
                 ObjectDisposedException.ThrowIf(disposedValue, this);
-                return SDLHelpers.ThrowIfNegative(MIX_GetTrackPlaybackPosition(_track));
+                return new(SDLHelpers.ThrowIfNegative(MIX_GetTrackPlaybackPosition(_track)));
             }
             set
             {
                 ObjectDisposedException.ThrowIf(disposedValue, this);
-                SDLHelpers.ThrowIfFalse(MIX_SetTrackPlaybackPosition(_track, value));
+                SDLHelpers.ThrowIfFalse(MIX_SetTrackPlaybackPosition(_track, value.Value));
             }
         }
 
@@ -126,16 +125,16 @@ namespace Cider.Audio
             set => PlaybackPositionFrames = TimeSpanToFrames(value);
         }
 
-        public unsafe TimeSpan FramesToTimeSpan(long frames)
+        public unsafe TimeSpan FramesToTimeSpan(SampleFrame frames)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
-            return TimeSpan.FromMilliseconds(SDLHelpers.ThrowIfNegative(MIX_TrackFramesToMS(_track, frames)));
+            return TimeSpan.FromMilliseconds(SDLHelpers.ThrowIfNegative(MIX_TrackFramesToMS(_track, frames.Value)));
         }
 
-        public unsafe long TimeSpanToFrames(TimeSpan timeSpan)
+        public unsafe SampleFrame TimeSpanToFrames(TimeSpan timeSpan)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
-            return SDLHelpers.ThrowIfNegative(MIX_TrackMSToFrames(_track, (long)timeSpan.TotalMilliseconds));
+            return new(SDLHelpers.ThrowIfNegative(MIX_TrackMSToFrames(_track, (long)timeSpan.TotalMilliseconds)));
         }
 
         public void Play(AudioPlayOptions? options = null)
@@ -156,12 +155,12 @@ namespace Cider.Audio
             }
         }
 
-        public void Stop(long fadeOutFrames)
+        public void Stop(SampleFrame fadeOutFrames)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
             unsafe
             {
-                SDLHelpers.ThrowIfFalse(MIX_StopTrack(_track, fadeOutFrames));
+                SDLHelpers.ThrowIfFalse(MIX_StopTrack(_track, fadeOutFrames.Value));
             }
         }
 
@@ -170,7 +169,7 @@ namespace Cider.Audio
             ObjectDisposedException.ThrowIf(disposedValue, this);
             unsafe
             {
-                SDLHelpers.ThrowIfFalse(MIX_StopTrack(_track, TimeSpanToFrames(fadeOutTime)));
+                SDLHelpers.ThrowIfFalse(MIX_StopTrack(_track, TimeSpanToFrames(fadeOutTime).Value));
             }
         }
 
@@ -222,7 +221,7 @@ namespace Cider.Audio
                 track.Stopped?.Invoke(mixer, track);
 
             else
-                Debug.Assert(false);
+                Game.Assert(false);
         }
     }
 }

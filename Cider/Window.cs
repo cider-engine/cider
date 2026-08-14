@@ -74,7 +74,7 @@ namespace Cider
             get;
             set
             {
-                field.Window = null;
+                field?.Window = null; // 第一次设置的时候field为null
                 field = value ?? throw new NullReferenceException();
                 value.Window = this;
                 if (Game.IsInitialized)
@@ -142,6 +142,34 @@ namespace Cider
                 field = value;
             }
         }
+
+        public Color BackgroundColor
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                return field;
+            }
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                field = value;
+            }
+        } = Color.Black;
+
+        public Color ClearColor
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                return field;
+            }
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                field = value;
+            }
+        } = Color.Black;
 
         internal unsafe SDL_Window* Pointer
         {

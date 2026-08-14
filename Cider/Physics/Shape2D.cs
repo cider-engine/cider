@@ -10,8 +10,6 @@ namespace Cider.Physics
     {
         public Vector2 Position { get; set; }
 
-        public abstract Body? Body { get; }
-
         public abstract void Attach(Body body, bool isSensor = false);
         public abstract void Detach(Body body);
     }

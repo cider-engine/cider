@@ -1,6 +1,5 @@
 using Cider.Assets;
 using Cider.Data.In2D;
-using Cider.Extensions;
 using Cider.Internals;
 using Cider.Render;
 using DotTiled;
@@ -9,15 +8,13 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Numerics;
-using System.Threading.Tasks;
 
 namespace Cider.Components.In2D
 {
     public class TileMap : Component2D
     {
         private Texture? _target;
-        private Task<Texture>[]? _textures;
-        private (List<TileRenderEntry> entries, RectangleF bounds)? _loadedData;
+        private (Dictionary<Vector2, TileRenderEntry> entries, RectangleF bounds)? _loadedData;
         private bool _readyToRender;
 
         public TileMapAsset? Map
@@ -32,7 +29,6 @@ namespace Cider.Components.In2D
 
                 DisposableHelpers.DisposeAndSetNull(ref _target);
 
-                _textures = null;
                 _loadedData = null;
             }
         }
@@ -42,8 +38,6 @@ namespace Cider.Components.In2D
             _readyToRender = false;
 
             DisposableHelpers.DisposeAndSetNull(ref _target);
-
-            _textures = null;
 
             base.OnWindowChangedInternal(oldWindow, newWindow);
         }
@@ -56,53 +50,40 @@ namespace Cider.Components.In2D
                 context.RenderTexture(_target!, transform.Position, null, transform.RotationInDegrees, transform.Scale, Vector2.Zero, FlipMode.None);
             }
 
-            else if (_textures is { IsAllSuccess: true } tasks)
+            else if (Map?.LoadAsync() is { IsCompletedSuccessfully: true } task)
             {
-                var (entries, bounds) = _loadedData ?? throw new NullReferenceException();
+                var map = task.Result;
+
+                var (entries, bounds) = _loadedData ?? BuildLoadedData(map, Map.OriginPath);
+
+                foreach (var entry in entries.Values)
+                {
+                    if (entry.Texture.LoadTextureAsync(context.Renderer) is not { IsCompletedSuccessfully: true }) return;
+                }
+
+                EnsureTarget(context.Renderer, bounds);
 
                 using (context.PushTarget(_target!))
                 {
-                    context.FillColor(Color.Transparent);
+                    context.FillColor(Color.FromArgb(map.BackgroundColor.A, map.BackgroundColor.R, map.BackgroundColor.G, map.BackgroundColor.B));
 
                     var offset = new Vector2(bounds.X, bounds.Y);
 
-                    for (var i = 0; i < entries.Count; i++)
+                    foreach (var entry in entries)
                     {
-                        var entry = entries[i];
-
-                        //if (tasks[i] is not Task<Texture> { IsCompletedSuccessfully: true } textureTask) continue;
-
                         context.RenderTexture(
-                            tasks[i].Result,
-                            entry.Position - offset,
-                            entry.SourceRectangle,
+                            entry.Value.Texture.LoadTextureAsync(context.Renderer).Result,
+                            entry.Key - offset,
+                            entry.Value.SourceRectangle,
                             rotationInDegrees: 0,
                             scale: Vector2.One,
                             originInSource: Vector2.Zero,
-                            flipMode: entry.FlipMode);
+                            flipMode: entry.Value.FlipMode);
                     }
                 }
 
                 _readyToRender = true;
             }
-
-            else if (Map?.Load() is { IsCompletedSuccessfully: true } task)
-            {
-                _textures = CalculateAndLoadTextures(context, task.Result);
-            }
-        }
-
-        private Task<Texture>[] CalculateAndLoadTextures(RenderContext context, Map map)
-        {
-            var (entries, bounds) = _loadedData ??= BuildLoadedData(map, Map!.Path);
-
-            EnsureTarget(context.Renderer, bounds);
-
-            var tasks = new Task<Texture>[entries.Count];
-
-            for (var i = 0; i < entries.Count; i++) tasks[i] = entries[i].Texture.LoadTexture(context.Renderer).EnsureToBeSuccessful();
-
-            return tasks;
         }
 
         private void EnsureTarget(Renderer renderer, RectangleF bounds)
@@ -119,9 +100,9 @@ namespace Cider.Components.In2D
             _target = new Texture(renderer, width, height, TextureAccess.Target);
         }
 
-        private static (List<TileRenderEntry> entries, RectangleF bounds) BuildLoadedData(Map map, string path)
+        private static (Dictionary<Vector2, TileRenderEntry> entries, RectangleF bounds) BuildLoadedData(Map map, string mapAssetPath)
         {
-            var entries = new List<TileRenderEntry>();
+            var entries = new Dictionary<Vector2, TileRenderEntry>();
             var bounds = RectangleF.Empty;
             var hasBounds = false;
 
@@ -131,11 +112,11 @@ namespace Cider.Components.In2D
                 {
                     if (data.Chunks is { HasValue: true, Value.Length: > 0 })
                     {
-                        EnumerateChunks(map, tileLayer, data, path, entries, ref bounds, ref hasBounds);
+                        EnumerateChunks(map, tileLayer, data, mapAssetPath, entries, ref bounds, ref hasBounds);
                     }
                     else
                     {
-                        EnumerateFiniteTiles(map, tileLayer, data, path, entries, ref bounds, ref hasBounds);
+                        EnumerateFiniteTiles(map, tileLayer, data, mapAssetPath, entries, ref bounds, ref hasBounds);
                     }
                 }
             }
@@ -147,7 +128,7 @@ namespace Cider.Components.In2D
 
             return (entries, bounds);
 
-            static void EnumerateFiniteTiles(Map mapValue, TileLayer layer, DotTiled.Data data, string path, List<TileRenderEntry> entries, ref RectangleF bounds, ref bool hasBounds)
+            static void EnumerateFiniteTiles(Map mapValue, TileLayer layer, DotTiled.Data data, string mapAssetPath, Dictionary<Vector2, TileRenderEntry> entries, ref RectangleF bounds, ref bool hasBounds)
             {
                 var width = layer.Width;
                 var height = layer.Height;
@@ -165,12 +146,12 @@ namespace Cider.Components.In2D
                         if (globalTileID == 0) continue;
 
                         var flippingFlag = index < flippingFlags.Length ? flippingFlags[index] : FlippingFlags.None;
-                        AddEntry(CreateEntry(mapValue, layer, x, y, globalTileID, flippingFlag, path), entries, ref bounds, ref hasBounds);
+                        AddEntry(CreateEntry(mapValue, layer, x, y, globalTileID, flippingFlag, mapAssetPath), entries, ref bounds, ref hasBounds);
                     }
                 }
             }
 
-            static void EnumerateChunks(Map mapValue, TileLayer layer, DotTiled.Data data, string path, List<TileRenderEntry> entries, ref RectangleF bounds, ref bool hasBounds)
+            static void EnumerateChunks(Map mapValue, TileLayer layer, DotTiled.Data data, string mapAssetPath, Dictionary<Vector2, TileRenderEntry> entries, ref RectangleF bounds, ref bool hasBounds)
             {
                 foreach (var chunk in data.Chunks.Value)
                 {
@@ -188,18 +169,19 @@ namespace Cider.Components.In2D
                             if (globalTileID == 0) continue;
 
                             var flippingFlag = index < chunkFlippingFlags.Length ? chunkFlippingFlags[index] : FlippingFlags.None;
-                            AddEntry(CreateEntry(mapValue, layer, chunk.X + x, chunk.Y + y, globalTileID, flippingFlag, path), entries, ref bounds, ref hasBounds);
+                            AddEntry(CreateEntry(mapValue, layer, chunk.X + x, chunk.Y + y, globalTileID, flippingFlag, mapAssetPath), entries, ref bounds, ref hasBounds);
                         }
                     }
                 }
             }
 
-            static void AddEntry(TileRenderEntry entry, List<TileRenderEntry> entries, ref RectangleF bounds, ref bool hasBounds)
+            static void AddEntry((Vector2 position, TileRenderEntry entry) positionAndEntry, Dictionary<Vector2, TileRenderEntry> entries, ref RectangleF bounds, ref bool hasBounds)
             {
-                entries.Add(entry);
+                (Vector2 position, TileRenderEntry entry) = positionAndEntry;
+                entries.Add(position, entry);
 
-                var left = entry.Position.X;
-                var top = entry.Position.Y;
+                var left = position.X;
+                var top = position.Y;
                 var right = left + entry.SourceRectangle.Width;
                 var bottom = top + entry.SourceRectangle.Height;
 
@@ -218,7 +200,7 @@ namespace Cider.Components.In2D
             }
         }
 
-        private static TileRenderEntry CreateEntry(Map map, TileLayer layer, int tileX, int tileY, uint globalTileID, FlippingFlags flippingFlags, string? mapPath)
+        private static (Vector2, TileRenderEntry) CreateEntry(Map map, TileLayer layer, int tileX, int tileY, uint globalTileID, FlippingFlags flippingFlags, string? mapPath)
         {
             var tileset = FindTileset(map, globalTileID) ?? throw new InvalidOperationException($"No tileset found for tile id '{globalTileID}'.");
             var firstGid = tileset.FirstGID.Value;
@@ -229,7 +211,7 @@ namespace Cider.Components.In2D
             var texturePath = GetTilesetTexturePath(tileset, mapPath);
             var texture = GetTextureAsset(texturePath);
 
-            return new TileRenderEntry(texture, sourceRectangle, position, ToFlipMode(flippingFlags));
+            return (position, new TileRenderEntry(texture, sourceRectangle, ToFlipMode(flippingFlags)));
         }
 
         private static Vector2 GetTilePosition(Map map, TileLayer layer, int tileX, int tileY)
@@ -314,6 +296,6 @@ namespace Cider.Components.In2D
             return mode;
         }
 
-        private readonly record struct TileRenderEntry(TextureAsset Texture, RectangleF SourceRectangle, Vector2 Position, FlipMode FlipMode);
+        private readonly record struct TileRenderEntry(TextureAsset Texture, RectangleF SourceRectangle, FlipMode FlipMode);
     }
 }

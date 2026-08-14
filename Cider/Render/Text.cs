@@ -72,6 +72,19 @@ namespace Cider.Render
             }
         }
 
+        public unsafe Size Size
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+
+                int width, height;
+                SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_GetTextSize(_text, &width, &height));
+
+                return new(width, height);
+            }
+        }
+
         public unsafe void SetContent(ReadOnlySpan<char> text)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -93,14 +106,6 @@ namespace Cider.Render
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
             OwnerTextEngine.RenderTo(this, x, y);
-        }
-
-        public unsafe void Measure(out int width, out int height)
-        {
-            ObjectDisposedException.ThrowIf(disposedValue, this);
-
-            fixed (int* w = &width, h = &height)
-                SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_GetTextSize(_text, w, h));
         }
 
         public unsafe void Update()

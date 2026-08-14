@@ -68,15 +68,32 @@ namespace Cider.Input
             return true;
         }
 
+        public static bool RectangleHitTest(Vector2 localPosition, float unscaledWidth, float unscaledHeight, float offsetX = 0, float offsetY = 0)
+        {
+            // 判断是否在矩形 [0, Width] x [0, Height] 内
+            return localPosition.X >= 0 - offsetX && localPosition.Y >= 0 - offsetY && localPosition.X <= unscaledWidth - offsetX && localPosition.Y <= unscaledHeight - offsetY;
+        }
+
         public bool RectangleHitTest(float unscaledWidth, float unscaledHeight, float offsetX = 0, float offsetY = 0)
         {
             if (TryToLocal(out var local))
             {
-                // 判断是否在矩形 [0, Width] x [0, Height] 内
-                if (local.X >= 0 - offsetX && local.Y >= 0 - offsetY && local.X <= unscaledWidth - offsetX && local.Y <= unscaledHeight - offsetY)
-                {
-                    return true;
-                }
+                return RectangleHitTest(local, unscaledWidth, unscaledHeight, offsetX, offsetY);
+            }
+
+            return false;
+        }
+
+        public static bool CircleHitTest(Vector2 localPosition, float radius, float offsetX = 0, float offsetY = 0)
+        {
+            return Vector2.DistanceSquared(localPosition, new(-offsetX, -offsetY)) <= radius * radius;
+        }
+
+        public bool CircleHitTest(float radius, float offsetX = 0, float offsetY = 0)
+        {
+            if (TryToLocal(out var local))
+            {
+                return CircleHitTest(local, radius, offsetX, offsetY);
             }
 
             return false;

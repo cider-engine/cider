@@ -69,6 +69,41 @@ namespace Cider.Render
             };
             SDLHelpers.ThrowIfFalse(SDL_RenderTextureRotated(Renderer.Pointer, texture.Pointer, sourceRectangle.HasValue ? &source : null, destinationRectangle.HasValue ? &destination : null, rotationInDegrees, &center, (SDL_FlipMode)flipMode));
         }
+
+        public void DrawCircle(Vector2 position, float radius, Color color)
+        {
+            using var colorScope = PushDrawColor(color);
+            float x = 0, y = radius;
+            float d = 3 - 2 * radius;
+
+            static void DrawPixel(Renderer renderer, Vector2 position, float x, float y)
+            {
+                renderer.DrawPoint(new(position.X + x, position.Y + y));
+                renderer.DrawPoint(new(position.X - x, position.Y + y));
+                renderer.DrawPoint(new(position.X + x, position.Y - y));
+                renderer.DrawPoint(new(position.X - x, position.Y - y));
+                renderer.DrawPoint(new(position.X + y, position.Y + x));
+                renderer.DrawPoint(new(position.X - y, position.Y + x));
+                renderer.DrawPoint(new(position.X + y, position.Y - x));
+                renderer.DrawPoint(new(position.X - y, position.Y - x));
+            }
+            ;
+
+            while (y >= x)
+            {
+                DrawPixel(Renderer, position, x, y);
+                x++;
+                if (d > 0)
+                {
+                    y--;
+                    d += 4 * (x - y) + 10;
+                }
+                else
+                {
+                    d += 4 * x + 6;
+                }
+            }
+        }
     }
 
     public readonly ref struct RenderDrawColorScope : IDisposable

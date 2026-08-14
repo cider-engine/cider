@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Cider.Attributes
 {
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
     public class ContentAttribute(string propertyName) : Attribute
     {
         public string PropertyName => propertyName;

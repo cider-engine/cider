@@ -9,7 +9,7 @@ namespace Cider.Components.In2D
 {
     public struct ComponentEventContext
     {
-        public bool Handled { get; set; }
+        public bool SuppressGlobalHandling { get; set; }
     }
     public delegate void ComponentMouseMovedEventHandler(Component sender, in MouseMovedEventArgs args, ref ComponentEventContext context);
     public delegate void ComponentMouseEnterEventHandler(Component sender, in MouseMovedEventArgs args);
@@ -96,7 +96,7 @@ namespace Cider.Components.In2D
 
         public event LostFocusEventHandler LostFocus;
 #nullable restore
-        private protected override EventArgs CreateGlobalTransformArgsFromCurrent() => new Transform2DChangedEventArgs()
+        private protected override Transform2DChangedEventArgs CreateGlobalTransformArgsFromCurrent() => new()
         {
             CurrentTransform2D = GlobalTransform
         };
@@ -156,7 +156,7 @@ namespace Cider.Components.In2D
         {
             if (IsFocused)
             {
-                Debug.Assert(oldWindow?.FocusedComponent == this);
+                Game.Assert(oldWindow?.FocusedComponent == this);
                 oldWindow?.ClearFocus();
             }
             base.OnWindowChangedInternal(oldWindow, newWindow);

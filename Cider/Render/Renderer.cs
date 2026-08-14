@@ -139,6 +139,13 @@ namespace Cider.Render
             SDL_RenderLine(_renderer, point1.X, point1.Y, point2.X, point2.Y);
         }
 
+        public unsafe void DrawPoint(Vector2 point)
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+            point -= Camera2D.OffsetPosition;
+            SDL_RenderPoint(_renderer, point.X, point.Y);
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)

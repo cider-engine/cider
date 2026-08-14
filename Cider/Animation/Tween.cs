@@ -1,40 +1,44 @@
 using System;
 using System.Numerics;
 using System.Drawing;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Cider.Animation
 {
 
     public static class Tween
     {
-        public static ITween<T> Create<T>(T initialValue, T endValue, Action<T> valueSetter, TimeSpan duration) where T : INumber<T>
+        public static ITween<T> Create<T>(T startValue, T endValue, Action<T> valueSetter, TimeSpan duration, PlaybackDirection direction = PlaybackDirection.Normal) where T : INumber<T>
         {
-            var tween = new Tween<T>(initialValue, endValue, duration);
+            var tween = new TweenNumber<T>(startValue, endValue, duration, direction);
             tween.ValueChanged += valueSetter;
             return tween;
         }
 
-        public static ITween<Vector2> Create(Vector2 initialValue, Vector2 endValue, Action<Vector2> valueSetter, TimeSpan duration)
+        public static ITween<Vector2> Create(Vector2 startValue, Vector2 endValue, Action<Vector2> valueSetter, TimeSpan duration, PlaybackDirection direction = PlaybackDirection.Normal)
         {
-            var tween = new TweenVector2(initialValue, endValue, duration);
+            var tween = new TweenVector2(startValue, endValue, duration, direction);
+            tween.ValueChanged += valueSetter;
+            return tween;
+        }
+
+        public static ITween<Color> Create(Color startValue, Color endValue, Action<Color> valueSetter, TimeSpan duration, PlaybackDirection direction = PlaybackDirection.Normal)
+        {
+            var tween = new TweenColor(startValue, endValue, duration, direction);
             tween.ValueChanged += valueSetter;
             return tween;
         }
     }
 
-    public interface ITween<T>
+    public interface ITween<T> : IUpdatable
     {
-        T Start { get; }
+        T StartValue { get; }
 
-        T End { get; }
+        T EndValue { get; }
 
         TimeSpan Duration { get; }
 
         EasingFunction Easing { get; set; }
-
-        Task Task { get; }
 
         bool IsLooping { get; set; }
 
@@ -47,8 +51,6 @@ namespace Cider.Animation
         event Action<T> ValueChanged;
 
         event Action Completed;
-
-        void Update(TimeSpan delta);
 
         void Continue();
 
@@ -63,6 +65,8 @@ namespace Cider.Animation
             Easing = easing;
             return this;
         }
+
+        TweenEndAwaitable<T> WaitForComplete() => new(this);
     }
 
     public enum PlaybackDirection
@@ -74,8 +78,8 @@ namespace Cider.Animation
 
     public abstract class TweenBase<T> : ITween<T>
     {
-        public T Start { get; }
-        public T End { get; }
+        public T StartValue { get; }
+        public T EndValue { get; }
         public TimeSpan Duration { get; }
         public EasingFunction Easing { get; set; } = Easings.Linear;
 
@@ -91,41 +95,40 @@ namespace Cider.Animation
             set
             {
                 field = value;
-                _forward = value is PlaybackDirection.Normal or PlaybackDirection.Alternate;
+                _forward = value switch
+                {
+                    PlaybackDirection.Normal or PlaybackDirection.Alternate => true,
+                    PlaybackDirection.Reverse => false,
+                    _ => throw new ArgumentException(nameof(Direction))
+                };
             }
         }
 
         private TimeSpan _elapsed;
-        private bool _playing;
         private bool _forward = true;
-        private Lazy<TaskCompletionSource> _completionSource = new();
 
-        public Task Task => IsCompleted ? Task.CompletedTask : _completionSource.Value.Task;
+        public bool IsPlaying { get; private set; } = true;
+        public bool IsCompleted { get; private set; } = false;
 
-        public bool IsPlaying => _playing;
-        public bool IsCompleted { get; private set; }
-
-        public TweenBase(T start, T end, TimeSpan duration)
+        public TweenBase(T start, T end, TimeSpan duration, PlaybackDirection direction)
         {
             if (duration <= TimeSpan.Zero) throw new ArgumentException("duration must be > 0", nameof(duration));
-            Start = start;
-            End = end;
+            StartValue = start;
+            EndValue = end;
             Duration = duration;
-            _elapsed = TimeSpan.Zero;
-            _playing = true;
-            IsCompleted = false;
+            Direction = direction;
+            _elapsed = direction is PlaybackDirection.Normal or PlaybackDirection.Alternate ? TimeSpan.Zero : duration;
         }
 
         public abstract T Lerp(T a, T b, double t);
 
-        public void Continue() => _playing = true;
-        public void Pause() => _playing = false;
+        public void Continue() => IsPlaying = true;
+        public void Pause() => IsPlaying = false;
         public void Restart()
         {
-            _completionSource = new();
             _elapsed = Direction is PlaybackDirection.Normal or PlaybackDirection.Alternate ? TimeSpan.Zero : Duration;
             IsCompleted = false;
-            _playing = true;
+            IsPlaying = true;
         }
 
         public void Seek(TimeSpan time)
@@ -144,74 +147,76 @@ namespace Cider.Animation
 
         public void Update(TimeSpan delta)
         {
-            if (!_playing || IsCompleted || Duration <= TimeSpan.Zero) return;
+            if (!IsPlaying || IsCompleted) return;
 
             _elapsed += _forward ? delta : -delta;
 
-            if (IsLooping && Direction == PlaybackDirection.Normal)
+            switch ((_forward, IsLooping, Direction))
             {
-                _elapsed = EnsureInPeriod(_elapsed);
-                UpdateValue();
-                return;
-            }
-
-            if (_forward && _elapsed >= Duration)
-            {
-                _elapsed = Duration;
-                UpdateValue();
-                if (Direction == PlaybackDirection.Alternate)
-                {
-                    _forward = false;
-                    _elapsed = Duration;
-                }
-
-                else if (IsLooping)
-                {
-                    _elapsed = TimeSpan.Zero;
-                }
-
-                else
-                {
-                    Complete();
-                    return;
-                }
-            }
-
-            else if (!_forward && _elapsed <= TimeSpan.Zero)
-            {
-                _elapsed = TimeSpan.Zero;
-                UpdateValue();
-                if (Direction == PlaybackDirection.Alternate)
-                {
-                    _forward = true;
-                    _elapsed = TimeSpan.Zero;
-                    if (!IsLooping)
+                case (true, false, PlaybackDirection.Normal):
+                    if (_elapsed >= Duration)
                     {
+                        _elapsed = Duration;
                         Complete();
                         return;
                     }
-                }
+                    UpdateValue();
+                    return;
 
-                else if (Direction == PlaybackDirection.Reverse)
-                {
-                    _elapsed = TimeSpan.Zero;
-                    if (!IsLooping)
+                case (true, true, PlaybackDirection.Normal):
+                    _elapsed = EnsureInPeriod(_elapsed);
+                    UpdateValue();
+                    return;
+
+                case (false, _, PlaybackDirection.Normal): throw new InvalidOperationException();
+
+                case (true, _, PlaybackDirection.Reverse): throw new InvalidOperationException();
+
+                case (false, false, PlaybackDirection.Reverse):
+                    if (_elapsed <= TimeSpan.Zero)
                     {
+                        _elapsed = TimeSpan.Zero;
                         Complete();
                         return;
                     }
-                }
-
-                else if (IsLooping) _elapsed = Duration;
-
-                else
-                {
-                    Complete();
+                    UpdateValue();
                     return;
-                }
+
+                case (false, true, PlaybackDirection.Reverse):
+                    _elapsed = EnsureInPeriod(_elapsed);
+                    UpdateValue();
+                    return;
+
+                case (true, _, PlaybackDirection.Alternate):
+                    if (_elapsed >= Duration)
+                    {
+                        _elapsed = 2 * Duration - _elapsed;
+                        _forward = false;
+                    }
+                    UpdateValue();
+                    return;
+
+                case (false, false, PlaybackDirection.Alternate):
+                    if (_elapsed <= TimeSpan.Zero)
+                    {
+                        _elapsed = TimeSpan.Zero;
+                        Complete();
+                        return;
+                    }
+                    UpdateValue();
+                    return;
+
+                case (false, true, PlaybackDirection.Alternate):
+                    if (_elapsed <= TimeSpan.Zero)
+                    {
+                        _elapsed = -_elapsed;
+                        _forward = true;
+                    }
+                    UpdateValue();
+                    return;
             }
 
-            else UpdateValue();
+            Game.Assert(false);
         }
 
         private TimeSpan EnsureInPeriod(TimeSpan elapsed)
@@ -225,23 +230,22 @@ namespace Cider.Animation
         {
             var t = Duration <= TimeSpan.Zero ? 1.0 : Math.Clamp(_elapsed.TotalSeconds / Duration.TotalSeconds, 0.0, 1.0);
             var eased = Easing(t);
-            var value = Lerp(Start, End, eased);
+            var value = Lerp(StartValue, EndValue, eased);
             ValueChanged?.Invoke(value);
         }
 
         private void Complete()
         {
             UpdateValue();
-            _playing = false;
+            IsPlaying = false;
             IsCompleted = true;
-            if (_completionSource.IsValueCreated) _completionSource.Value.SetResult();
             Completed?.Invoke();
         }
     }
 
-    public class Tween<T> : TweenBase<T> where T : INumber<T>
+    public class TweenNumber<T> : TweenBase<T> where T : INumber<T>
     {
-        public Tween(T start, T end, TimeSpan duration) : base(start, end, duration)
+        public TweenNumber(T start, T end, TimeSpan duration, PlaybackDirection direction) : base(start, end, duration, direction)
         { }
 
         public override T Lerp(T a, T b, double t)
@@ -254,7 +258,7 @@ namespace Cider.Animation
 
     public class TweenVector2 : TweenBase<Vector2>
     {
-        public TweenVector2(Vector2 start, Vector2 end, TimeSpan duration) : base(start, end, duration)
+        public TweenVector2(Vector2 start, Vector2 end, TimeSpan duration, PlaybackDirection direction) : base(start, end, duration, direction)
         { }
 
         public override Vector2 Lerp(Vector2 a, Vector2 b, double t)
@@ -267,7 +271,7 @@ namespace Cider.Animation
 
     public class TweenColor : TweenBase<Color>
     {
-        public TweenColor(Color start, Color end, TimeSpan duration) : base(start, end, duration)
+        public TweenColor(Color start, Color end, TimeSpan duration, PlaybackDirection direction) : base(start, end, duration, direction)
         { }
 
         public override Color Lerp(Color a, Color b, double t)
@@ -277,6 +281,31 @@ namespace Cider.Animation
             var blue = byte.CreateChecked(a.B + (b.B - a.B) * t);
             var alpha = byte.CreateChecked(a.A + (b.A - a.A) * t);
             return Color.FromArgb(alpha, red, green, blue);
+        }
+    }
+
+    public readonly struct TweenEndAwaitable<T>(ITween<T> tween)
+    {
+        public TweenEndAwaiter<T> GetAwaiter() => new(tween);
+    }
+
+    public readonly struct TweenEndAwaiter<T>(ITween<T> tween) : ICriticalNotifyCompletion
+    {
+        public bool IsCompleted => tween.IsCompleted;
+
+        public void GetResult()
+        {
+            if (!IsCompleted) throw new InvalidOperationException("Calling GetResult when IsCompleted is false is invalid");
+        }
+
+        public void OnCompleted(Action continuation)
+        {
+            tween.Completed += continuation;
+        }
+
+        public void UnsafeOnCompleted(Action continuation)
+        {
+            tween.Completed += continuation;
         }
     }
 }

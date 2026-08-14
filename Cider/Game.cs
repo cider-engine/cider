@@ -10,6 +10,7 @@ using SDL;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -121,6 +122,15 @@ namespace Cider
 
         public static TaskScheduler GetTaskScheduler() => OperatingSystem.IsBrowser() ? TaskScheduler.Default : TaskScheduler.FromCurrentSynchronizationContext();
 
+        private static Action<bool, string?> _assertFunction = (condition, message) => Debug.Assert(condition, message);
+
+        public static void SetAssertFunction(Action<bool, string?> function) => _assertFunction = function;
+
+        public static void Assert([DoesNotReturnIf(false)] bool condition, [CallerArgumentExpression(nameof(condition))] string? message = null)
+        {
+            _assertFunction.Invoke(condition, message);
+        }
+
         void Initialize()
         {
             if (ProjectSettings is null)
@@ -135,11 +145,15 @@ namespace Cider
                 ProjectSettings.MainScene,
                 ProjectSettings.MainWindowSize.Width,
                 ProjectSettings.MainWindowSize.Height,
-                ProjectSettings.MainWindowFlags);
+                ProjectSettings.MainWindowFlags)
+            {
+                BackgroundColor = ProjectSettings.MainWindowBackgroundColor,
+                ClearColor = ProjectSettings.MainWindowClearColor
+            };
 
             MainWindow.Renderer.SetLogicalPresentation(ProjectSettings.LogicalSize, ProjectSettings.LogicalPresentationMode);
 
-            ProjectSettings.MainWindowIcon?.LoadSurface().ContinueWith(x =>
+            ProjectSettings.MainWindowIcon?.LoadSurfaceAsync().ContinueWith(x =>
             {
                 x.EnsureSuccess();
                 MainWindow.Icon = x.Result;
@@ -193,12 +207,12 @@ namespace Cider
 
         unsafe void Draw(Window window, TimeContext context)
         {
-            using (var colorScope = new RenderDrawColorScope(window.Renderer, ProjectSettings.ClearColor))
+            using (var colorScope = new RenderDrawColorScope(window.Renderer, window.ClearColor))
             {
                 SDLHelpers.ThrowIfFalse(SDL_RenderClear(window.Renderer.Pointer));
             }
 
-            using (var colorScope = new RenderDrawColorScope(window.Renderer, ProjectSettings.BackgroundColor))
+            using (var colorScope = new RenderDrawColorScope(window.Renderer, window.BackgroundColor))
             {
                 var size = window.Renderer.LogicalSize is { IsEmpty: false } logicalSize ? logicalSize : window.Size;
                 SDL_FRect rect = new()
@@ -424,7 +438,7 @@ namespace Cider
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void Quit(nint state, SDL_AppResult result)
         {
-            Debug.Assert(result == SDL_AppResult.SDL_APP_SUCCESS);
+            Assert(result == SDL_AppResult.SDL_APP_SUCCESS);
             SDL3_ttf.TTF_Quit();
             SDL3_mixer.MIX_Quit();
             Instance._gameProcess.TrySetResult();

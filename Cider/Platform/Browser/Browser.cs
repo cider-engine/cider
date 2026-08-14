@@ -71,15 +71,15 @@ namespace Cider.Platform.Browser
             {
                 try
                 {
-                    var id = *((int*)userdata);
+                    var id = (int)userdata;
 
                     var stream = IOStreamUnderlyingStreams[id];
 
                     return stream.Length;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    Debug.Assert(false);
+                    Game.Instance.TryRaiseException(e);
                     return -1;
                 }
             }
@@ -89,11 +89,9 @@ namespace Cider.Platform.Browser
             {
                 try
                 {
-                    var id = *((int*)userdata);
+                    var id = (int)userdata;
 
                     var stream = IOStreamUnderlyingStreams[id];
-
-                    Debug.Assert(stream.CanSeek);
 
                     return stream.Seek(offset, whence switch
                     {
@@ -103,9 +101,9 @@ namespace Cider.Platform.Browser
                         _ => throw new CiderGameException()
                     });
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    Debug.Assert(false);
+                    Game.Instance.TryRaiseException(e);
                     return -1;
                 }
             }
@@ -115,11 +113,9 @@ namespace Cider.Platform.Browser
             {
                 try
                 {
-                    var id = *((int*)userdata);
+                    var id = (int)userdata;
 
                     var stream = IOStreamUnderlyingStreams[id];
-
-                    Debug.Assert(stream.CanRead);
 
                     var span = new Span<byte>((void*)ptr, (int)size);
 
@@ -127,10 +123,10 @@ namespace Cider.Platform.Browser
 
                     return number;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     *status = SDL_IOStatus.SDL_IO_STATUS_ERROR;
-                    Debug.Assert(false);
+                    Game.Instance.TryRaiseException(e);
                     return 0;
                 }
             }
@@ -140,11 +136,9 @@ namespace Cider.Platform.Browser
             {
                 try
                 {
-                    var id = *((int*)userdata);
+                    var id = (int)userdata;
 
                     var stream = IOStreamUnderlyingStreams[id];
-
-                    Debug.Assert(stream.CanWrite);
 
                     var span = new Span<byte>((void*)ptr, (int)size);
 
@@ -152,10 +146,10 @@ namespace Cider.Platform.Browser
 
                     return size;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     *status = SDL_IOStatus.SDL_IO_STATUS_ERROR;
-                    Debug.Assert(false);
+                    Game.Instance.TryRaiseException(e);
                     return 0;
                 }
             }
@@ -165,7 +159,7 @@ namespace Cider.Platform.Browser
             {
                 try
                 {
-                    var id = *((int*)userdata);
+                    var id = (int)userdata;
 
                     var stream = IOStreamUnderlyingStreams[id];
 
@@ -173,10 +167,10 @@ namespace Cider.Platform.Browser
 
                     return true;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     *status = SDL_IOStatus.SDL_IO_STATUS_ERROR;
-                    Debug.Assert(false);
+                    Game.Instance.TryRaiseException(e);
                     return false;
                 }
             }
@@ -186,7 +180,7 @@ namespace Cider.Platform.Browser
             {
                 try
                 {
-                    var id = *((int*)userdata);
+                    var id = (int)userdata;
 
                     var stream = IOStreamUnderlyingStreams[id];
 
@@ -196,9 +190,9 @@ namespace Cider.Platform.Browser
 
                     return true;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    Debug.Assert(false);
+                    Game.Instance.TryRaiseException(e);
                     return false;
                 }
             }

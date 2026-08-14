@@ -1,22 +1,44 @@
-using Cider.Input;
-using nkast.Aether.Physics2D.Dynamics.Contacts;
+using Cider.Attributes;
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cider.Components.In2D.Controls
 {
-    public class Button : TextBlock
+    [Content(nameof(Content))]
+    public class Button : ButtonBase
     {
-        protected internal override void OnMouseUp(Component sender, in MouseButtonEventArgs args, ref ComponentEventContext context)
+        private readonly TextBlock _content;
+
+        public Button()
         {
-            OnClick(this, args, ref context);
-            base.OnMouseUp(sender, args, ref context);
+            Children.AddRange([(_content = new TextBlock())]);
+
+            ContentChanged += x => _content.Text = x;
+
+            FontSizeChanged += x => _content.FontSize = x;
         }
 
-        protected virtual void OnClick(Component sender, in MouseButtonEventArgs args, ref ComponentEventContext context)
+        [NotNull]
+        public string Content
         {
-            Click?.Invoke(sender, args, ref context);
-        }
-#nullable disable
-        public event ComponentMouseButtonEventHandler Click;
+            get;
+            set
+            {
+                if (SetIfChanged(ref field, value)) ContentChanged?.Invoke(value);
+            }
+        } = "";
+
+        public event Action<string> ContentChanged = null!;
+
+        public float FontSize
+        {
+            get;
+            set
+            {
+                if (SetIfChanged(ref field, value)) FontSizeChanged?.Invoke(value);
+            }
+        } = TextBlock.DefaultFontSize;
+
+        public event Action<float> FontSizeChanged = null!;
     }
 }

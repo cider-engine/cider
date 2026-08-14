@@ -15,8 +15,8 @@ namespace Cider.Audio
     public class AudioMixer : IDisposable
     {
         internal readonly static ConcurrentDictionary<nint, AudioMixer> MixerDictionary = new();
-        public static IReadOnlyCollection<AudioMixer> AllMixers => (IReadOnlyCollection<AudioMixer>)MixerDictionary.Values;
-        public static AudioMixer DefaultPlayback { get; } = new(((uint)SDL3.SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK));
+        public static ICollection<AudioMixer> AllMixers => MixerDictionary.Values;
+        public static AudioMixer DefaultPlayback { get; } = new((uint)SDL3.SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK);
 
         private unsafe readonly MIX_Mixer* _mixer;
         private bool disposedValue;
@@ -31,12 +31,12 @@ namespace Cider.Audio
             }
         }
 
-        public IReadOnlyCollection<AudioTrack> AllTracks
+        public ICollection<AudioTrack> AllTracks
         {
             get
             {
                 ObjectDisposedException.ThrowIf(disposedValue, this);
-                return (IReadOnlyCollection<AudioTrack>)TrackDictionary.Values;
+                return TrackDictionary.Values;
             }
         }
 
@@ -80,6 +80,15 @@ namespace Cider.Audio
             unsafe
             {
                 MIX_PlayAudio(_mixer, audio.Pointer);
+            }
+        }
+
+        public void StopAllTracks(TimeSpan fadeOutTime = default)
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+            unsafe
+            {
+                MIX_StopAllTracks(_mixer, (long)fadeOutTime.TotalMilliseconds);
             }
         }
 

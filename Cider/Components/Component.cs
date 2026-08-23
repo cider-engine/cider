@@ -135,7 +135,7 @@ namespace Cider.Components
         {}
 
         [Dispatcher]
-        internal void OnRenderDispatcher(RenderContext context)
+        internal virtual void OnRenderDispatcher(RenderContext context)
         {
             if (!IsVisible) return;
             OnRender(context);
@@ -186,7 +186,7 @@ namespace Cider.Components
         {}
 
         /// <summary>
-        /// 通知当前节点与子节点父节点的全局变换可能发生改变
+        /// 通知当前节点与子节点自己的全局变换可能发生改变
         /// </summary>
         /// <param name="args"></param>
         [Dispatcher]

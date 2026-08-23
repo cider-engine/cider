@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -41,6 +42,8 @@ namespace Cider
         private readonly List<Action> _endOfFrameContinuations = new(64);
 
         private bool _isEndOfFrame = false;
+
+        internal static float LogicalUnitPerPhysicsUnit { get; set; } = 10;
 #nullable disable
         public static Game Instance { get; private set; }
 #nullable restore
@@ -65,6 +68,7 @@ namespace Cider
 
         public event EventHandler<Game, int> FpsChanged;
 #nullable restore
+
         public Game(ProjectSettings settings)
         {
             //Instance?.Dispose();
@@ -151,7 +155,7 @@ namespace Cider
                 ClearColor = ProjectSettings.MainWindowClearColor
             };
 
-            MainWindow.Renderer.SetLogicalPresentation(ProjectSettings.LogicalSize, ProjectSettings.LogicalPresentationMode);
+            MainWindow.Renderer.SetLogicalPresentation(ProjectSettings.MainWindowLogicalSize, ProjectSettings.MainWindowLogicalPresentationMode);
 
             ProjectSettings.MainWindowIcon?.LoadSurfaceAsync().ContinueWith(x =>
             {
@@ -203,6 +207,8 @@ namespace Cider
             foreach (var continuation in _endOfFrameContinuations) continuation.Invoke();
             _endOfFrameContinuations.Clear();
             _isEndOfFrame = false;
+
+            InputManager.Update();
         }
 
         unsafe void Draw(Window window, TimeContext context)
@@ -214,7 +220,7 @@ namespace Cider
 
             using (var colorScope = new RenderDrawColorScope(window.Renderer, window.BackgroundColor))
             {
-                var size = window.Renderer.LogicalSize is { IsEmpty: false } logicalSize ? logicalSize : window.Size;
+                var size = window.Renderer.CurrentOutputSize;
                 SDL_FRect rect = new()
                 {
                     x = 0,
@@ -305,43 +311,57 @@ namespace Cider
                     case SDL_EventType.SDL_EVENT_MOUSE_MOTION:
                         {
                             var @event = e->motion;
+                            var rawPosition = new Vector2(@event.x, @event.y);
+                            var rawMovement = new Vector2(@event.xrel, @event.yrel);
+                            var window = @event.windowID.RelativeWindow;
+                            if (window is not null) SDL_ConvertEventToRenderCoordinates(window.Renderer.Pointer, (SDL_Event*)&@event);
                             var args = new MouseMovedEventArgs(
                                 Position: new(@event.x, @event.y),
+                                RawPosition: rawPosition,
                                 Movement: new(@event.xrel, @event.yrel),
+                                RawMovement: rawMovement,
                                 Timestamp: @event.timestamp,
                                 MouseId: new((uint)@event.which),
                                 ButtonState: (MouseButtonFlags)@event.state);
-                            InputManager.RaiseMouseMoved(@event.windowID.RelativeWindow, args);
+                            InputManager.RaiseMouseMoved(window, args);
                             break;
                         }
 
                     case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN:
                         {
                             var @event = e->button;
+                            var rawPosition = new Vector2(@event.x, @event.y);
+                            var window = @event.windowID.RelativeWindow;
+                            if (window is not null) SDL_ConvertEventToRenderCoordinates(window.Renderer.Pointer, (SDL_Event*)&@event);
                             var args = new MouseButtonEventArgs(
                                 Position: new(@event.x, @event.y),
+                                RawPosition: rawPosition,
                                 Timestamp: @event.timestamp,
                                 MouseId: new((uint)@event.which),
                                 Button: (MouseButton)@event.button,
                                 IsDown: @event.down,
                                 ClickTimes: @event.clicks
                             );
-                            InputManager.RaiseMouseDown(@event.windowID.RelativeWindow, args);
+                            InputManager.RaiseMouseDown(window, args);
                             break;
                         }
 
                     case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_UP:
                         {
                             var @event = e->button;
+                            var rawPosition = new Vector2(@event.x, @event.y);
+                            var window = @event.windowID.RelativeWindow;
+                            if (window is not null) SDL_ConvertEventToRenderCoordinates(window.Renderer.Pointer, (SDL_Event*)&@event);
                             var args = new MouseButtonEventArgs(
                                 Position: new(@event.x, @event.y),
+                                RawPosition: rawPosition,
                                 Timestamp: @event.timestamp,
                                 MouseId: new((uint)@event.which),
                                 Button: (MouseButton)@event.button,
                                 IsDown: @event.down,
                                 ClickTimes: @event.clicks
                             );
-                            InputManager.RaiseMouseUp(@event.windowID.RelativeWindow, args);
+                            InputManager.RaiseMouseUp(window, args);
                             break;
                         }
                     #endregion

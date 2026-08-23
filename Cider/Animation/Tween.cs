@@ -73,7 +73,7 @@ namespace Cider.Animation
     {
         Normal,
         Reverse,
-        Alternate
+        PingPong
     }
 
     public abstract class TweenBase<T> : ITween<T>
@@ -97,12 +97,12 @@ namespace Cider.Animation
                 field = value;
                 _forward = value switch
                 {
-                    PlaybackDirection.Normal or PlaybackDirection.Alternate => true,
+                    PlaybackDirection.Normal or PlaybackDirection.PingPong => true,
                     PlaybackDirection.Reverse => false,
                     _ => throw new ArgumentException(nameof(Direction))
                 };
             }
-        }
+        } = PlaybackDirection.Normal;
 
         private TimeSpan _elapsed;
         private bool _forward = true;
@@ -117,7 +117,7 @@ namespace Cider.Animation
             EndValue = end;
             Duration = duration;
             Direction = direction;
-            _elapsed = direction is PlaybackDirection.Normal or PlaybackDirection.Alternate ? TimeSpan.Zero : duration;
+            _elapsed = direction is PlaybackDirection.Normal or PlaybackDirection.PingPong ? TimeSpan.Zero : duration;
         }
 
         public abstract T Lerp(T a, T b, double t);
@@ -126,7 +126,13 @@ namespace Cider.Animation
         public void Pause() => IsPlaying = false;
         public void Restart()
         {
-            _elapsed = Direction is PlaybackDirection.Normal or PlaybackDirection.Alternate ? TimeSpan.Zero : Duration;
+            _elapsed = Direction is PlaybackDirection.Normal or PlaybackDirection.PingPong ? TimeSpan.Zero : Duration;
+            _forward = Direction switch
+            {
+                PlaybackDirection.Normal or PlaybackDirection.PingPong => true,
+                PlaybackDirection.Reverse => false,
+                _ => throw new ArgumentException(nameof(Direction))
+            };
             IsCompleted = false;
             IsPlaying = true;
         }
@@ -187,7 +193,7 @@ namespace Cider.Animation
                     UpdateValue();
                     return;
 
-                case (true, _, PlaybackDirection.Alternate):
+                case (true, _, PlaybackDirection.PingPong):
                     if (_elapsed >= Duration)
                     {
                         _elapsed = 2 * Duration - _elapsed;
@@ -196,7 +202,7 @@ namespace Cider.Animation
                     UpdateValue();
                     return;
 
-                case (false, false, PlaybackDirection.Alternate):
+                case (false, false, PlaybackDirection.PingPong):
                     if (_elapsed <= TimeSpan.Zero)
                     {
                         _elapsed = TimeSpan.Zero;
@@ -206,7 +212,7 @@ namespace Cider.Animation
                     UpdateValue();
                     return;
 
-                case (false, true, PlaybackDirection.Alternate):
+                case (false, true, PlaybackDirection.PingPong):
                     if (_elapsed <= TimeSpan.Zero)
                     {
                         _elapsed = -_elapsed;

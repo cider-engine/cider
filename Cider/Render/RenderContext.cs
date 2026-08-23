@@ -1,3 +1,4 @@
+using Cider.Attributes;
 using Cider.Data;
 using Cider.Data.In2D;
 using Cider.Extensions;
@@ -24,6 +25,8 @@ namespace Cider.Render
 
         public RenderBlendModeScope PushBlendMode(BlendMode mode) => new(Renderer, mode);
 
+        public RenderScaleScope PushScale(Vector2 scale) => new(Renderer, scale);
+
         public void FillColor(Color color)
         {
             using var colorScope = PushDrawColor(color);
@@ -33,12 +36,14 @@ namespace Cider.Render
             }
         }
 
+        [IndirectRenderFunction]
         public void FillRectangle(Vector2 position, float width, float height, float rotationInDegrees, Color color, Vector2 scale)
         {
             using var colorScope = new RenderTextureColorScope(Renderer.WhiteSinglePixelTexture.Value, color);
             RenderTexture(Renderer.WhiteSinglePixelTexture.Value, position, null, rotationInDegrees, new(width * scale.X, height * scale.Y), Vector2.Zero, FlipMode.None);
         }
 
+        [IndirectRenderFunction]
         public void RenderTexture(Texture texture, Vector2 position, RectangleF? sourceRectangle, float rotationInDegrees, Vector2 scale, Vector2 originInSource, FlipMode flipMode)
         {
             var destination = sourceRectangle is RectangleF rect
@@ -68,41 +73,6 @@ namespace Cider.Render
                 y = originInDestination.Y,
             };
             SDLHelpers.ThrowIfFalse(SDL_RenderTextureRotated(Renderer.Pointer, texture.Pointer, sourceRectangle.HasValue ? &source : null, destinationRectangle.HasValue ? &destination : null, rotationInDegrees, &center, (SDL_FlipMode)flipMode));
-        }
-
-        public void DrawCircle(Vector2 position, float radius, Color color)
-        {
-            using var colorScope = PushDrawColor(color);
-            float x = 0, y = radius;
-            float d = 3 - 2 * radius;
-
-            static void DrawPixel(Renderer renderer, Vector2 position, float x, float y)
-            {
-                renderer.DrawPoint(new(position.X + x, position.Y + y));
-                renderer.DrawPoint(new(position.X - x, position.Y + y));
-                renderer.DrawPoint(new(position.X + x, position.Y - y));
-                renderer.DrawPoint(new(position.X - x, position.Y - y));
-                renderer.DrawPoint(new(position.X + y, position.Y + x));
-                renderer.DrawPoint(new(position.X - y, position.Y + x));
-                renderer.DrawPoint(new(position.X + y, position.Y - x));
-                renderer.DrawPoint(new(position.X - y, position.Y - x));
-            }
-            ;
-
-            while (y >= x)
-            {
-                DrawPixel(Renderer, position, x, y);
-                x++;
-                if (d > 0)
-                {
-                    y--;
-                    d += 4 * (x - y) + 10;
-                }
-                else
-                {
-                    d += 4 * x + 6;
-                }
-            }
         }
     }
 
@@ -153,9 +123,15 @@ namespace Cider.Render
     {
         private unsafe readonly SDL_Renderer* _renderer;
         private unsafe readonly SDL_Texture* _target;
+        private readonly bool _isCamera2DEnabled;
+        private readonly Camera2D _camera;
 
         public unsafe RenderTargetScope(Renderer renderer, Texture target)
         {
+            _camera = renderer.Camera2D;
+            _isCamera2DEnabled = _camera.IsEnabled;
+            _camera.IsEnabled = false;
+
             _renderer = renderer.Pointer;
             _target = SDL_GetRenderTarget(renderer.Pointer);
             SDL_SetRenderTarget(renderer.Pointer, target.Pointer);
@@ -164,6 +140,8 @@ namespace Cider.Render
         public readonly unsafe void Dispose()
         {
             SDLHelpers.ThrowIfFalse(SDL_SetRenderTarget(_renderer, _target));
+
+            _camera.IsEnabled = _isCamera2DEnabled;
         }
     }
 
@@ -184,6 +162,26 @@ namespace Cider.Render
         public readonly unsafe void Dispose()
         {
             SDLHelpers.ThrowIfFalse(SDL_SetRenderDrawBlendMode(_renderer, _mode));
+        }
+    }
+
+    public readonly ref struct RenderScaleScope : IDisposable
+    {
+        private unsafe readonly SDL_Renderer* _renderer;
+        private readonly float _scaleX;
+        private readonly float _scaleY;
+
+        public unsafe RenderScaleScope(Renderer renderer, Vector2 scale)
+        {
+            _renderer = renderer.Pointer;
+            fixed (RenderScaleScope* _this = &this)
+                SDLHelpers.ThrowIfFalse(SDL_GetRenderScale(_renderer, &_this->_scaleX, &_this->_scaleY));
+            SDLHelpers.ThrowIfFalse(SDL_SetRenderScale(_renderer, scale.X, scale.Y));
+        }
+
+        public readonly unsafe void Dispose()
+        {
+            SDLHelpers.ThrowIfFalse(SDL_SetRenderScale(_renderer, _scaleX, _scaleY));
         }
     }
 }

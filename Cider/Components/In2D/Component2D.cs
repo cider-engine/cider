@@ -122,7 +122,7 @@ namespace Cider.Components.In2D
                 _parentGlobalTransform = new();
                 var newArgs2D = new Transform2DChangedEventArgs()
                 {
-                    CurrentTransform2D = Transform
+                    CurrentTransform2D = Transform // 重置变换链
                 };
                 OnGlobalTransformChangedInternal(newArgs2D);
 

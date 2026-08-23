@@ -4,6 +4,7 @@ using Cider.Components;
 using Cider.Render;
 using System;
 using System.Drawing;
+using System.Numerics;
 
 namespace Cider.Project
 {
@@ -35,14 +36,21 @@ namespace Cider.Project
         public Color MainWindowClearColor { get; init; } = Color.Black;
 
         [SettingGroup(Display)]
-        public Size LogicalSize { get; init; }
+        public Size MainWindowLogicalSize { get; init; }
 
         [SettingGroup(Display)]
-        public LogicalPresentationMode LogicalPresentationMode { get; init; }
+        public LogicalPresentationMode MainWindowLogicalPresentationMode { get; init; }
 
         const string UI = nameof(UI);
 
         [SettingGroup(UI)]
         public FontAsset? DefaultFallbackFont { get; init; }
+
+        const string Render = nameof(Render);
+
+        const string Physics = nameof(Physics);
+
+        [SettingGroup(Physics)]
+        public Vector2 DefaultGravity { get; set; } = new(0, 0.98f * Game.LogicalUnitPerPhysicsUnit);
     }
 }

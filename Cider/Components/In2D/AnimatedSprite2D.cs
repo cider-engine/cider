@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Cider.Components.In2D
 {
-    public class AnimatedSprite2D
+    public class AnimatedSprite2D : Component2D
     {
     }
 }

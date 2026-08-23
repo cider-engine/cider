@@ -20,13 +20,14 @@ namespace Cider.Physics
         {
             if (_fixture is not null)
                 throw new InvalidOperationException("Shape is already attached to a body.");
-            _fixture = body.CreateRectangle(Width, Height, Density, Position.AsPhysicsVector2());
+            _fixture = body.CreateRectangle(Width / Game.LogicalUnitPerPhysicsUnit, Height / Game.LogicalUnitPerPhysicsUnit, Density, Position.AsPhysicsVector2());
             _fixture.IsSensor = isSensor;
+            _fixture.Friction = Friction;
         }
 
-        public override void Detach(Body body)
+        public override void Detach()
         {
-            if (_fixture?.Body is not null)
+            if (_fixture?.Body is { } body)
                 body.Remove(_fixture);
             _fixture = null;
         }

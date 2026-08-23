@@ -217,11 +217,26 @@ namespace Cider.Audio
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static unsafe void TrackStoppedCallback(nint mixerPtr, MIX_Track* trackPtr)
         {
-            if (AudioMixer.MixerDictionary.TryGetValue(mixerPtr, out var mixer) && mixer.TrackDictionary.TryGetValue((nint)trackPtr, out var track))
-                track.Stopped?.Invoke(mixer, track);
+            if (AudioMixer.MixerDictionary.TryGetValue(mixerPtr, out var mixer))
+            {
+                if (mixer.TrackDictionary.TryGetValue((nint)trackPtr, out var track))
+                {
+                    try
+                    {
+                        track.Stopped?.Invoke(mixer, track);
+                    }
+                    catch (Exception e)
+                    {
+                        Game.Instance.TryRaiseException(e);
+                    }
+                }
+
+                else
+                    Game.Instance.TryRaiseException(new CiderGameException("Cannot find the track from " + ((nint)trackPtr).ToString()));
+            }
 
             else
-                Game.Assert(false);
+                Game.Instance.TryRaiseException(new CiderGameException("Cannot find the mixer from " + mixerPtr.ToString()));
         }
     }
 }

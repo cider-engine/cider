@@ -40,8 +40,7 @@ namespace Cider.Components.In2D
             get;
             set
             {
-                if (FrameIndex < 0 || FrameIndex >= HorizontalFrameCount * VerticalFrameCount)
-                    throw new ArgumentOutOfRangeException(nameof(FrameIndex));
+                ArgumentOutOfRangeException.ThrowIfLessThan(value, 0, nameof(FrameIndex));
 
                 field = value;
 
@@ -54,8 +53,7 @@ namespace Cider.Components.In2D
             get;
             set
             {
-                if (FrameIndex >= VerticalFrameCount * value)
-                    throw new ArgumentOutOfRangeException(nameof(HorizontalFrameCount));
+                ArgumentOutOfRangeException.ThrowIfLessThan(value, 1, nameof(HorizontalFrameCount));
 
                 field = value;
 
@@ -68,8 +66,7 @@ namespace Cider.Components.In2D
             get;
             set
             {
-                if (FrameIndex >= HorizontalFrameCount * value)
-                    throw new ArgumentOutOfRangeException(nameof(VerticalFrameCount));
+                ArgumentOutOfRangeException.ThrowIfLessThan(value, 1, nameof(VerticalFrameCount));
 
                 field = value;
 
@@ -77,39 +74,36 @@ namespace Cider.Components.In2D
             }
         } = 1;
 
-        private void UpdateRenderRegion(Renderer renderer)
+        private void UpdateRenderRegion(Texture texture)
         {
-            if (Texture?.LoadTextureAsync(renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
+            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(FrameIndex, HorizontalFrameCount * VerticalFrameCount);
+
+            if (HorizontalFrameCount == 1 && VerticalFrameCount == 1)
             {
-                var texture = task.Result;
-
-                if (HorizontalFrameCount == 1 && VerticalFrameCount == 1)
-                {
-                    _cachedRenderRegion = RegionEnabled ? RegionRectangle : new(0, 0, texture.Width, texture.Height);
-                    return;
-                }
-
-                var frameWidth = (float)texture.Width / HorizontalFrameCount;
-                var frameHeight = (float)texture.Height / VerticalFrameCount;
-
-                var column = FrameIndex % HorizontalFrameCount;
-                var row = FrameIndex / HorizontalFrameCount;
-
-                var x = frameWidth * column;
-                var y = frameHeight * row;
-
-                if (RegionEnabled) _cachedRenderRegion = new RectangleF(
-                    RegionRectangle.X + x,
-                    RegionRectangle.Y + y,
-                    RegionRectangle.Width,
-                    RegionRectangle.Height);
-
-                else _cachedRenderRegion = new RectangleF(
-                    x,
-                    y,
-                    frameWidth,
-                    frameHeight);
+                _cachedRenderRegion = RegionEnabled ? RegionRectangle : new(0, 0, texture.Width, texture.Height);
+                return;
             }
+
+            var frameWidth = (float)texture.Width / HorizontalFrameCount;
+            var frameHeight = (float)texture.Height / VerticalFrameCount;
+
+            var column = FrameIndex % HorizontalFrameCount;
+            var row = FrameIndex / HorizontalFrameCount;
+
+            var x = frameWidth * column;
+            var y = frameHeight * row;
+
+            if (RegionEnabled) _cachedRenderRegion = new RectangleF(
+                RegionRectangle.X + x,
+                RegionRectangle.Y + y,
+                RegionRectangle.Width,
+                RegionRectangle.Height);
+
+            else _cachedRenderRegion = new RectangleF(
+                x,
+                y,
+                frameWidth,
+                frameHeight);
         }
 
         protected override bool HitTest(HitTestResult result)
@@ -128,33 +122,31 @@ namespace Cider.Components.In2D
 
             if (Texture?.LoadTextureAsync(context.Renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
             {
-                if (_cachedRenderRegion is RectangleF rect)
-                {
-                    var transform = GlobalTransform;
+                if (_cachedRenderRegion is null) UpdateRenderRegion(task.Result);
 
-                    context.RenderTexture(
-                        texture: task.Result,
+                var rect = _cachedRenderRegion!.Value;
 
-                        position: IsCentered ? transform.Position - transform.Scale * new Vector2(rect.Width / 2, rect.Height / 2) : transform.Position,
+                var transform = GlobalTransform;
 
-                        sourceRectangle: rect,
+                context.RenderTexture(
+                    texture: task.Result,
 
-                        rotationInDegrees: transform.RotationInDegrees,
+                    position: IsCentered ? transform.Position - transform.Scale * new Vector2(rect.Width / 2, rect.Height / 2) : transform.Position,
 
-                        scale: transform.Scale,
+                    sourceRectangle: rect,
 
-                        originInSource: IsCentered ? new Vector2(rect.Width / 2, rect.Height / 2) : Vector2.Zero,
+                    rotationInDegrees: transform.RotationInDegrees,
 
-                        flipMode: (FlipHorizontally
-                            ? FlipMode.FlipHorizontally
-                            : FlipMode.None) |
-                        (FlipVertically
-                            ? FlipMode.FlipVertically
-                            : FlipMode.None));
-                }
+                    scale: transform.Scale,
 
-                else
-                    UpdateRenderRegion(context.Renderer);
+                    originInSource: IsCentered ? new Vector2(rect.Width / 2, rect.Height / 2) : Vector2.Zero,
+
+                    flipMode: (FlipHorizontally
+                        ? FlipMode.FlipHorizontally
+                        : FlipMode.None) |
+                    (FlipVertically
+                        ? FlipMode.FlipVertically
+                        : FlipMode.None));
             }
         }
     }

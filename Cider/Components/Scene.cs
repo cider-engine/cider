@@ -1,3 +1,4 @@
+using Cider.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -22,7 +23,7 @@ namespace Cider.Components
 
         private Lazy<nkast.Aether.Physics2D.Dynamics.World> World2D { get; } = new(() => new()
         {
-            Gravity = new(0, 0)
+            Gravity = Game.Instance.ProjectSettings.DefaultGravity.AsPhysicsVector2()
         });
 
         internal void OnPhysicsStep(float delta)
@@ -58,6 +59,26 @@ namespace Cider.Components
         internal void EnqueueBodyToRemove2D(nkast.Aether.Physics2D.Dynamics.Body body)
         {
             BodiesToRemove2D.Add(body);
+        }
+
+        internal void EnqueueBodyToAdd2D(ReadOnlySpan<nkast.Aether.Physics2D.Dynamics.Body> bodies)
+        {
+            BodiesToAdd2D.AddRange(bodies);
+        }
+
+        internal void EnqueueBodyToAdd2D(IEnumerable<nkast.Aether.Physics2D.Dynamics.Body> bodies)
+        {
+            BodiesToAdd2D.AddRange(bodies);
+        }
+
+        internal void EnqueueBodyToRemove2D(ReadOnlySpan<nkast.Aether.Physics2D.Dynamics.Body> bodies)
+        {
+            BodiesToRemove2D.AddRange(bodies);
+        }
+
+        internal void EnqueueBodyToRemove2D(IEnumerable<nkast.Aether.Physics2D.Dynamics.Body> bodies)
+        {
+            BodiesToRemove2D.AddRange(bodies);
         }
     }
 }

@@ -17,5 +17,7 @@ namespace Cider.Components.In2D.Physics
             get => Body.AngularVelocity;
             set => Body.AngularVelocity = value;
         }
+
+        public virtual Vector2 GetGravity() => Game.Instance.ProjectSettings.DefaultGravity;
     }
 }

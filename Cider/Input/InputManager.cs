@@ -24,13 +24,13 @@ namespace Cider.Input
         {
             var context = new ComponentEventContext();
 
-            if (window is { Scene: { } scene })
+            if (window is { Scene: { } scene, Renderer.Camera2D.OffsetPosition: var offset })
             {
                 Component2D? mouseLeave = null;
 
                 Component2D? mouseEnter = null;
 
-                using (var result = HitTestResult.GetScopedSingleton(args.Position - args.Movement))
+                using (var result = HitTestResult.GetScopedSingleton(args.Position - args.Movement, offset))
                 {
                     scene.HitTestDispatcher(result);
 
@@ -48,7 +48,7 @@ namespace Cider.Input
                     }
                 }
 
-                using (var result = HitTestResult.GetScopedSingleton(args.Position))
+                using (var result = HitTestResult.GetScopedSingleton(args.Position, offset))
                 {
                     window.Scene.HitTestDispatcher(result);
 
@@ -86,9 +86,9 @@ namespace Cider.Input
         {
             var context = new ComponentEventContext();
 
-            if (window is { Scene: { } scene })
+            if (window is { Scene: { } scene, Renderer.Camera2D.OffsetPosition: var offset })
             {
-                using var result = HitTestResult.GetScopedSingleton(args.Position);
+                using var result = HitTestResult.GetScopedSingleton(args.Position, offset);
 
                 scene.HitTestDispatcher(result);
 
@@ -112,9 +112,9 @@ namespace Cider.Input
         {
             var context = new ComponentEventContext();
 
-            if (window is { Scene: { } scene })
+            if (window is { Scene: { } scene, Renderer.Camera2D.OffsetPosition: var offset })
             {
-                using var result = HitTestResult.GetScopedSingleton(args.Position);
+                using var result = HitTestResult.GetScopedSingleton(args.Position, offset);
 
                 scene.HitTestDispatcher(result);
 
@@ -189,6 +189,15 @@ namespace Cider.Input
 
             if (!context.SuppressGlobalHandling)
                 KeyUp?.Invoke(window, args);
+        }
+    }
+
+    partial class InputManager
+    {
+        internal static void Update()
+        {
+            Mouse.Update();
+            Keyboard.Update();
         }
     }
 }

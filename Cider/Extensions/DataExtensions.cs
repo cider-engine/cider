@@ -13,7 +13,7 @@ namespace Cider.Extensions
         extension(nkast.Aether.Physics2D.Common.Vector2 vector)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public Vector2 AsVector2() => new(vector.X, vector.Y);
+            public Vector2 AsVector2() => new(vector.X * Game.LogicalUnitPerPhysicsUnit, vector.Y * Game.LogicalUnitPerPhysicsUnit);
         }
 
         extension(RectangleF rect)
@@ -42,7 +42,7 @@ namespace Cider.Extensions
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal nkast.Aether.Physics2D.Common.Vector2 AsPhysicsVector2() => new(vector.X, vector.Y);
+            internal nkast.Aether.Physics2D.Common.Vector2 AsPhysicsVector2() => new(vector.X / Game.LogicalUnitPerPhysicsUnit, vector.Y / Game.LogicalUnitPerPhysicsUnit);
 
             public static Vector2 Parse(string value)
             {

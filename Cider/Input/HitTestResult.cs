@@ -12,9 +12,10 @@ namespace Cider.Input
     {
         private static readonly HitTestResult singleton = new();
 
-        public static HitTestResult GetScopedSingleton(Vector2 position)
+        public static HitTestResult GetScopedSingleton(Vector2 position, Vector2 offset)
         {
             singleton.Position = position;
+            singleton.OffsetPosition = offset;
             return singleton;
         }
 
@@ -23,6 +24,8 @@ namespace Cider.Input
         public Transform2D CurrentTransform2D { get; set; } = new();
 
         public Vector2 Position { get; set; }
+
+        public Vector2 OffsetPosition { get; set; }
 
         public void SetComponent([NotNull] Component control) => _component = control ?? throw new NullReferenceException();
 
@@ -39,6 +42,7 @@ namespace Cider.Input
             _component = null;
             CurrentTransform2D = new();
             Position = default;
+            OffsetPosition = default;
         }
 
         public bool TryToLocal(out Vector2 localPosition)
@@ -74,11 +78,11 @@ namespace Cider.Input
             return localPosition.X >= 0 - offsetX && localPosition.Y >= 0 - offsetY && localPosition.X <= unscaledWidth - offsetX && localPosition.Y <= unscaledHeight - offsetY;
         }
 
-        public bool RectangleHitTest(float unscaledWidth, float unscaledHeight, float offsetX = 0, float offsetY = 0)
+        public bool RectangleHitTest(float unscaledWidth, float unscaledHeight, float additionalOffsetX = 0, float additionalOffsetY = 0)
         {
             if (TryToLocal(out var local))
             {
-                return RectangleHitTest(local, unscaledWidth, unscaledHeight, offsetX, offsetY);
+                return RectangleHitTest(local, unscaledWidth, unscaledHeight, OffsetPosition.X + additionalOffsetX, OffsetPosition.Y + additionalOffsetY);
             }
 
             return false;
@@ -89,11 +93,11 @@ namespace Cider.Input
             return Vector2.DistanceSquared(localPosition, new(-offsetX, -offsetY)) <= radius * radius;
         }
 
-        public bool CircleHitTest(float radius, float offsetX = 0, float offsetY = 0)
+        public bool CircleHitTest(float radius, float additionalOffsetX = 0, float additionalOffsetY = 0)
         {
             if (TryToLocal(out var local))
             {
-                return CircleHitTest(local, radius, offsetX, offsetY);
+                return CircleHitTest(local, radius, OffsetPosition.X + additionalOffsetX, OffsetPosition.Y + additionalOffsetY);
             }
 
             return false;

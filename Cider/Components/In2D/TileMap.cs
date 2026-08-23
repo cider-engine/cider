@@ -1,8 +1,10 @@
 using Cider.Assets;
 using Cider.Data.In2D;
+using Cider.Extensions;
 using Cider.Internals;
 using Cider.Render;
 using DotTiled;
+using nkast.Aether.Physics2D.Dynamics;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -14,8 +16,25 @@ namespace Cider.Components.In2D
     public class TileMap : Component2D
     {
         private Texture? _target;
-        private (Dictionary<Vector2, TileRenderEntry> entries, RectangleF bounds)? _loadedData;
-        private bool _readyToRender;
+        private TileMapData? LoadedData
+        {
+            get;
+            set
+            {
+                if (field is { LayerIdAndBodies.Values: { } bodiesToRemove })
+                {
+                    Root!.EnqueueBodyToRemove2D(bodiesToRemove);
+                }
+
+                field = value;
+
+                if (value is { LayerIdAndBodies.Values: { } bodiesToAdd})
+                {
+                    Root!.EnqueueBodyToAdd2D(bodiesToAdd);
+                }
+            }
+        }
+        private Vector2? _readyToRenderAndOffset = null;
 
         public TileMapAsset? Map
         {
@@ -25,17 +44,17 @@ namespace Cider.Components.In2D
                 if (field == value) return;
                 field = value;
 
-                _readyToRender = false;
+                _readyToRenderAndOffset = null;
 
                 DisposableHelpers.DisposeAndSetNull(ref _target);
 
-                _loadedData = null;
+                LoadedData = null;
             }
         }
 
         private protected override void OnWindowChangedInternal(Window? oldWindow, Window? newWindow)
         {
-            _readyToRender = false;
+            _readyToRenderAndOffset = null;
 
             DisposableHelpers.DisposeAndSetNull(ref _target);
 
@@ -44,17 +63,17 @@ namespace Cider.Components.In2D
 
         protected override void OnRender(RenderContext context)
         {
-            if (_readyToRender)
+            if (_readyToRenderAndOffset is Vector2 origin)
             {
                 var transform = GlobalTransform;
-                context.RenderTexture(_target!, transform.Position, null, transform.RotationInDegrees, transform.Scale, Vector2.Zero, FlipMode.None);
+                context.RenderTexture(_target!, transform.Position + origin, null, transform.RotationInDegrees, transform.Scale, Vector2.Zero, FlipMode.None);
             }
 
             else if (Map?.LoadAsync() is { IsCompletedSuccessfully: true } task)
             {
                 var map = task.Result;
 
-                var (entries, bounds) = _loadedData ?? BuildLoadedData(map, Map.OriginPath);
+                var (entries, bounds, _) = LoadedData ??= BuildLoadedData(map, Map.OriginPath);
 
                 foreach (var entry in entries.Values)
                 {
@@ -63,11 +82,11 @@ namespace Cider.Components.In2D
 
                 EnsureTarget(context.Renderer, bounds);
 
+                var offset = new Vector2(bounds.X, bounds.Y);
+
                 using (context.PushTarget(_target!))
                 {
                     context.FillColor(Color.FromArgb(map.BackgroundColor.A, map.BackgroundColor.R, map.BackgroundColor.G, map.BackgroundColor.B));
-
-                    var offset = new Vector2(bounds.X, bounds.Y);
 
                     foreach (var entry in entries)
                     {
@@ -82,8 +101,28 @@ namespace Cider.Components.In2D
                     }
                 }
 
-                _readyToRender = true;
+                _readyToRenderAndOffset = offset;
             }
+        }
+
+        private protected override void OnGlobalTransformChangedInternal(EventArgs args)
+        {
+            if (LoadedData is { LayerIdAndBodies.Values: { } bodies })
+            {
+                var transform = ((Transform2DChangedEventArgs)args).CurrentTransform2D;
+                foreach (var body in bodies)
+                {
+                    body.Position = transform.Position.AsPhysicsVector2();
+                    body.Rotation = transform.RotationInRadians;
+
+                    foreach (var fixture in body.FixtureList)
+                    {
+                        Game.Assert(fixture is null, "Modifying Transform after the fixture is created is not supported");
+                    }
+                }
+            }
+
+            base.OnGlobalTransformChangedInternal(args);
         }
 
         private void EnsureTarget(Renderer renderer, RectangleF bounds)
@@ -100,24 +139,55 @@ namespace Cider.Components.In2D
             _target = new Texture(renderer, width, height, TextureAccess.Target);
         }
 
-        private static (Dictionary<Vector2, TileRenderEntry> entries, RectangleF bounds) BuildLoadedData(Map map, string mapAssetPath)
+        private TileMapData BuildLoadedData(Map map, string mapAssetPath)
         {
+            var transform = GlobalTransform;
             var entries = new Dictionary<Vector2, TileRenderEntry>();
+            var bodies = new Dictionary<uint, Body>();
             var bounds = RectangleF.Empty;
             var hasBounds = false;
 
             foreach (var layer in map.Layers)
             {
-                if (layer is TileLayer { Visible: true, Data: { HasValue: true, Value: var data } } tileLayer)
+                switch (layer)
                 {
-                    if (data.Chunks is { HasValue: true, Value.Length: > 0 })
-                    {
-                        EnumerateChunks(map, tileLayer, data, mapAssetPath, entries, ref bounds, ref hasBounds);
-                    }
-                    else
-                    {
-                        EnumerateFiniteTiles(map, tileLayer, data, mapAssetPath, entries, ref bounds, ref hasBounds);
-                    }
+                    case TileLayer { Visible: true, Data: { HasValue: true, Value: var data } } tileLayer:
+                        {
+                            if (data.Chunks is { HasValue: true, Value.Length: > 0 })
+                            {
+                                EnumerateChunks(map, tileLayer, data, mapAssetPath, entries, ref bounds, ref hasBounds);
+                            }
+                            else
+                            {
+                                EnumerateFiniteTiles(map, tileLayer, data, mapAssetPath, entries, ref bounds, ref hasBounds);
+                            }
+                            break;
+                        }
+
+                    case ObjectLayer { Visible: true } objectLayer:
+                        {
+                            var body = new Body()
+                            {
+                                BodyType = BodyType.Static,
+                                Position = transform.Position.AsPhysicsVector2(),
+                                Rotation = transform.RotationInRadians,
+                                FixedRotation = true,
+                                Tag = this
+                            };
+                            foreach (var @object in objectLayer.Objects)
+                            {
+                                switch (@object)
+                                {
+                                    case RectangleObject obj:
+                                        {
+                                            body.CreateRectangle(obj.Width * transform.Scale.X / Game.LogicalUnitPerPhysicsUnit, obj.Height * transform.Scale.Y / Game.LogicalUnitPerPhysicsUnit, 1, (new Vector2(obj.X + obj.Width / 2, obj.Y + obj.Height / 2) * transform.Scale).AsPhysicsVector2());
+                                            break;
+                                        }
+                                }
+                            }
+                            bodies.Add(objectLayer.ID, body);
+                            break;
+                        }
                 }
             }
 
@@ -126,7 +196,7 @@ namespace Cider.Components.In2D
                 bounds = new RectangleF(0, 0, 1, 1);
             }
 
-            return (entries, bounds);
+            return new(entries, bounds, bodies);
 
             static void EnumerateFiniteTiles(Map mapValue, TileLayer layer, DotTiled.Data data, string mapAssetPath, Dictionary<Vector2, TileRenderEntry> entries, ref RectangleF bounds, ref bool hasBounds)
             {
@@ -297,5 +367,7 @@ namespace Cider.Components.In2D
         }
 
         private readonly record struct TileRenderEntry(TextureAsset Texture, RectangleF SourceRectangle, FlipMode FlipMode);
+
+        private readonly record struct TileMapData(Dictionary<Vector2, TileRenderEntry> PositionAndEntries, RectangleF Bounds, Dictionary<uint, Body> LayerIdAndBodies);
     }
 }

@@ -38,7 +38,7 @@ namespace Cider.Components.In2D.Physics
 
         protected virtual void OnShape2DRemoved(Shape2D shape)
         {
-            shape.Detach(Body);
+            shape.Detach();
         }
 
         internal Body Body { get; }
@@ -81,6 +81,8 @@ namespace Cider.Components.In2D.Physics
             {
                 Body.Rotation = globalRotation;
             }
+
+            base.OnGlobalTransformChangedInternal(args);
         }
 
         private protected override void OnFixedUpdateInternal(TimeContext context)

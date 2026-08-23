@@ -7,19 +7,33 @@ namespace Cider.Input
 {
     public static class Keyboard
     {
+        private static readonly SDLBool[] _lastState;
+        private static readonly unsafe SDLBool* _statePtr;
+        private static readonly int _stateNum;
+
         public static bool IsKeyboardAvailable => SDL3.SDL_HasKeyboard();
 
-        public static KeyboardState GetState()
+        public static unsafe KeyboardState GetState()
         {
-            int num;
-            unsafe
-            {
-                var ptr = SDL3.SDL_GetKeyboardState(&num);
-                return new(new(ptr, num));
-            }
+            return new(new(_statePtr, _stateNum));
         }
 
-        public static unsafe Window? FocusedWindow => SDL3.SDL_GetWindowID(SDL3.SDL_GetKeyboardFocus()).RelativeWindow;
+        public static unsafe Window? FocusedWindow => SDL3.SDL_GetKeyboardFocus() is not null and var ptr ? SDL3.SDL_GetWindowID(ptr).RelativeWindow : null;
+
+        internal static unsafe void Update()
+        {
+            new Span<SDLBool>(_statePtr, _stateNum).CopyTo(_lastState);
+        }
+
+        static unsafe Keyboard()
+        {
+            fixed (int* numPtr = &_stateNum)
+                _statePtr = SDL3.SDL_GetKeyboardState(numPtr);
+
+            _lastState = new SDLBool[_stateNum];
+
+            Update();
+        }
     }
 
     public readonly record struct KeyboardEventArgs(ulong Timestamp,
@@ -45,6 +59,8 @@ namespace Cider.Input
         }
 
         public readonly bool this[KeyCode key] => states[(int)key];
+
+        public bool IsUp(KeyCode key) => !states[(int)key];
 
         public bool IsDown(KeyCode key) => states[(int)key];
     }

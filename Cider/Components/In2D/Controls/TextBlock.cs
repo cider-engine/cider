@@ -290,7 +290,11 @@ namespace Cider.Components.In2D.Controls
 
                 context.FillRectangle(transform.Position, size.Width, size.Height, 0, @this.Background, Vector2.One);
 
-                text.Render(transform.Position.X, transform.Position.Y);
+                if (context.Renderer.Camera2D is { IsEnabled: true } camera)
+                    text.Render(transform.Position.X - camera.OffsetPosition.X, transform.Position.Y - camera.OffsetPosition.Y);
+
+                else
+                    text.Render(transform.Position.X, transform.Position.Y);
             }
         }
     }

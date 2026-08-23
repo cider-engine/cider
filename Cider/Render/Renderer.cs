@@ -42,7 +42,7 @@ namespace Cider.Render
             }
         }
 
-        public Camera2D Camera2D { get; set; } = new();
+        public Camera2D Camera2D { get; }
 
         public ScaleMode ScaleMode
         {
@@ -63,6 +63,29 @@ namespace Cider.Render
                 unsafe
                 {
                     SDLHelpers.ThrowIfFalse(SDL_SetDefaultTextureScaleMode(_renderer, (SDL_ScaleMode)value));
+                }
+            }
+        }
+
+        public Vector2 Scale
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                unsafe
+                {
+                    float x, y;
+                    SDLHelpers.ThrowIfFalse(SDL_GetRenderScale(_renderer, &x, &y));
+                    return new(x, y);
+                }
+            }
+
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                unsafe
+                {
+                    SDLHelpers.ThrowIfFalse(SDL_SetRenderScale(_renderer, value.X, value.Y));
                 }
             }
         }
@@ -101,6 +124,25 @@ namespace Cider.Render
             }
         }
 
+        public Size CurrentOutputSize
+        {
+            get
+            {
+                if (LogicalSize is { IsEmpty: false } size) return size;
+
+                //ObjectDisposedException.ThrowIf(disposedValue, this);
+                //SDLHelpers.EnsureOnMainThread();
+
+                unsafe
+                {
+                    int width, height;
+                    SDLHelpers.ThrowIfFalse(SDL_GetCurrentRenderOutputSize(_renderer, &width, &height));
+
+                    return new(width, height);
+                }
+            }
+        }
+
         internal unsafe Renderer(Window window) : this(window.Pointer)
         {}
 
@@ -117,6 +159,8 @@ namespace Cider.Render
             });
 
             _textEngine = new(() => new RendererTextEngine(this));
+
+            Camera2D = new(this);
         }
 
         public unsafe void SetRenderTarget(Texture? texture)
@@ -129,21 +173,6 @@ namespace Cider.Render
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
             SDLHelpers.ThrowIfFalse(SDL_SetRenderLogicalPresentation(_renderer, size.Width, size.Height, (SDL_RendererLogicalPresentation)mode));
-        }
-
-        public unsafe void DrawLine(Vector2 point1, Vector2 point2)
-        {
-            ObjectDisposedException.ThrowIf(disposedValue, this);
-            point1 -= Camera2D.OffsetPosition;
-            point2 -= Camera2D.OffsetPosition;
-            SDL_RenderLine(_renderer, point1.X, point1.Y, point2.X, point2.Y);
-        }
-
-        public unsafe void DrawPoint(Vector2 point)
-        {
-            ObjectDisposedException.ThrowIf(disposedValue, this);
-            point -= Camera2D.OffsetPosition;
-            SDL_RenderPoint(_renderer, point.X, point.Y);
         }
 
         protected virtual void Dispose(bool disposing)

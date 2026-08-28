@@ -7,6 +7,9 @@ using System.Runtime.CompilerServices;
 
 namespace Cider.Render
 {
+    /// <summary>
+    /// 图像的GPU内存表示形式，不可跨线程，只能在创建它的渲染器上使用
+    /// </summary>
     public class Texture : IDisposable
     {
         private bool disposedValue;
@@ -31,6 +34,11 @@ namespace Cider.Render
                 (SDL_TextureAccess)access, width, height));
         }
 
+        /// <summary>
+        /// 从<c>Surface</c>创建<c>Texture</c>，创建结束后<c>Surface</c>对象可释放
+        /// </summary>
+        /// <param name="renderer">渲染器对象</param>
+        /// <param name="surface">作为源的<c>Surface</c>对象，创建后可直接释放</param>
         public unsafe Texture(Renderer renderer, Surface surface)
         {
             ownerRenderer = renderer;
@@ -38,6 +46,11 @@ namespace Cider.Render
             _texture = SDLHelpers.ThrowIfPtrIsNull(SDL3.SDL_CreateTextureFromSurface(renderer.Pointer, surface.Pointer));
         }
 
+        /// <summary>
+        /// 从文件路径创建<c>Texture</c>，需要当前平台有文件系统的支持
+        /// </summary>
+        /// <param name="renderer">渲染器对象</param>
+        /// <param name="path">文件路径，不会经过特殊处理</param>
         public unsafe Texture(Renderer renderer, string path)
         {
             ownerRenderer = renderer;

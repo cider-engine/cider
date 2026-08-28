@@ -199,5 +199,11 @@ namespace Cider.Input
             Mouse.Update();
             Keyboard.Update();
         }
+
+        internal static void FixedUpdate()
+        {
+            Mouse.FixedUpdate();
+            Keyboard.FixedUpdate();
+        }
     }
 }

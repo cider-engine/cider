@@ -12,7 +12,12 @@ namespace Cider.Input
     public static class Mouse
     {
         private static MouseButtonFlags _lastState;
+        private static MouseButtonFlags _lastPhysicsState;
 
+        /// <summary>
+        /// 返回当前的鼠标状态
+        /// </summary>
+        /// <returns></returns>
         public static unsafe MouseButtonFlags GetState()
         {
             return (MouseButtonFlags)SDL3.SDL_GetMouseState(null, null);
@@ -38,6 +43,14 @@ namespace Cider.Input
             }
         }
 
+        /// <summary>
+        /// <para>返回上一帧的鼠标状态</para>
+        /// <para>如果当前在物理帧中，返回上一物理帧的鼠标状态</para>
+        /// <para>如果当前不在物理帧中，返回上一渲染帧的鼠标状态</para>
+        /// </summary>
+        /// <returns></returns>
+        public static MouseButtonFlags GetLastState() => Game.Instance.IsInPhysicsFrame ? _lastPhysicsState : _lastState;
+
         public static unsafe Window? FocusedWindow => SDL3.SDL_GetMouseFocus() is not null and var ptr ? SDL3.SDL_GetWindowID(ptr).RelativeWindow : null;
 
         internal static unsafe void Update()
@@ -45,8 +58,20 @@ namespace Cider.Input
             _lastState = (MouseButtonFlags)SDL3.SDL_GetMouseState(null, null);
         }
 
-        public static unsafe Vector2 GetRawMousePosition(Vector2 position, Renderer renderer)
+        internal static unsafe void FixedUpdate()
         {
+            _lastPhysicsState = (MouseButtonFlags)SDL3.SDL_GetMouseState(null, null);
+        }
+
+        /// <summary>
+        /// 获取当前鼠标在窗口上的原位置
+        /// </summary>
+        /// <param name="renderer">窗口所使用的渲染器</param>
+        /// <returns>鼠标位置</returns>
+        public static unsafe Vector2 GetRawMousePosition(Renderer renderer)
+        {
+            GetState(out var position);
+
             Vector2 vector = Vector2.Zero;
 
             SDLHelpers.ThrowIfFalse(SDL3.SDL_RenderCoordinatesToWindow(renderer.Pointer, position.X, position.Y, &vector.X, &vector.Y));
@@ -54,9 +79,30 @@ namespace Cider.Input
             return vector;
         }
 
+        public static bool IsPressed(MouseButtonFlags buttons)
+        {
+            return (GetState() & buttons) != 0;
+        }
+
+        public static bool IsReleased(MouseButtonFlags buttons)
+        {
+            return (GetState() & buttons) == 0;
+        }
+
+        public static bool IsJustPressed(MouseButtonFlags buttons)
+        {
+            return ((GetLastState() & buttons) == 0) && ((GetState() & buttons) != 0);
+        }
+
+        public static bool IsJustReleased(MouseButtonFlags buttons)
+        {
+            return ((GetLastState() & buttons) != 0) && ((GetState() & buttons) == 0);
+        }
+
         static Mouse()
         {
             Update();
+            FixedUpdate();
         }
     }
 
@@ -64,13 +110,13 @@ namespace Cider.Input
         Vector2 RawPosition,
         Vector2 Movement,
         Vector2 RawMovement,
-        ulong Timestamp,
+        GameTimestamp Timestamp,
         MouseId MouseId,
         MouseButtonFlags ButtonState);
 
     public readonly record struct MouseButtonEventArgs(Vector2 Position,
         Vector2 RawPosition,
-        ulong Timestamp,
+        GameTimestamp Timestamp,
         MouseId MouseId,
         MouseButton Button,
         bool IsDown,

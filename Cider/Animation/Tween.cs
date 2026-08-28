@@ -2,10 +2,13 @@ using System;
 using System.Numerics;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace Cider.Animation
 {
-
+    /// <summary>
+    /// 创建补间动画的帮助类
+    /// </summary>
     public static class Tween
     {
         public static ITween<T> Create<T>(T startValue, T endValue, Action<T> valueSetter, TimeSpan duration, PlaybackDirection direction = PlaybackDirection.Normal) where T : INumber<T>
@@ -139,16 +142,18 @@ namespace Cider.Animation
 
         public void Seek(TimeSpan time)
         {
-            if (time < TimeSpan.Zero)
-                _elapsed = TimeSpan.Zero;
+            // TODO: implement Seek
+            throw new NotImplementedException();
+            //if (time < TimeSpan.Zero)
+            //    _elapsed = TimeSpan.Zero;
 
-            else if (time > Duration)
-                _elapsed = Duration;
+            //else if (time > Duration)
+            //    _elapsed = Duration;
 
-            else
-                _elapsed = time;
+            //else
+            //    _elapsed = time;
 
-            UpdateValue();
+            //UpdateValue();
         }
 
         public void Update(TimeSpan delta)
@@ -174,9 +179,13 @@ namespace Cider.Animation
                     UpdateValue();
                     return;
 
-                case (false, _, PlaybackDirection.Normal): throw new InvalidOperationException();
+                case (false, _, PlaybackDirection.Normal):
+                    Debug.Assert(false); // impossible
+                    return;
 
-                case (true, _, PlaybackDirection.Reverse): throw new InvalidOperationException();
+                case (true, _, PlaybackDirection.Reverse):
+                    Debug.Assert(false); // impossible
+                    return;
 
                 case (false, false, PlaybackDirection.Reverse):
                     if (_elapsed <= TimeSpan.Zero)
@@ -222,7 +231,7 @@ namespace Cider.Animation
                     return;
             }
 
-            Game.Assert(false);
+            Debug.Assert(false);
         }
 
         private TimeSpan EnsureInPeriod(TimeSpan elapsed)
@@ -249,6 +258,10 @@ namespace Cider.Animation
         }
     }
 
+    /// <summary>
+    /// <c>INumber&lt;T&gt;</c>类型的补间动画类
+    /// </summary>
+    /// <typeparam name="T">实现<c>INumber&lt;T&gt;</c></typeparam>
     public class TweenNumber<T> : TweenBase<T> where T : INumber<T>
     {
         public TweenNumber(T start, T end, TimeSpan duration, PlaybackDirection direction) : base(start, end, duration, direction)
@@ -262,6 +275,9 @@ namespace Cider.Animation
         }
     }
 
+    /// <summary>
+    /// <c>Vector2</c>类型的补间动画类
+    /// </summary>
     public class TweenVector2 : TweenBase<Vector2>
     {
         public TweenVector2(Vector2 start, Vector2 end, TimeSpan duration, PlaybackDirection direction) : base(start, end, duration, direction)
@@ -275,6 +291,9 @@ namespace Cider.Animation
         }
     }
 
+    /// <summary>
+    /// <c>Color</c>类型的补间动画类
+    /// </summary>
     public class TweenColor : TweenBase<Color>
     {
         public TweenColor(Color start, Color end, TimeSpan duration, PlaybackDirection direction) : base(start, end, duration, direction)
@@ -298,7 +317,10 @@ namespace Cider.Animation
     public readonly struct TweenEndAwaiter<T>(ITween<T> tween) : ICriticalNotifyCompletion
     {
         public bool IsCompleted => tween.IsCompleted;
-
+        /// <summary>
+        /// 不应调用此方法，此方法会在<c>IsCompleted</c>为false时抛出异常
+        /// </summary>
+        /// <exception cref="InvalidOperationException"></exception>
         public void GetResult()
         {
             if (!IsCompleted) throw new InvalidOperationException("Calling GetResult when IsCompleted is false is invalid");

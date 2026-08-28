@@ -45,8 +45,14 @@ namespace Cider
 
         internal static float LogicalUnitPerPhysicsUnit { get; set; } = 10;
 #nullable disable
+        /// <summary>
+        /// <c>Game</c>的全局单例，在实例化前访问会得到<c>null</c>
+        /// </summary>
         public static Game Instance { get; private set; }
 #nullable restore
+        /// <summary>
+        /// 指示<c>Game</c>实例是否初始化完成，在<c>Game</c>对象实例化前访问会返回<c>false</c>
+        /// </summary>
         public static bool IsInitialized => Instance?._initialized ?? false;
 
         /// <summary>
@@ -58,25 +64,53 @@ namespace Cider
             set => MainWindow.Scene = value;
         }
 
-        public ProjectSettings ProjectSettings { get; private set; }
+        /// <summary>
+        /// <c>Game</c>所使用的项目设置
+        /// </summary>
+        public ProjectSettings ProjectSettings { get; }
+
+        /// <summary>
+        /// 当前是否在物理帧内
+        /// </summary>
+        public bool IsInPhysicsFrame { get; private set; }
 #nullable disable
+        /// <summary>
+        /// 主窗口
+        /// </summary>
         public Window MainWindow { get; private set; }
 
+        /// <summary>
+        /// 当前所使用的同步上下文
+        /// </summary>
         public CiderSynchronizationContext CurrentSynchronizationContext { get; private set; }
 
+        /// <summary>
+        /// 可使用<c>ConfigureServices</c>配置的服务对象，在<c>ConfigureServices</c>调用前返回null
+        /// </summary>
         public IServiceProvider Services { get; private set; }
 
+        /// <summary>
+        /// 当内置的FPS计时器变动时触发的事件
+        /// </summary>
         public event EventHandler<Game, int> FpsChanged;
 #nullable restore
 
         public Game(ProjectSettings settings)
         {
             //Instance?.Dispose();
+            if (Instance is not null) throw new InvalidOperationException("The Game instance has been created.");
             Instance = this;
 
-            ProjectSettings = settings;
+            ProjectSettings = settings ?? throw new NullReferenceException("ProjectSettings should not be null.");
         }
 
+        /// <summary>
+        /// <para>以同步方式运行</para>
+        /// <para>浏览器端不支持以同步方式运行，必须改用<c>RunAsync</c></para>
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="PlatformNotSupportedException">当前平台为浏览器，请改用<c>RunAsync</c></exception>
+        /// <exception cref="CiderGameException">游戏内异常</exception>
         [UnsupportedOSPlatform("browser")]
         public unsafe int Run()
         {
@@ -90,6 +124,11 @@ namespace Cider
             return result;
         }
 
+        /// <summary>
+        /// 以异步方式运行
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="CiderGameException">游戏内异常</exception>
         public async Task<int> RunAsync()
         {
             int result;
@@ -126,21 +165,13 @@ namespace Cider
 
         public static TaskScheduler GetTaskScheduler() => OperatingSystem.IsBrowser() ? TaskScheduler.Default : TaskScheduler.FromCurrentSynchronizationContext();
 
-        private static Action<bool, string?> _assertFunction = (condition, message) => Debug.Assert(condition, message);
-
-        public static void SetAssertFunction(Action<bool, string?> function) => _assertFunction = function;
-
-        public static void Assert([DoesNotReturnIf(false)] bool condition, [CallerArgumentExpression(nameof(condition))] string? message = null)
+        public static void Warning(string message)
         {
-            _assertFunction.Invoke(condition, message);
+            Console.Error.WriteLine(message);
         }
 
         void Initialize()
         {
-            if (ProjectSettings is null)
-                throw new InvalidOperationException("You must set project settings before initializing the game.");
-
-
             // 必要设置
             SynchronizationContext.SetSynchronizationContext(CurrentSynchronizationContext = new CiderSynchronizationContext());
 
@@ -191,9 +222,14 @@ namespace Cider
 
                 while (_accumulator >= _fixedTimeStep)
                 {
+                    // 我在想要不要加try finally
+                    IsInPhysicsFrame = true;
                     currentScene.OnPhysicsStep((float)_fixedTimeStep);
                     _accumulator -= _fixedTimeStep;
                     currentScene.OnFixedUpdateDispatcher(new(TimeSpan.FromSeconds(_fixedTimeStep)));
+                    IsInPhysicsFrame = false;
+
+                    InputManager.FixedUpdate();
                 }
 
                 currentScene.OnUpdateDispatcher(context);
@@ -203,6 +239,7 @@ namespace Cider
                 Draw(window, context);
             }
 
+            // 我在想要不要加try finally
             _isEndOfFrame = true;
             foreach (var continuation in _endOfFrameContinuations) continuation.Invoke();
             _endOfFrameContinuations.Clear();
@@ -320,7 +357,7 @@ namespace Cider
                                 RawPosition: rawPosition,
                                 Movement: new(@event.xrel, @event.yrel),
                                 RawMovement: rawMovement,
-                                Timestamp: @event.timestamp,
+                                Timestamp: new(@event.timestamp),
                                 MouseId: new((uint)@event.which),
                                 ButtonState: (MouseButtonFlags)@event.state);
                             InputManager.RaiseMouseMoved(window, args);
@@ -336,7 +373,7 @@ namespace Cider
                             var args = new MouseButtonEventArgs(
                                 Position: new(@event.x, @event.y),
                                 RawPosition: rawPosition,
-                                Timestamp: @event.timestamp,
+                                Timestamp: new(@event.timestamp),
                                 MouseId: new((uint)@event.which),
                                 Button: (MouseButton)@event.button,
                                 IsDown: @event.down,
@@ -355,7 +392,7 @@ namespace Cider
                             var args = new MouseButtonEventArgs(
                                 Position: new(@event.x, @event.y),
                                 RawPosition: rawPosition,
-                                Timestamp: @event.timestamp,
+                                Timestamp: new(@event.timestamp),
                                 MouseId: new((uint)@event.which),
                                 Button: (MouseButton)@event.button,
                                 IsDown: @event.down,
@@ -402,7 +439,7 @@ namespace Cider
                     case SDL_EventType.SDL_EVENT_KEY_DOWN:
                         {
                             var @event = e->key;
-                            var args = new KeyboardEventArgs(Timestamp: @event.timestamp,
+                            var args = new KeyboardEventArgs(Timestamp: new(@event.timestamp),
                                 Code: (KeyCode)@event.scancode,
                                 Symbol: (KeySymbol)@event.key,
                                 Modifier: (KeyModifier)@event.mod,
@@ -416,7 +453,7 @@ namespace Cider
                     case SDL_EventType.SDL_EVENT_KEY_UP:
                         {
                             var @event = e->key;
-                            var args = new KeyboardEventArgs(Timestamp: @event.timestamp,
+                            var args = new KeyboardEventArgs(Timestamp: new(@event.timestamp),
                                 Code: (KeyCode)@event.scancode,
                                 Symbol: (KeySymbol)@event.key,
                                 Modifier: (KeyModifier)@event.mod,
@@ -458,7 +495,7 @@ namespace Cider
         [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
         static void Quit(nint state, SDL_AppResult result)
         {
-            Assert(result == SDL_AppResult.SDL_APP_SUCCESS);
+            Debug.Assert(result == SDL_AppResult.SDL_APP_SUCCESS);
             SDL3_ttf.TTF_Quit();
             SDL3_mixer.MIX_Quit();
             Instance._gameProcess.TrySetResult();
@@ -490,5 +527,26 @@ namespace Cider
                 if (continuation is not null) Instance._endOfFrameContinuations.Add(continuation);
             }
         }
+    }
+
+    /// <summary>
+    /// <para>游戏时间戳，单位为纳秒</para>
+    /// <para>支持作差得到<c>TimeSpan</c>，但<c>TimeSpan的最小单位为1刻即100纳秒，会产生精度丢失</c></para>
+    /// </summary>
+    /// <param name="Nanoseconds"></param>
+    public readonly record struct GameTimestamp(ulong Nanoseconds)
+    {
+        public static TimeSpan operator -(GameTimestamp left, GameTimestamp right) =>
+            TimeSpan.FromTicks(unchecked((long)(left.Nanoseconds - right.Nanoseconds)) / TimeSpan.NanosecondsPerTick);
+
+        public static bool operator >(GameTimestamp left, GameTimestamp right) => left.Nanoseconds > right.Nanoseconds;
+
+        public static bool operator >=(GameTimestamp left, GameTimestamp right) => left.Nanoseconds >= right.Nanoseconds;
+
+        public static bool operator <(GameTimestamp left, GameTimestamp right) => left.Nanoseconds < right.Nanoseconds;
+
+        public static bool operator <=(GameTimestamp left, GameTimestamp right) => left.Nanoseconds <= right.Nanoseconds;
+        
+        // ==和!=用record自动生成的
     }
 }

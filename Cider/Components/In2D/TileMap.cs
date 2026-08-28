@@ -117,7 +117,8 @@ namespace Cider.Components.In2D
 
                     foreach (var fixture in body.FixtureList)
                     {
-                        Game.Assert(fixture is null, "Modifying Transform after the fixture is created is not supported");
+                        if (fixture is not null)
+                            Game.Warning("Modifying Transform after the fixture is created is not supported");
                     }
                 }
             }

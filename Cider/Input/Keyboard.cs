@@ -8,14 +8,30 @@ namespace Cider.Input
     public static class Keyboard
     {
         private static readonly SDLBool[] _lastState;
+        private static readonly SDLBool[] _lastPhysicsState;
         private static readonly unsafe SDLBool* _statePtr;
         private static readonly int _stateNum;
 
         public static bool IsKeyboardAvailable => SDL3.SDL_HasKeyboard();
 
+        /// <summary>
+        /// 返回当前的键盘状态
+        /// </summary>
+        /// <returns></returns>
         public static unsafe KeyboardState GetState()
         {
             return new(new(_statePtr, _stateNum));
+        }
+
+        /// <summary>
+        /// <para>返回上一帧的键盘状态</para>
+        /// <para>如果当前在物理帧中，返回上一物理帧的键盘状态</para>
+        /// <para>如果当前不在物理帧中，返回上一渲染帧的键盘状态</para>
+        /// </summary>
+        /// <returns></returns>
+        public static KeyboardState GetLastState()
+        {
+            return Game.Instance.IsInPhysicsFrame ? new(_lastPhysicsState) : new(_lastState);
         }
 
         public static unsafe Window? FocusedWindow => SDL3.SDL_GetKeyboardFocus() is not null and var ptr ? SDL3.SDL_GetWindowID(ptr).RelativeWindow : null;
@@ -25,18 +41,45 @@ namespace Cider.Input
             new Span<SDLBool>(_statePtr, _stateNum).CopyTo(_lastState);
         }
 
+        internal static unsafe void FixedUpdate()
+        {
+            new Span<SDLBool>(_statePtr, _stateNum).CopyTo(_lastPhysicsState);
+        }
+
+        public static bool IsPressed(KeyCode key)
+        {
+            return GetState().IsDown(key);
+        }
+
+        public static bool IsReleased(KeyCode key)
+        {
+            return GetState().IsUp(key);
+        }
+
+        public static bool IsJustPressed(KeyCode key)
+        {
+            return GetLastState().IsUp(key) && GetState().IsDown(key);
+        }
+
+        public static bool IsJustReleased(KeyCode key)
+        {
+            return GetLastState().IsDown(key) && GetState().IsUp(key);
+        }
+
         static unsafe Keyboard()
         {
             fixed (int* numPtr = &_stateNum)
                 _statePtr = SDL3.SDL_GetKeyboardState(numPtr);
 
             _lastState = new SDLBool[_stateNum];
+            _lastPhysicsState = new SDLBool[_stateNum];
 
             Update();
+            FixedUpdate();
         }
     }
 
-    public readonly record struct KeyboardEventArgs(ulong Timestamp,
+    public readonly record struct KeyboardEventArgs(GameTimestamp Timestamp,
         KeyCode Code,
         KeySymbol Symbol,
         KeyModifier Modifier,

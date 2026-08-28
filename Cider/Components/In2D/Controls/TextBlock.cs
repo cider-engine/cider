@@ -6,6 +6,7 @@ using Cider.Input;
 using Cider.Internals;
 using Cider.Render;
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Numerics;
@@ -22,7 +23,7 @@ namespace Cider.Components.In2D.Controls
     [Content(nameof(Text))]
     public class TextBlock : Control
     {
-        private unsafe delegate* managed<TextBlock, RenderContext, void> _renderFunction = &OnDirectRender;
+        private unsafe delegate* managed<TextBlock, RenderContext, void> _renderFunction = &OnCachedRender;
         private Texture? _cachedTexture = null;
         private Task<FontVariant>? _fontVariant = null;
         private Text? _text = null;
@@ -213,7 +214,7 @@ namespace Cider.Components.In2D.Controls
 
         protected override unsafe void OnRender(RenderContext context)
         {
-            Game.Assert(_renderFunction != null);
+            Debug.Assert(_renderFunction != null);
             _renderFunction(this, context);
         }
 
@@ -282,9 +283,9 @@ namespace Cider.Components.In2D.Controls
 
                 var transform = @this.GlobalTransform;
 
-                Game.Assert(transform.RotationInRadians == 0, "Direct render does not support rotation");
+                if (transform.RotationInRadians != 0) Game.Warning("Direct render does not support rotation");
 
-                Game.Assert(transform.Scale == Vector2.One, "Direct render doest not support scale");
+                if (transform.Scale != Vector2.One) Game.Warning("Direct render doest not support scale");
 
                 var size = text.Size;
 

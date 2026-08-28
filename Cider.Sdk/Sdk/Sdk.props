@@ -1,6 +1,6 @@
 <Project>
 	<PropertyGroup>
-		<CiderVersion>0.0.3-alpha</CiderVersion>
+		<CiderVersion>0.0.3-beta</CiderVersion>
 		<CiderAssetsPath>Assets</CiderAssetsPath>
 		<CiderTest>false</CiderTest>
 	</PropertyGroup>

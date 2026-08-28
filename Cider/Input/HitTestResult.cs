@@ -12,7 +12,7 @@ namespace Cider.Input
     {
         private static readonly HitTestResult singleton = new();
 
-        public static HitTestResult GetScopedSingleton(Vector2 position, Vector2 offset)
+        internal static HitTestResult GetScopedSingleton(Vector2 position, Vector2 offset)
         {
             singleton.Position = position;
             singleton.OffsetPosition = offset;
@@ -27,7 +27,7 @@ namespace Cider.Input
 
         public Vector2 OffsetPosition { get; set; }
 
-        public void SetComponent([NotNull] Component control) => _component = control ?? throw new NullReferenceException();
+        internal void SetComponent([NotNull] Component control) => _component = control ?? throw new NullReferenceException();
 
         public Component? GetComponent() => _component;
 

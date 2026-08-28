@@ -15,9 +15,12 @@ namespace Cider.Render
 
         unsafe TTF_TextEngine* ITextEngine.Pointer => _engine;
 
+        public Renderer OwnerRenderer { get; }
+
         public unsafe RendererTextEngine(Renderer renderer)
         {
             _engine = SDLHelpers.ThrowIfPtrIsNull(SDL3_ttf.TTF_CreateRendererTextEngine(renderer.Pointer));
+            OwnerRenderer = renderer;
         }
 
         public void RenderTo(Text text, float x, float y)
@@ -26,7 +29,8 @@ namespace Cider.Render
             if (!ReferenceEquals(this, text.OwnerTextEngine)) throw new InvalidOperationException("The text is not rendered from owner text engine.");
             unsafe
             {
-                SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_DrawRendererText(text.Pointer, x, y));
+                var offset = OwnerRenderer.Camera2D.OffsetPosition;
+                SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_DrawRendererText(text.Pointer, x - offset.X, y - offset.Y));
             }
         }
 

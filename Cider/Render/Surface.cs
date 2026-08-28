@@ -7,6 +7,9 @@ using System.Runtime.CompilerServices;
 
 namespace Cider.Render
 {
+    /// <summary>
+    /// 图像的CPU内存表示形式，可跨线程
+    /// </summary>
     public class Surface : IDisposable
     {
         private bool disposedValue;

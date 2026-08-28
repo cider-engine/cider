@@ -26,6 +26,9 @@ namespace Cider
 
     public class WindowCloseRequestedEventArgs : EventArgs
     {
+        /// <summary>
+        /// 将此属性设为<c>true</c>来阻止窗口关闭
+        /// </summary>
         public bool Handled { get; set; }
     }
 
@@ -33,8 +36,16 @@ namespace Cider
     {
         private static readonly Dictionary<WindowId, Window> _allWindows = new(EqualityComparer<WindowId>.Create((a, b) => a == b, x => x.GetHashCode()));
 
+        /// <summary>
+        /// 当前所有未关闭（包括隐藏的）的窗口实例，返回的集合是只读的，不应缓存这个属性的结果
+        /// </summary>
         public static ICollection<Window> AllWindows => _allWindows.Values;
 
+        /// <summary>
+        /// 通过<c>WindowId</c>获取窗口，返回值可能为<c>null</c>
+        /// </summary>
+        /// <param name="id">窗口ID</param>
+        /// <returns>与此ID关联的窗口，可能为<c>null</c></returns>
         public static Window? GetWindowFromId(WindowId id)
         {
             if (_allWindows.TryGetValue(id, out var window)) return window;
@@ -67,8 +78,14 @@ namespace Cider
             }
         }
 
+        /// <summary>
+        /// 此窗口是否已关闭，关闭的窗口不会在<c>AllWindows</c>中出现
+        /// </summary>
         public bool IsClosed => disposedValue;
 
+        /// <summary>
+        /// 此窗口连接的场景，设置为null会抛出异常
+        /// </summary>
         public Scene Scene
         {
             get;
@@ -84,6 +101,9 @@ namespace Cider
             }
         }
 
+        /// <summary>
+        /// 窗口的位置
+        /// </summary>
         public Point Position
         {
             get
@@ -108,6 +128,9 @@ namespace Cider
             }
         }
 
+        /// <summary>
+        /// 窗口的大小
+        /// </summary>
         public unsafe Size Size
         {
             get
@@ -124,6 +147,9 @@ namespace Cider
             }
         }
 
+        /// <summary>
+        /// 窗口的图标
+        /// </summary>
         public Surface? Icon
         {
             get
@@ -183,6 +209,16 @@ namespace Cider
         [global::System.Runtime.InteropServices.DllImport("SDL3", CallingConvention = global::System.Runtime.InteropServices.CallingConvention.Cdecl, ExactSpelling = true)]
         private unsafe static extern SDL_Window* SDL_CreateWindow(byte* title, int w, int h, SpecificWindowFlags flags);
 
+        /// <summary>
+        /// <para>创建窗口的构造函数，窗口会被自动添加进入<c>AllWindows</c>中，默认情况下窗口会直接显示</para>
+        /// <para>浏览器平台最多只支持1个窗口</para>
+        /// </summary>
+        /// <param name="title">标题，不可为null</param>
+        /// <param name="scene">场景，不可谓null</param>
+        /// <param name="width">窗口宽度</param>
+        /// <param name="height">窗口高度</param>
+        /// <param name="flags">窗口的其它属性</param>
+        /// <exception cref="PlatformNotSupportedException">当已经存在窗口时抛出</exception>
         public unsafe Window(string title, Scene scene, int width, int height, WindowFlags flags)
         {
             if (OperatingSystem.IsBrowser() && AllWindows.Count > 0) throw new PlatformNotSupportedException("browser doesn't support multiple windows.");
@@ -221,6 +257,9 @@ namespace Cider
             _allWindows.Add(WindowId, this);
         }
 
+        /// <summary>
+        /// 显示窗口
+        /// </summary>
         public void Show()
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -231,6 +270,9 @@ namespace Cider
             }
         }
 
+        /// <summary>
+        /// 隐藏窗口
+        /// </summary>
         public void Hide()
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -241,6 +283,9 @@ namespace Cider
             }
         }
 
+        /// <summary>
+        /// 强制关闭窗口，<c>CloseRequested</c>事件不会被触发
+        /// </summary>
         public void ForceClose()
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -248,6 +293,9 @@ namespace Cider
             ((IDisposable)this).Dispose();
         }
 
+        /// <summary>
+        /// 最大化窗口
+        /// </summary>
         public void Maximize()
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -258,6 +306,9 @@ namespace Cider
             }
         }
 
+        /// <summary>
+        /// 最小化窗口
+        /// </summary>
         public void Minimize()
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -268,6 +319,9 @@ namespace Cider
             }
         }
 
+        /// <summary>
+        /// 将窗口置于其他窗口前并获取输入焦点
+        /// </summary>
         public void Raise()
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -278,6 +332,9 @@ namespace Cider
             }
         }
 
+        /// <summary>
+        /// 请求最大化或最小化的窗口恢复原来的位置与大小
+        /// </summary>
         public void Restore()
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -346,7 +403,7 @@ namespace Cider
 
         private readonly WeakReference<Component2D> _focusedComponentRefrence = new(null!);
 
-        internal Component2D? FocusedComponent => _focusedComponentRefrence.TryGetTarget(out var target) ? target : null;
+        public Component2D? FocusedComponent => _focusedComponentRefrence.TryGetTarget(out var target) ? target : null;
 
         internal void SetFocus(Component2D? gettingFocusComponent)
         {
@@ -366,6 +423,9 @@ namespace Cider
         internal void ClearFocus() => SetFocus(null);
 
 #nullable disable
+        /// <summary>
+        /// 调用<c>TryClose</c>时会触发的事件，可用于阻止窗口关闭，无法阻止<c>ForceClose</c>引起的窗口关闭
+        /// </summary>
         public event EventHandler<Window, WindowCloseRequestedEventArgs> CloseRequested;
 
         public event EventHandler<Window, EventArgs> Shown;
@@ -381,7 +441,11 @@ namespace Cider
         internal void OnHidden() => Hidden?.Invoke(this, EventArgs.Empty);
         internal void OnMoved(Point position) => Moved?.Invoke(this, position);
         internal void OnResized(Size size) => Resized?.Invoke(this, size);
-        
+
+        /// <summary>
+        /// 尝试关闭窗口，可被<c>CloseRequested</c>显式拦截
+        /// </summary>
+        /// <returns>返回<c>true</c>代表成功关闭，<c>false</c>代表被拦截</returns>
         public bool TryClose()
         {
             SDLHelpers.EnsureOnMainThread();
@@ -393,7 +457,7 @@ namespace Cider
             return true;
         }
 
-        protected virtual void Dispose(bool disposing)
+        private protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
@@ -537,7 +601,7 @@ namespace Cider
         KeyboardGrabbed = SDL_WindowFlags.SDL_WINDOW_KEYBOARD_GRABBED,
 
         /// <summary>
-        /// 窗口处于填充文档模式（仅限 Emscripten），自 SDL 3.4.0 起
+        /// 窗口处于填充文档模式（仅限 Emscripten）
         /// </summary>
         [SupportedOSPlatform("browser")]
         FillDocument = 0x200000uL,

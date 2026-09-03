@@ -24,16 +24,24 @@ namespace Cider.Assets
 
             static async Task<string> _Load(string path, CancellationToken token)
             {
-                if (OperatingSystem.IsBrowser())
+                try
                 {
-                    using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
-                    res.EnsureSuccessStatusCode();
-                    return await res.Content.ReadAsStringAsync(token);
-                }
+                    if (OperatingSystem.IsBrowser())
+                    {
+                        using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
+                        res.EnsureSuccessStatusCode();
+                        return await res.Content.ReadAsStringAsync(token);
+                    }
 
-                else
+                    else
+                    {
+                        return await File.ReadAllTextAsync(path, token);
+                    }
+                }
+                catch (Exception e)
                 {
-                    return await File.ReadAllTextAsync(path, token);
+                    Game.Instance.TryRaiseException(e);
+                    throw;
                 }
             }
         }

@@ -90,6 +90,28 @@ namespace Cider.Render
             }
         }
 
+        public BlendMode BlendMode
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                unsafe
+                {
+                    SDL_BlendMode mode;
+                    SDLHelpers.ThrowIfFalse(SDL3.SDL_GetTextureBlendMode(_texture, &mode));
+                    return (BlendMode)mode;
+                }
+            }
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                unsafe
+                {
+                    SDLHelpers.ThrowIfFalse(SDL3.SDL_SetTextureBlendMode(_texture, (SDL_BlendMode)value));
+                }
+            }
+        }
+
         internal unsafe SDL_Texture* Pointer
         {
             get
@@ -99,7 +121,7 @@ namespace Cider.Render
             }
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

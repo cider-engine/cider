@@ -32,7 +32,8 @@ namespace Cider.Extensions
                 span[^1] = 0;
                 return new()
                 {
-                    Pointer = ptr
+                    Pointer = ptr,
+                    Length = length - 1
                 };
             }
         }
@@ -41,6 +42,8 @@ namespace Cider.Extensions
     internal ref struct UnmanagedUtf8
     {
         public unsafe byte* Pointer;
+
+        public int Length;
 
         public unsafe void Dispose()
         {

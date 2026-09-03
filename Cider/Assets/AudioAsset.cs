@@ -26,18 +26,26 @@ namespace Cider.Assets
 
             static async Task<AudioClip> _Load(string path, AudioMixer? mixer, CancellationToken token)
             {
-                if (OperatingSystem.IsBrowser())
+                try
                 {
-                    using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
+                    if (OperatingSystem.IsBrowser())
+                    {
+                        using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
 
-                    res.EnsureSuccessStatusCode();
+                        res.EnsureSuccessStatusCode();
 
-                    var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
+                        var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
 
-                    return LoadInBrowser(context, id, mixer);
+                        return LoadInBrowser(context, id, mixer);
+                    }
+
+                    else return await Task.Run(() => new AudioClip(path, mixer));
                 }
-
-                else return await Task.Run(() => new AudioClip(path, mixer));
+                catch (Exception e)
+                {
+                    Game.Instance.TryRaiseException(e);
+                    throw;
+                }
             }
 
             [SupportedOSPlatform("browser")]

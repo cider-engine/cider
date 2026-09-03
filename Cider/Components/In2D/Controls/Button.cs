@@ -13,9 +13,9 @@ namespace Cider.Components.In2D.Controls
         {
             Children.AddRange([(_content = new TextBlock())]);
 
-            ContentChanged += x => _content.Text = x;
+            ContentChanged = x => _content.Text = x;
 
-            FontSizeChanged += x => _content.FontSize = x;
+            FontSizeChanged = x => _content.FontSize = x;
         }
 
         [NotNull]
@@ -24,21 +24,21 @@ namespace Cider.Components.In2D.Controls
             get;
             set
             {
-                if (SetIfChanged(ref field, value)) ContentChanged?.Invoke(value);
+                if (SetIfChanged(ref field, value)) ContentChanged.Invoke(value);
             }
         } = "";
 
-        public event Action<string> ContentChanged = null!;
+        public event Action<string> ContentChanged;
 
         public float FontSize
         {
             get;
             set
             {
-                if (SetIfChanged(ref field, value)) FontSizeChanged?.Invoke(value);
+                if (SetIfChanged(ref field, value)) FontSizeChanged.Invoke(value);
             }
         } = TextBlock.DefaultFontSize;
 
-        public event Action<float> FontSizeChanged = null!;
+        public event Action<float> FontSizeChanged;
     }
 }

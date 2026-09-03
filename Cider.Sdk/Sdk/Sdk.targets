@@ -58,6 +58,7 @@
 	
 	<!--Browser Start-->
 	<PropertyGroup Condition="$(_IsOnBrowser)">
+		<DefineConstants>$(DefineConstants);BROWSER</DefineConstants>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
 		<WasmEnableExceptionHandling>false</WasmEnableExceptionHandling>

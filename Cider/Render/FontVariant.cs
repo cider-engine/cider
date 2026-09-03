@@ -212,7 +212,7 @@ namespace Cider.Render
             return properties;
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

@@ -175,7 +175,7 @@ namespace Cider.Render
             SDLHelpers.ThrowIfFalse(SDL_SetRenderLogicalPresentation(_renderer, size.Width, size.Height, (SDL_RendererLogicalPresentation)mode));
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

@@ -80,7 +80,7 @@ namespace Cider.Components
         public Scene? Root { get; private set; }
 
         /// <summary>
-        /// 指向<c>Root</c>的<c>Window</c>，当不在组件树或根场景不在窗口下时为<c>null</c>
+        /// 指向<c>Root</c>的<c>Window</c>，当不在场景树或根场景不在窗口下时为<c>null</c>
         /// </summary>
         public Window? CurrentWindow => Root?.Window;
 
@@ -91,6 +91,11 @@ namespace Cider.Components
         }
 
         /// <summary>
+        /// 指示当前组件是否已初始化，已初始化过的组件在场景树可用时只会执行<c>OnInitialized</c>一次
+        /// </summary>
+        public bool IsInitialized { get; private set; }
+
+        /// <summary>
         /// 组件是否可见，不可见的组件会跳过<c>OnRender</c>的调用
         /// </summary>
         public bool IsVisible { get; set; } = true;
@@ -98,7 +103,7 @@ namespace Cider.Components
         /// <summary>
         /// <para>表示子组件的集合</para>
         /// <para>通过这个属性修改父子关系时会自动同步<c>Parent</c>属性</para>
-        /// <para>在生命周期回调中子组件是禁止修改的，应使用</para>
+        /// <para>在生命周期回调中子组件是禁止修改的，应使用<c>await WaitForEndOfFrame()</c>等待到帧末再进行修改</para>
         /// </summary>
         public ComponentCollection Children { get; }
 
@@ -123,11 +128,26 @@ namespace Cider.Components
         protected virtual void OnAttachToScene(Scene root)
         { }
 
+        /// <summary>
+        /// <para>当组件就绪时调用的生命周期函数</para>
+        /// <para>只有组件第一次处于就绪状态时此函数会被调用，且先于<c>OnLoaded</c>被调用</para>
+        /// <para>此函数的方法体是空的，可以省略<c>base</c>调用</para>
+        /// </summary>
+        /// <param name="root">根场景</param>
+        // 这个函数由OnLoadedDispatcher调用
+        protected virtual void OnInitialized(Scene root)
+        { }
+
         [Dispatcher]
         internal void OnLoadedDispatcher(Scene root)
         {
             Debug.Assert(CurrentWindow is not null);
 
+            if (!IsInitialized)
+            {
+                IsInitialized = true;
+                OnInitialized(root);
+            }
             OnLoaded(root);
             foreach (var item in Children)
                 item.OnLoadedDispatcher(root);
@@ -135,7 +155,7 @@ namespace Cider.Components
 
         /// <summary>
         /// <para>当组件就绪时调用的生命周期函数</para>
-        /// <para>在组件每次处于就绪状态时此函数都会被调用，因此在组件实例化时就确定的子组件应该直接在构造函数内添加</para>
+        /// <para>在组件每次处于就绪状态时此函数都会被调用</para>
         /// <para>此函数的方法体是空的，可以省略<c>base</c>调用</para>
         /// </summary>
         /// <param name="root">根场景</param>

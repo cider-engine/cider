@@ -27,7 +27,7 @@ namespace Cider.Buffers
             }
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

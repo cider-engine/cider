@@ -29,7 +29,7 @@ namespace Cider
         /// <summary>
         /// 将此属性设为<c>true</c>来阻止窗口关闭
         /// </summary>
-        public bool Handled { get; set; }
+        public bool Cancel { get; set; }
     }
 
     public class Window : IDisposable
@@ -257,6 +257,16 @@ namespace Cider
             _allWindows.Add(WindowId, this);
         }
 
+        public WindowFlags GetFlags()
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+            SDLHelpers.EnsureOnMainThread();
+            unsafe
+            {
+                return (WindowFlags)SDL_GetWindowFlags(_window);
+            }
+        }
+
         /// <summary>
         /// 显示窗口
         /// </summary>
@@ -345,6 +355,16 @@ namespace Cider
             }
         }
 
+        public void SetFullScreen(bool isFullScreenEnabled)
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+            SDLHelpers.EnsureOnMainThread();
+            unsafe
+            {
+                SDLHelpers.ThrowIfFalse(SDL_SetWindowFullscreen(_window, isFullScreenEnabled));
+            }
+        }
+
         public void SetTextInputArea(Rectangle? target, int cursorOffsetToTargetX = 0)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -388,17 +408,17 @@ namespace Cider
             }
         }
 
-        public void ShowMessageBox(MessageBoxType type, ReadOnlySpan<char> title, ReadOnlySpan<char> message)
-        {
-            ObjectDisposedException.ThrowIf(disposedValue, this);
-            SDLHelpers.EnsureOnMainThread();
-            unsafe
-            {
-                using var titlePtr = title.ToUnmanagedUtf8();
-                using var messagePtr = message.ToUnmanagedUtf8();
-                SDLHelpers.ThrowIfFalse(SDL_ShowSimpleMessageBox((SDL_MessageBoxFlags)type, titlePtr.Pointer, messagePtr.Pointer, _window));
-            }
-        }
+        //public void ShowMessageBox(MessageBoxType type, ReadOnlySpan<char> title, ReadOnlySpan<char> message)
+        //{
+        //    ObjectDisposedException.ThrowIf(disposedValue, this);
+        //    SDLHelpers.EnsureOnMainThread();
+        //    unsafe
+        //    {
+        //        using var titlePtr = title.ToUnmanagedUtf8();
+        //        using var messagePtr = message.ToUnmanagedUtf8();
+        //        SDLHelpers.ThrowIfFalse(SDL_ShowSimpleMessageBox((SDL_MessageBoxFlags)type, titlePtr.Pointer, messagePtr.Pointer, _window));
+        //    }
+        //}
 
 
         private readonly WeakReference<Component2D> _focusedComponentRefrence = new(null!);
@@ -448,16 +468,17 @@ namespace Cider
         /// <returns>返回<c>true</c>代表成功关闭，<c>false</c>代表被拦截</returns>
         public bool TryClose()
         {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
             SDLHelpers.EnsureOnMainThread();
             var args = new WindowCloseRequestedEventArgs();
             CloseRequested?.Invoke(this, args);
-            if (args.Handled) return false;
+            if (args.Cancel) return false;
 
             ((IDisposable)this).Dispose();
             return true;
         }
 
-        private protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
@@ -511,7 +532,7 @@ namespace Cider
         Occluded = SDL_WindowFlags.SDL_WINDOW_OCCLUDED,
 
         /// <summary>
-        /// 窗口既未映射到桌面上，也未显示在任务栏/停靠栏/窗口列表中；需要调用 SDL_ShowWindow() 才能使其可见
+        /// 窗口既未映射到桌面上，也未显示在任务栏/停靠栏/窗口列表中；需要调用 Show() 才能使其可见
         /// </summary>
         Hidden = SDL_WindowFlags.SDL_WINDOW_HIDDEN,
 
@@ -551,7 +572,7 @@ namespace Cider
         MouseFocus = SDL_WindowFlags.SDL_WINDOW_MOUSE_FOCUS,
 
         /// <summary>
-        /// 窗口不是由 SDL 创建的
+        /// 窗口是在外部创建的
         /// </summary>
         External = SDL_WindowFlags.SDL_WINDOW_EXTERNAL,
 

@@ -23,7 +23,9 @@ namespace Cider.Render
 
         public RenderTargetScope PushTarget(Texture target) => new(Renderer, target);
 
-        public RenderBlendModeScope PushBlendMode(BlendMode mode) => new(Renderer, mode);
+        public RenderDrawBlendModeScope PushDrawBlendMode(BlendMode mode) => new(Renderer, mode);
+
+        public RenderTextureBlendModeScope PushTextureBlendMode(Texture texture, BlendMode mode) => new(texture, mode);
 
         public RenderScaleScope PushScale(Vector2 scale) => new(Renderer, scale);
 
@@ -92,6 +94,8 @@ namespace Cider.Render
 
         public readonly unsafe void Dispose()
         {
+            if (_renderer == null) return; // default(T)
+
             SDLHelpers.ThrowIfFalse(SDL_SetRenderDrawColor(_renderer, _color.R, _color.G, _color.B, _color.A));
         }
     }
@@ -114,6 +118,8 @@ namespace Cider.Render
 
         public readonly unsafe void Dispose()
         {
+            if (_texture == null) return; // default(T)
+
             SDLHelpers.ThrowIfFalse(SDL_SetTextureColorMod(_texture, _color.R, _color.G, _color.B));
             SDLHelpers.ThrowIfFalse(SDL_SetTextureAlphaMod(_texture, _color.A));
         }
@@ -139,18 +145,20 @@ namespace Cider.Render
 
         public readonly unsafe void Dispose()
         {
+            if (_renderer == null) return; // default(T)
+
             SDLHelpers.ThrowIfFalse(SDL_SetRenderTarget(_renderer, _target));
 
             _camera.IsEnabled = _isCamera2DEnabled;
         }
     }
 
-    public readonly ref struct RenderBlendModeScope : IDisposable
+    public readonly ref struct RenderDrawBlendModeScope : IDisposable
     {
         private unsafe readonly SDL_Renderer* _renderer;
         private readonly SDL_BlendMode _mode;
 
-        public unsafe RenderBlendModeScope(Renderer renderer, BlendMode mode)
+        public unsafe RenderDrawBlendModeScope(Renderer renderer, BlendMode mode)
         {
             _renderer = renderer.Pointer;
             SDL_BlendMode blendMode;
@@ -161,7 +169,31 @@ namespace Cider.Render
 
         public readonly unsafe void Dispose()
         {
+            if (_renderer == null) return; // default(T)
+
             SDLHelpers.ThrowIfFalse(SDL_SetRenderDrawBlendMode(_renderer, _mode));
+        }
+    }
+
+    public readonly ref struct RenderTextureBlendModeScope : IDisposable
+    {
+        private unsafe readonly SDL_Texture* _texture;
+        private readonly SDL_BlendMode _mode;
+
+        public unsafe RenderTextureBlendModeScope(Texture texture, BlendMode mode)
+        {
+            _texture = texture.Pointer;
+            SDL_BlendMode blendMode;
+            SDLHelpers.ThrowIfFalse(SDL_GetTextureBlendMode(_texture, &blendMode));
+            _mode = blendMode;
+            SDLHelpers.ThrowIfFalse(SDL_SetTextureBlendMode(_texture, (SDL_BlendMode)mode));
+        }
+
+        public readonly unsafe void Dispose()
+        {
+            if (_texture == null) return; // default(T)
+
+            SDLHelpers.ThrowIfFalse(SDL_SetTextureBlendMode(_texture, _mode));
         }
     }
 
@@ -181,6 +213,8 @@ namespace Cider.Render
 
         public readonly unsafe void Dispose()
         {
+            if (_renderer == null) return; // default(T)
+
             SDLHelpers.ThrowIfFalse(SDL_SetRenderScale(_renderer, _scaleX, _scaleY));
         }
     }

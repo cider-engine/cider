@@ -43,7 +43,8 @@ namespace Cider.Audio
         internal unsafe AudioMixer(uint id)
         {
             _mixer = SDLHelpers.ThrowIfPtrIsNull(MIX_CreateMixerDevice((SDL_AudioDeviceID)id, null));
-            if (!MixerDictionary.TryAdd((nint)_mixer, this)) throw new CiderGameException();
+            var added = MixerDictionary.TryAdd((nint)_mixer, this);
+            Debug.Assert(added);
         }
 
         public unsafe float FrequencyRatio
@@ -104,7 +105,7 @@ namespace Cider.Audio
             return track;
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {
@@ -112,10 +113,11 @@ namespace Cider.Audio
                 {
                     unsafe
                     {
-                        MixerDictionary.TryRemove((nint)_mixer, out _);
+                        var removed = MixerDictionary.TryRemove((nint)_mixer, out _);
+                        Debug.Assert(removed);
                     }
                     foreach (var track in TrackDictionary.Values)
-                        track.Dispose();
+                        track.DisposeWithoutRemoveInMixer();
 
                     TrackDictionary.Clear();
                 }

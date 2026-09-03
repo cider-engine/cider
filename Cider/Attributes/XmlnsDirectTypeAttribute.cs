@@ -5,7 +5,7 @@ using System.Text;
 namespace Cider.Attributes
 {
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
-    public class XmlnsDirectTypeAttribute : Attribute
+    internal class XmlnsDirectTypeAttribute : Attribute
     {
         public XmlnsDirectTypeAttribute(string xmlnsUri, Type directType)
         {

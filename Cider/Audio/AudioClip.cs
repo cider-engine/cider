@@ -43,7 +43,7 @@ namespace Cider.Audio
             return SDLHelpers.ThrowIfNegative(SDL3_mixer.MIX_AudioMSToFrames(_audio, (long)timeSpan.TotalMilliseconds));
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

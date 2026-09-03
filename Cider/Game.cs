@@ -10,7 +10,6 @@ using SDL;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -21,6 +20,11 @@ using static SDL.SDL3;
 
 namespace Cider
 {
+    public class GameQuitEventArgs : EventArgs
+    {
+        public bool Cancel { get; set; }
+    }
+
     public class Game
     {
         private bool _initialized;
@@ -93,6 +97,18 @@ namespace Cider
         /// 当内置的FPS计时器变动时触发的事件
         /// </summary>
         public event EventHandler<Game, int> FpsChanged;
+
+        /// <summary>
+        /// <para>当游戏初始化完成时触发的事件</para>
+        /// <para>这个事件会在游戏初始化完成，主场景初始化前被触发</para>
+        /// </summary>
+        public event Action Initialized;
+
+        /// <summary>
+        /// <para>当最后一个窗口被关闭，游戏尝试退出时触发的事件</para>
+        /// <para>可以通过这个事件阻止游戏退出</para>
+        /// </summary>
+        public event EventHandler<Game, GameQuitEventArgs> QuitRequested;
 #nullable restore
 
         public Game(ProjectSettings settings)
@@ -190,11 +206,16 @@ namespace Cider
 
             ProjectSettings.MainWindowIcon?.LoadSurfaceAsync().ContinueWith(x =>
             {
-                x.EnsureSuccess();
-                MainWindow.Icon = x.Result;
+                if (x.IsCompletedSuccessfully)
+                    MainWindow.Icon = x.Result;
+
+                else
+                    TryRaiseException(x.Exception ?? new CiderGameException("The task is not completed successfully.") as Exception);
+
             }, GetTaskScheduler());
 
             _initialized = true;
+            Initialized?.Invoke();
             CurrentScene.OnLoadedDispatcher(CurrentScene);
         }
 
@@ -337,11 +358,14 @@ namespace Cider
                 {
                     case SDL_EventType.SDL_EVENT_QUIT:
                         {
-                            if (Instance.MainWindow.TryClose())
-                                return SDL_AppResult.SDL_APP_SUCCESS;
+                            var instance = Instance;
+                            var args = new GameQuitEventArgs();
+                            instance.QuitRequested?.Invoke(instance, args);
+                            if (args.Cancel)
+                                return SDL_AppResult.SDL_APP_CONTINUE;
 
                             else
-                                return SDL_AppResult.SDL_APP_CONTINUE;
+                                return SDL_AppResult.SDL_APP_SUCCESS;
                         }
 
                     #region Mouse Event
@@ -440,9 +464,9 @@ namespace Cider
                         {
                             var @event = e->key;
                             var args = new KeyboardEventArgs(Timestamp: new(@event.timestamp),
-                                Code: (KeyCode)@event.scancode,
-                                Symbol: (KeySymbol)@event.key,
-                                Modifier: (KeyModifier)@event.mod,
+                                KeyCode: (KeyCode)@event.scancode,
+                                KeySymbol: (KeySymbol)@event.key,
+                                KeyModifier: (KeyModifier)@event.mod,
                                 Raw: @event.raw,
                                 IsDown: @event.down,
                                 IsRepeat: @event.repeat);
@@ -454,9 +478,9 @@ namespace Cider
                         {
                             var @event = e->key;
                             var args = new KeyboardEventArgs(Timestamp: new(@event.timestamp),
-                                Code: (KeyCode)@event.scancode,
-                                Symbol: (KeySymbol)@event.key,
-                                Modifier: (KeyModifier)@event.mod,
+                                KeyCode: (KeyCode)@event.scancode,
+                                KeySymbol: (KeySymbol)@event.key,
+                                KeyModifier: (KeyModifier)@event.mod,
                                 Raw: @event.raw,
                                 IsDown: @event.down,
                                 IsRepeat: @event.repeat);

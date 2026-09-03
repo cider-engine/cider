@@ -32,16 +32,24 @@ namespace Cider.Assets
 
             static async Task<Font> _Load(string path, float ptsize, CancellationToken token)
             {
-                if (OperatingSystem.IsBrowser())
+                try
                 {
-                    using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
-                    res.EnsureSuccessStatusCode();
-                    var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
+                    if (OperatingSystem.IsBrowser())
+                    {
+                        using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
+                        res.EnsureSuccessStatusCode();
+                        var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
 
-                    return LoadInBrowser(context, id, ptsize);
+                        return LoadInBrowser(context, id, ptsize);
+                    }
+
+                    else return await Task.Run(() => new Font(path, ptsize));
                 }
-
-                else return await Task.Run(() => new Font(path, ptsize));
+                catch (Exception e)
+                {
+                    Game.Instance.TryRaiseException(e);
+                    throw;
+                }
             }
 
             [SupportedOSPlatform("browser")]
@@ -127,7 +135,7 @@ namespace Cider.Assets
             return (width, height);
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

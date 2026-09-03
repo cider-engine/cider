@@ -114,6 +114,9 @@ namespace Cider.Components.In2D
         /// 远程相机在渲染帧中
         /// </summary>
         Update,
+        /// <summary>
+        /// 远程相机在物理帧中
+        /// </summary>
         FixedUpdate
     }
 

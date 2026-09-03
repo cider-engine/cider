@@ -65,8 +65,7 @@ namespace Cider.Components.In2D.Controls
                 if (Game.IsInitialized)
                     _fontVariant = Font?.LoadAsync()
                         .ContinueWith(x => SetFontProperties(x.Result.CreateVariant()),
-                            Game.GetTaskScheduler())
-                        .EnsureToBeSuccessful();
+                            Game.GetTaskScheduler());
             }
         }
 
@@ -228,8 +227,7 @@ namespace Cider.Components.In2D.Controls
                 {
                     @this._fontVariant = @this.Font.LoadAsync()
                         .ContinueWith(x => @this.SetFontProperties(x.Result.CreateVariant()),
-                            Game.GetTaskScheduler())
-                        .EnsureToBeSuccessful();
+                            Game.GetTaskScheduler());
 
                     return;
                 }
@@ -269,8 +267,7 @@ namespace Cider.Components.In2D.Controls
             {
                 @this._fontVariant = @this.Font.LoadAsync()
                     .ContinueWith(x => @this.SetFontProperties(x.Result.CreateVariant()),
-                        Game.GetTaskScheduler())
-                    .EnsureToBeSuccessful();
+                        Game.GetTaskScheduler());
 
                 return;
             }

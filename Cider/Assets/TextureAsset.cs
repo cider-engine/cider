@@ -26,15 +26,23 @@ namespace Cider.Assets
 
             static async Task<Surface> _Load(string path, CancellationToken token)
             {
-                if (OperatingSystem.IsBrowser())
+                try
                 {
-                    using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
-                    res.EnsureSuccessStatusCode();
-                    var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
-                    return LoadInBrowser(context, id);
-                }
+                    if (OperatingSystem.IsBrowser())
+                    {
+                        using var res = await Platform.Browser.Browser.Client.GetAsync(Platform.Browser.Browser.LocationHref + path, token);
+                        res.EnsureSuccessStatusCode();
+                        var (context, id) = await Platform.Browser.Browser.HttpResponseToIOStreamInterface(res, token);
+                        return LoadInBrowser(context, id);
+                    }
 
-                else return await Task.Run(() => new Surface(path));
+                    else return await Task.Run(() => new Surface(path));
+                }
+                catch (Exception e)
+                {
+                    Game.Instance.TryRaiseException(e);
+                    throw;
+                }
             }
 
             [SupportedOSPlatform("browser")]
@@ -57,7 +65,15 @@ namespace Cider.Assets
 
             static async Task<Texture> _Load(TextureAsset asset, Renderer renderer)
             {
-                return new(renderer, await asset.LoadSurfaceAsync());
+                try
+                {
+                    return new(renderer, await asset.LoadSurfaceAsync());
+                }
+                catch (Exception e)
+                {
+                    Game.Instance.TryRaiseException(e);
+                    throw;
+                }
             }
         }
 

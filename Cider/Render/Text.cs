@@ -115,7 +115,7 @@ namespace Cider.Render
             SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_UpdateText(_text));
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

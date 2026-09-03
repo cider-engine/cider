@@ -20,6 +20,7 @@ namespace Cider.Generator.CiderXml
                 .Select(static (x, token) =>
                 {
                     var ((additionalText, mappingsWrapper), compilation) = x;
+
                     var mappings = mappingsWrapper.Value;
 
                     var text = additionalText.GetText(token)?.ToString();
@@ -28,6 +29,7 @@ namespace Cider.Generator.CiderXml
                     XElement root;
                     try
                     {
+                        token.ThrowIfCancellationRequested();
                         root = XElement.Parse(text);
                     }
                     catch
@@ -79,7 +81,7 @@ namespace Cider.Generator.CiderXml
                     var namedFields = new List<string>();
 
                     if (root.Element(DefaultWithChildren) is XElement children)
-                        ProcessElement(children, mappings, writer, namedFields, compilation, false);
+                        ProcessElementCreateObject(children, mappings, writer, namedFields, compilation);
 
                     writer.Indent = 0;
 

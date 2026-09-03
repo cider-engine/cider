@@ -1,8 +1,6 @@
 using Cider.Assets;
 using Cider.Data.In2D;
-using Cider.Extensions;
 using Cider.Input;
-using Cider.Internals;
 using Cider.Render;
 using System;
 using System.Drawing;
@@ -74,6 +72,8 @@ namespace Cider.Components.In2D
             }
         } = 1;
 
+        public Color Color { get; set; } = Color.White;
+
         private void UpdateRenderRegion(Texture texture)
         {
             ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(FrameIndex, HorizontalFrameCount * VerticalFrameCount);
@@ -108,7 +108,7 @@ namespace Cider.Components.In2D
 
         protected override bool HitTest(HitTestResult result)
         {
-            if (Texture is null || _cachedRenderRegion is null) return false;
+            if (Texture is null || _cachedRenderRegion is null || Color.A == 0) return false;
             var rect = _cachedRenderRegion.Value;
             if (IsCentered)
                 return result.RectangleHitTest(rect.Width, rect.Height, rect.Width / 2, rect.Height / 2);
@@ -122,14 +122,19 @@ namespace Cider.Components.In2D
 
             if (Texture?.LoadTextureAsync(context.Renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
             {
-                if (_cachedRenderRegion is null) UpdateRenderRegion(task.Result);
+                var texture = task.Result;
+                if (_cachedRenderRegion is null) UpdateRenderRegion(texture);
 
                 var rect = _cachedRenderRegion!.Value;
 
                 var transform = GlobalTransform;
 
+                // Texture有可能在其他地方被复用
+                using var colorScope = Color == Color.White ? default : context.PushTextureColor(texture, Color);
+                using var blendScope = Color.A == byte.MaxValue ? default : context.PushTextureBlendMode(texture, BlendMode.Blend);
+
                 context.RenderTexture(
-                    texture: task.Result,
+                    texture: texture,
 
                     position: IsCentered ? transform.Position - transform.Scale * new Vector2(rect.Width / 2, rect.Height / 2) : transform.Position,
 

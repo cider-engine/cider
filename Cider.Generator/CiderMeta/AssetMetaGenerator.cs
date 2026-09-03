@@ -2,10 +2,8 @@ using Microsoft.CodeAnalysis;
 using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 
 namespace Cider.Generator.CiderMeta
@@ -24,20 +22,20 @@ namespace Cider.Generator.CiderMeta
                 return null;
             });
 
-            var compilation = context.CompilationProvider
+            var registeredAssetTypesProvider = context.CompilationProvider
                 .Select(static (x, token) =>
                 {
-                    var cider = x.SourceModule.ReferencedAssemblySymbols.Single(static y => y.Name == "Cider");
+                    var cider = x.SourceModule.ReferencedAssemblySymbols.Single(static y => y.Name == "Cider"); // 只取Cider程序集里的
                     
                     var types = new List<(string, List<string>)>(); // 资源类名，支持的资源类型数组
 
                     ProcessNamespace(cider.GlobalNamespace, types);
 
-                    return types;
+                    return new AlwaysEqualWrapper<List<(string, List<string>)>>(types);
 
-                    static void ProcessNamespace(INamespaceSymbol ns, List<(string, List<string>)> types)
+                    static void ProcessNamespace(INamespaceSymbol @namespace, List<(string, List<string>)> types)
                     {
-                        foreach (var type in ns.GetTypeMembers())
+                        foreach (var type in @namespace.GetTypeMembers())
                         {
                             if (type.GetAttributes().SingleOrDefault(static attr => attr.AttributeClass.GetFullyQualifiedName() == "global::Cider.Attributes.SupportedAssetTypesAttribute") is AttributeData attr)
                             {
@@ -45,20 +43,22 @@ namespace Cider.Generator.CiderMeta
                             }
                         }
 
-                        foreach (var nested in ns.GetNamespaceMembers())
+                        foreach (var memberNamespace in @namespace.GetNamespaceMembers())
                         {
-                            ProcessNamespace(nested, types);
+                            ProcessNamespace(memberNamespace, types);
                         }
                     }
                 });
 
             var provider = context.AdditionalTextsProvider.Where(static x => x.Path.EndsWith(".meta"))
                 .Collect()
-                .Combine(compilation)
+                .Combine(registeredAssetTypesProvider)
                 .Combine(projectPathProvider)
                 .Select((x, token) =>
                 {
-                    var ((additionalTexts, types), projectPath) = x;
+                    var ((additionalTexts, typesWrapper), projectPath) = x;
+
+                    var types = typesWrapper.Value;
 
                     if (string.IsNullOrEmpty(projectPath))
                     {

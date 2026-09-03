@@ -50,7 +50,7 @@ namespace Cider.Render
             SDLHelpers.ThrowIfFalse(SDL3.SDL_ClearSurface(_surface, color.R, color.G, color.B, color.A));
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

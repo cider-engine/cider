@@ -38,6 +38,7 @@ namespace Cider.Generator.CiderXml
                     XElement root;
                     try
                     {
+                        token.ThrowIfCancellationRequested();
                         root = XElement.Parse(text.ToString());
                     }
                     catch
@@ -66,7 +67,7 @@ namespace Cider.Generator.CiderXml
 
                     writer.Indent = 3;
 
-                    ProcessElement(root, mappingsWrapper.Value, writer, null, compilation, true);
+                    ProcessElementSetMember(root, mappingsWrapper.Value, writer, null, compilation);
 
                     writer.Indent = 0;
 

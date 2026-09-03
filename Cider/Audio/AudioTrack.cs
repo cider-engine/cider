@@ -57,7 +57,7 @@ namespace Cider.Audio
                 ObjectDisposedException.ThrowIf(disposedValue, this);
                 unsafe
                 {
-                    SDLHelpers.ThrowIfFalse(MIX_SetTrackAudio(_track, value is AudioClip audio ? audio.Pointer : null));
+                    SDLHelpers.ThrowIfFalse(MIX_SetTrackAudio(_track, value?.Pointer));
                     field = value;
                 }
             }
@@ -134,7 +134,7 @@ namespace Cider.Audio
         public unsafe SampleFrame TimeSpanToFrames(TimeSpan timeSpan)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
-            return new(SDLHelpers.ThrowIfNegative(MIX_TrackMSToFrames(_track, (long)timeSpan.TotalMilliseconds)));
+            return new(SDLHelpers.ThrowIfNegative(MIX_TrackMSToFrames(_track, long.CreateChecked(timeSpan.TotalMilliseconds))));
         }
 
         public void Play(AudioPlayOptions? options = null)
@@ -173,18 +173,32 @@ namespace Cider.Audio
             }
         }
 
-        protected virtual void Dispose(bool disposing)
+        public void Remove()
+        {
+            ((IDisposable)this).Dispose();
+        }
+
+#pragma warning disable CA1816
+        internal void DisposeWithoutRemoveInMixer()
+        {
+            Dispose(disposing: true, false);
+            GC.SuppressFinalize(this);
+        }
+#pragma warning restore CA1816
+
+        private void Dispose(bool disposing, bool removeTrackInMixer = true) // 这个参数是给AudioMixer.Dispose准备的，它会在遍历后直接Clear
         {
             if (!disposedValue)
             {
                 if (disposing)
                 {
+                    if (removeTrackInMixer)
                     unsafe
                     {
                         ownerMixer.TrackDictionary.TryRemove((nint)_track, out _);
                     }
                     ownerMixer = null!; // 解除引用，访问触发异常
-                    TrackAudio = null; // 解除引用，不负责释放音频数据
+                    TrackAudio = null;
                 }
 
                 unsafe
@@ -204,7 +218,7 @@ namespace Cider.Audio
             Dispose(disposing: false);
         }
 
-        public void Dispose()
+        void IDisposable.Dispose()
         {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);

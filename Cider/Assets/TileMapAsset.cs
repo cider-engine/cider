@@ -26,7 +26,15 @@ namespace Cider.Assets
 
             static async Task<Map> _Load(string path, CancellationToken token)
             {
-                return await Loader.DefaultWith(new TileMapResourceReader(token)).LoadMapAsync(path);
+                try
+                {
+                    return await Loader.DefaultWith(new TileMapResourceReader(token)).LoadMapAsync(path);
+                }
+                catch (Exception e)
+                {
+                    Game.Instance.TryRaiseException(e);
+                    throw;
+                }
             }
         }
 

@@ -1,3 +1,4 @@
+using Cider.Collections;
 using Cider.Components;
 using System;
 using System.Collections.Generic;
@@ -47,6 +48,16 @@ namespace Cider.Extensions
             {
                 components.Capacity = components.Count + items.Length;
                 components.AddRange(items);
+            }
+        }
+
+
+        extension<T>(ItemObservableCollection<T> collection)
+        {
+            public void Add(ReadOnlySpan<T> items)
+            {
+                collection.Capacity = collection.Count + items.Length;
+                collection.AddRange(items);
             }
         }
     }

@@ -1,10 +1,7 @@
 using Cider.Internals;
 using SDL;
 using System;
-using System.Collections.Generic;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Cider.Render
 {
@@ -34,7 +31,7 @@ namespace Cider.Render
             }
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

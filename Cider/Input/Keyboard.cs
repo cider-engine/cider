@@ -46,24 +46,24 @@ namespace Cider.Input
             new Span<SDLBool>(_statePtr, _stateNum).CopyTo(_lastPhysicsState);
         }
 
-        public static bool IsPressed(KeyCode key)
+        public static bool IsPressed(KeyCode keyCode)
         {
-            return GetState().IsDown(key);
+            return GetState().IsDown(keyCode);
         }
 
-        public static bool IsReleased(KeyCode key)
+        public static bool IsReleased(KeyCode keyCode)
         {
-            return GetState().IsUp(key);
+            return GetState().IsUp(keyCode);
         }
 
-        public static bool IsJustPressed(KeyCode key)
+        public static bool IsJustPressed(KeyCode keyCode)
         {
-            return GetLastState().IsUp(key) && GetState().IsDown(key);
+            return GetLastState().IsUp(keyCode) && GetState().IsDown(keyCode);
         }
 
-        public static bool IsJustReleased(KeyCode key)
+        public static bool IsJustReleased(KeyCode keyCode)
         {
-            return GetLastState().IsDown(key) && GetState().IsUp(key);
+            return GetLastState().IsDown(keyCode) && GetState().IsUp(keyCode);
         }
 
         static unsafe Keyboard()
@@ -80,9 +80,9 @@ namespace Cider.Input
     }
 
     public readonly record struct KeyboardEventArgs(GameTimestamp Timestamp,
-        KeyCode Code,
-        KeySymbol Symbol,
-        KeyModifier Modifier,
+        KeyCode KeyCode,
+        KeySymbol KeySymbol,
+        KeyModifier KeyModifier,
         ushort Raw,
         bool IsDown,
         bool IsRepeat);
@@ -101,11 +101,11 @@ namespace Cider.Input
             this.states = states;
         }
 
-        public readonly bool this[KeyCode key] => states[(int)key];
+        public readonly bool this[KeyCode keyCode] => states[(int)keyCode];
 
-        public bool IsUp(KeyCode key) => !states[(int)key];
+        public bool IsUp(KeyCode keyCode) => !states[(int)keyCode];
 
-        public bool IsDown(KeyCode key) => states[(int)key];
+        public bool IsDown(KeyCode keyCode) => states[(int)keyCode];
     }
 
     public static class KeyExtensions

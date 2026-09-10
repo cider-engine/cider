@@ -3,7 +3,6 @@ using Cider.Data.In2D;
 using Cider.Input;
 using Cider.Render;
 using System;
-using System.Drawing;
 using System.Numerics;
 using System.Threading.Tasks;
 

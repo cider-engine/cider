@@ -1,12 +1,9 @@
+using Cider.Data.In2D;
 using Cider.Extensions;
 using Cider.Internals;
 using SDL;
 using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Runtime.CompilerServices;
-using System.Text;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Cider.Render
 {
@@ -61,7 +58,7 @@ namespace Cider.Render
                 byte r, g, b, a;
                 SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_GetTextColor(_text, &r, &g, &b, &a));
 
-                return Color.FromArgb(a, r, g, b);
+                return new(r, g, b, a);
             }
 
             set

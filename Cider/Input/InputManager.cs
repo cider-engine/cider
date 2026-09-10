@@ -2,6 +2,7 @@ using Cider.Components;
 using Cider.Components.In2D;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace Cider.Input
 {
@@ -18,7 +19,7 @@ namespace Cider.Input
 
         public static event MouseButtonEventHandler MouseDown;
 #nullable enable
-        private static readonly HashSet<Component2D> visitedMouseMovedComponents = new(256); // 深度
+        private static readonly List<Component2D> visitedMouseMovedComponents = new(256); // 深度
 
         internal static void RaiseMouseMoved(Window? window, in MouseMovedEventArgs args)
         {
@@ -26,27 +27,26 @@ namespace Cider.Input
 
             if (window is { Scene: { } scene, Renderer.Camera2D.OffsetPosition: var offset })
             {
-                Component2D? mouseLeave = null;
-
-                Component2D? mouseEnter = null;
-
                 using (var result = HitTestResult.GetScopedSingleton(args.Position - args.Movement, offset))
                 {
                     scene.HitTestDispatcher(result);
 
                     if (result.GetComponent() is Component component)
                     {
-                        mouseLeave = component as Component2D;
+                        context.Target = component;
+
                         foreach (var item in component.EnumerateToRoot())
                         {
                             if (item is Component2D c2d)
                             {
-                                c2d.OnMouseMoved(component, args, ref context);
+                                c2d.OnMouseMoved(c2d, args, ref context);
                                 visitedMouseMovedComponents.Add(c2d);
                             }
                         }
                     }
                 }
+
+                var crossIndex = -1;
 
                 using (var result = HitTestResult.GetScopedSingleton(args.Position, offset))
                 {
@@ -54,28 +54,38 @@ namespace Cider.Input
 
                     if (result.GetComponent() is Component component)
                     {
-                        mouseEnter = component as Component2D;
+                        context.Target = component;
+
                         foreach (var item in component.EnumerateToRoot())
                         {
                             if (item is Component2D c2d)
                             {
-                                if (visitedMouseMovedComponents.Contains(c2d)) break;
+                                crossIndex = visitedMouseMovedComponents.IndexOf(c2d);
+                                if (crossIndex >= 0) break;
+
+                                c2d.IsMouseOver = true;
+                                c2d.OnMouseEnter(c2d, args);
+
                                 c2d.OnMouseMoved(component, args, ref context);
                             }
                         }
                     }
                 }
 
-                visitedMouseMovedComponents.Clear();
-
-                if (mouseLeave != mouseEnter)
                 {
-                    mouseLeave?.IsMouseOver = false;
-                    mouseLeave?.OnMouseLeave(mouseLeave, args);
+                    // span的生命周期只在这个block内
+                    var span = CollectionsMarshal.AsSpan(visitedMouseMovedComponents);
 
-                    mouseEnter?.IsMouseOver = true;
-                    mouseEnter?.OnMouseEnter(mouseEnter, args);
+                    // 如果第二次命中测试成功，就遍历到第一个重复父元素前
+                    // 如果没成功，就全部遍历
+                    foreach (var c2d in crossIndex >= 0 ? span[..crossIndex] : span)
+                    {
+                        c2d.IsMouseOver = false;
+                        c2d.OnMouseLeave(c2d, args);
+                    }
                 }
+
+                visitedMouseMovedComponents.Clear();
             }
 
             if (!context.SuppressGlobalHandling)
@@ -94,11 +104,13 @@ namespace Cider.Input
 
                 if (result.GetComponent() is Component component)
                 {
+                    context.Target = component;
+
                     foreach (var item in component.EnumerateToRoot())
                     {
                         if (item is Component2D c2d)
                         {
-                            c2d.OnMouseUp(component, args, ref context);
+                            c2d.OnMouseUp(c2d, args, ref context);
                         }
                     }
                 }
@@ -120,13 +132,15 @@ namespace Cider.Input
 
                 if (result.GetComponent() is Component component)
                 {
+                    context.Target = component;
+
                     Component2D? focusedComponent = null;
 
                     foreach (var item in component.EnumerateToRoot())
                     {
                         if (item is Component2D c2d)
                         {
-                            c2d.OnMouseDown(component, args, ref context);
+                            c2d.OnMouseDown(c2d, args, ref context);
                             if (c2d.Focusable)
                             {
                                 focusedComponent ??= c2d;
@@ -159,11 +173,13 @@ namespace Cider.Input
 
             if (window is { FocusedComponent: { } component })
             {
+                context.Target = component;
+
                 foreach (var item in component.EnumerateToRoot())
                 {
                     if (item is Component2D c2d)
                     {
-                        c2d.OnKeyDown(component, args, ref context);
+                        c2d.OnKeyDown(c2d, args, ref context);
                     }
                 }
             }
@@ -178,11 +194,13 @@ namespace Cider.Input
 
             if (window is { FocusedComponent: { } component })
             {
+                context.Target = component;
+
                 foreach (var item in component.EnumerateToRoot())
                 {
                     if (item is Component2D c2d)
                     {
-                        c2d.OnKeyUp(component, args, ref context);
+                        c2d.OnKeyUp(c2d, args, ref context);
                     }
                 }
             }

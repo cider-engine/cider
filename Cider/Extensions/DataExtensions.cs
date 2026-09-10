@@ -1,7 +1,6 @@
+using Cider.Data.In2D;
 using SDL;
 using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -91,7 +90,7 @@ namespace Cider.Extensions
                         var r = byte.Parse(hex[..2], System.Globalization.NumberStyles.HexNumber);
                         var g = byte.Parse(hex.Slice(2, 2), System.Globalization.NumberStyles.HexNumber);
                         var b = byte.Parse(hex.Slice(4, 2), System.Globalization.NumberStyles.HexNumber);
-                        return Color.FromArgb(r, g, b);
+                        return new(r, g, b);
                     }
 
                     else if (hex.Length == 8)
@@ -100,7 +99,7 @@ namespace Cider.Extensions
                         var r = byte.Parse(hex.Slice(2, 2), System.Globalization.NumberStyles.HexNumber);
                         var g = byte.Parse(hex.Slice(4, 2), System.Globalization.NumberStyles.HexNumber);
                         var b = byte.Parse(hex.Slice(6, 2), System.Globalization.NumberStyles.HexNumber);
-                        return Color.FromArgb(a, r, g, b);
+                        return new(r, g, b, a);
                     }
 
                     else

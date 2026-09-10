@@ -2,7 +2,6 @@ using Cider.Extensions;
 using Cider.Internals;
 using SDL;
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Cider.Render

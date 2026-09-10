@@ -13,6 +13,11 @@ namespace Cider.Components.In2D
         /// 是否抑制全局处理，将此属性设为true来阻止InputManager调用全局事件处理器
         /// </summary>
         public bool SuppressGlobalHandling { get; set; }
+
+        /// <summary>
+        /// 最初引发事件的组件
+        /// </summary>
+        public Component Target { get; internal set; }
     }
     public delegate void ComponentMouseMovedEventHandler(Component sender, in MouseMovedEventArgs args, ref ComponentEventContext context);
     public delegate void ComponentMouseEnterEventHandler(Component sender, in MouseMovedEventArgs args);

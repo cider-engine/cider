@@ -1,8 +1,8 @@
 using System;
 using System.Numerics;
-using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using Cider.Data.In2D;
 
 namespace Cider.Animation
 {
@@ -301,11 +301,13 @@ namespace Cider.Animation
 
         public override Color Lerp(Color a, Color b, double t)
         {
-            var red = byte.CreateChecked(a.R + (b.R - a.R) * t);
-            var green = byte.CreateChecked(a.G + (b.G - a.G) * t);
-            var blue = byte.CreateChecked(a.B + (b.B - a.B) * t);
-            var alpha = byte.CreateChecked(a.A + (b.A - a.A) * t);
-            return Color.FromArgb(alpha, red, green, blue);
+            return new()
+            {
+                R = byte.CreateChecked(a.R + (b.R - a.R) * t),
+                G = byte.CreateChecked(a.G + (b.G - a.G) * t),
+                B = byte.CreateChecked(a.B + (b.B - a.B) * t),
+                A = byte.CreateChecked(a.A + (b.A - a.A) * t),
+            };
         }
     }
 

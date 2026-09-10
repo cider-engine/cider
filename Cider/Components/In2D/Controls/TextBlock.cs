@@ -1,14 +1,12 @@
 using Cider.Assets;
 using Cider.Attributes;
 using Cider.Data.In2D;
-using Cider.Extensions;
 using Cider.Input;
 using Cider.Internals;
 using Cider.Render;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Drawing;
 using System.Numerics;
 using System.Threading.Tasks;
 
@@ -187,11 +185,10 @@ namespace Cider.Components.In2D.Controls
 
         public bool TryMeasureSize(out float unscaledWidth, out float unscaledHeight)
         {
-            if (_text is Text text)
+            if (_text is { Size: { IsEmpty: false, Width: var width, Height: var height } })
             {
-                var size = text.Size;
-                unscaledWidth = size.Width;
-                unscaledHeight = size.Height;
+                unscaledWidth = width;
+                unscaledHeight = height;
                 return true;
             }
 

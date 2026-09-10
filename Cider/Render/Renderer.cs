@@ -1,12 +1,11 @@
 using Cider.Assets;
+using Cider.Data.In2D;
 using Cider.Internals;
 using SDL;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 using static SDL.SDL3;
 

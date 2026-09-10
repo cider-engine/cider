@@ -7,7 +7,6 @@ using DotTiled;
 using nkast.Aether.Physics2D.Dynamics;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Numerics;
 
@@ -86,7 +85,7 @@ namespace Cider.Components.In2D
 
                 using (context.PushTarget(_target!))
                 {
-                    context.FillColor(Color.FromArgb(map.BackgroundColor.A, map.BackgroundColor.R, map.BackgroundColor.G, map.BackgroundColor.B));
+                    context.FillColor(new(map.BackgroundColor.R, map.BackgroundColor.G, map.BackgroundColor.B, map.BackgroundColor.A));
 
                     foreach (var entry in entries)
                     {

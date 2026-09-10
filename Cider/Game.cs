@@ -181,9 +181,12 @@ namespace Cider
 
         public static TaskScheduler GetTaskScheduler() => OperatingSystem.IsBrowser() ? TaskScheduler.Default : TaskScheduler.FromCurrentSynchronizationContext();
 
+        private static string _lastWarning = "";
+        
         public static void Warning(string message)
         {
-            Console.Error.WriteLine(message);
+            if (_lastWarning == message) return;
+            Console.Error.WriteLine(_lastWarning = message);
         }
 
         void Initialize()

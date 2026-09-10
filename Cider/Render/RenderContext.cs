@@ -5,7 +5,6 @@ using Cider.Extensions;
 using Cider.Internals;
 using SDL;
 using System;
-using System.Drawing;
 using System.Numerics;
 using static SDL.SDL3;
 
@@ -88,7 +87,7 @@ namespace Cider.Render
             _renderer = renderer.Pointer;
             byte r, g, b, a;
             SDLHelpers.ThrowIfFalse(SDL_GetRenderDrawColor(_renderer, &r, &g, &b, &a));
-            _color = Color.FromArgb(a, r, g, b);
+            _color = new(r, g, b, a);
             SDLHelpers.ThrowIfFalse(SDL_SetRenderDrawColor(_renderer, color.R, color.G, color.B, color.A));
         }
 
@@ -111,7 +110,7 @@ namespace Cider.Render
             byte r, g, b, a;
             SDLHelpers.ThrowIfFalse(SDL_GetTextureColorMod(_texture, &r, &g, &b));
             SDLHelpers.ThrowIfFalse(SDL_GetTextureAlphaMod(_texture, &a));
-            _color = Color.FromArgb(a, r, g, b);
+            _color = new(r, g, b, a);
             SDLHelpers.ThrowIfFalse(SDL_SetTextureColorMod(_texture, color.R, color.G, color.B));
             SDLHelpers.ThrowIfFalse(SDL_SetTextureAlphaMod(_texture, color.A));
         }

@@ -21,16 +21,32 @@ namespace Cider.Extensions
         {
             public void Add(ReadOnlySpan<T> items)
             {
-                foreach (var item in items) collection.Add(item);
+                if (collection is List<T> list) list.Add(items);
+                else foreach (var item in items) collection.Add(item);
             }
+        }
+
+        // CS8620
+        public static void Add<T>(this ICollection<T> collection, IEnumerable<T> items)
+        {
+            if (collection is List<T> list) list.AddRange(items);
+            else foreach (var item in items) collection.Add(item);
         }
 
         extension<T>(IList<T> list)
         {
             public void Add(ReadOnlySpan<T> items)
             {
-                foreach (var item in items) list.Add(item);
+                if (list is List<T> listImpl) listImpl.Add(items);
+                else foreach (var item in items) list.Add(item);
             }
+        }
+
+        // CS8620
+        public static void Add<T>(this IList<T> list, IEnumerable<T> items)
+        {
+            if (list is List<T> listImpl) listImpl.AddRange(items);
+            else foreach (var item in items) list.Add(item);
         }
 
         extension<T>(List<T> list)
@@ -42,6 +58,12 @@ namespace Cider.Extensions
             }
         }
 
+        // CS8620
+        public static void Add<T>(this List<T> list, IEnumerable<T> items)
+        {
+            list.AddRange(items);
+        }
+
         extension(ComponentCollection components)
         {
             public void Add(ReadOnlySpan<Component> items)
@@ -51,6 +73,11 @@ namespace Cider.Extensions
             }
         }
 
+        // CS8620
+        public static void Add<T>(this ComponentCollection components, IEnumerable<T> items) where T : Component
+        {
+            foreach (var item in items) components.Add(item);
+        }
 
         extension<T>(ItemObservableCollection<T> collection)
         {
@@ -59,6 +86,12 @@ namespace Cider.Extensions
                 collection.Capacity = collection.Count + items.Length;
                 collection.AddRange(items);
             }
+        }
+
+        // CS8620
+        public static void Add<T>(this ItemObservableCollection<T> collection, IEnumerable<T> items)
+        {
+            foreach (var item in items) collection.Add(item);
         }
     }
 }

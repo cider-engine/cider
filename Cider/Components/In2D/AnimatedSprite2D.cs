@@ -55,8 +55,6 @@ namespace Cider.Components.In2D
                 {
                     var index = int.CreateChecked(_accumulator.Ticks / FramePerTimeSpan.Ticks);
 
-                    Debug.WriteLine(index);
-
                     var frame = animation.SpriteFrames[index];
 
                     if (frame.Texture.LoadTextureAsync(context.Renderer) is { IsCompletedSuccessfully: true } task)

@@ -63,6 +63,12 @@ namespace Cider.Extensions
                     };
                 }
             }
+
+            public void Deconstruct(out float x, out float y)
+            {
+                x = vector.X;
+                y = vector.Y;
+            }
         }
     }
 

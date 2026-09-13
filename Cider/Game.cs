@@ -189,6 +189,8 @@ namespace Cider
             Console.Error.WriteLine(_lastWarning = message);
         }
 
+        public static MainThreadAwaitable ResumeOnMainThread() => new();
+
         void Initialize()
         {
             // 必要设置
@@ -546,12 +548,46 @@ namespace Cider
 
             public void OnCompleted(Action continuation)
             {
-                if (continuation is not null) Instance._endOfFrameContinuations.Add(continuation);
+                Debug.Assert(SDLHelpers.IsOnMainThread());
+                ArgumentNullException.ThrowIfNull(continuation);
+                Instance._endOfFrameContinuations.Add(continuation);
             }
 
             public void UnsafeOnCompleted(Action continuation)
             {
-                if (continuation is not null) Instance._endOfFrameContinuations.Add(continuation);
+                Debug.Assert(SDLHelpers.IsOnMainThread());
+                ArgumentNullException.ThrowIfNull(continuation);
+                Instance._endOfFrameContinuations.Add(continuation);
+            }
+        }
+
+        public readonly struct MainThreadAwaitable
+        {
+            public MainThreadAwaiter GetAwaiter() => new();
+        }
+
+        public readonly struct MainThreadAwaiter : ICriticalNotifyCompletion
+        {
+            // 实现参考Task.Yield / YieldAwaitable
+            public bool IsCompleted => SDLHelpers.IsOnMainThread();
+
+            public void GetResult()
+            { }
+
+            private static readonly SendOrPostCallback _callback = ContextCallback;
+
+            private static void ContextCallback(object? state) => ((Action)state!).Invoke();
+
+            public void OnCompleted(Action continuation)
+            {
+                ArgumentNullException.ThrowIfNull(continuation);
+                Instance.CurrentSynchronizationContext.Post(_callback, continuation);
+            }
+
+            public void UnsafeOnCompleted(Action continuation)
+            {
+                ArgumentNullException.ThrowIfNull(continuation);
+                Instance.CurrentSynchronizationContext.Post(_callback, continuation);
             }
         }
     }

@@ -37,14 +37,14 @@ namespace Cider.Render
             }
         }
 
-        [IndirectRenderFunction]
+        [CameraDependent]
         public void FillRectangle(Vector2 position, float width, float height, float rotationInDegrees, Color color, Vector2 scale)
         {
             using var colorScope = new RenderTextureColorScope(Renderer.WhiteSinglePixelTexture.Value, color);
             RenderTexture(Renderer.WhiteSinglePixelTexture.Value, position, null, rotationInDegrees, new(width * scale.X, height * scale.Y), Vector2.Zero, FlipMode.None);
         }
 
-        [IndirectRenderFunction]
+        [CameraDependent]
         public void RenderTexture(Texture texture, Vector2 position, RectangleF? sourceRectangle, float rotationInDegrees, Vector2 scale, Vector2 originInSource, FlipMode flipMode)
         {
             var destination = sourceRectangle is RectangleF rect
@@ -54,6 +54,7 @@ namespace Cider.Render
             RenderTexture(texture, sourceRectangle, destination, rotationInDegrees, originInSource * scale, flipMode);
         }
 
+        [CameraDependent]
         public unsafe void RenderTexture(Texture texture, RectangleF? sourceRectangle, RectangleF? destinationRectangle, float rotationInDegrees, Vector2 originInDestination, FlipMode flipMode)
         {
             SDL_FRect source;
@@ -74,6 +75,16 @@ namespace Cider.Render
                 y = originInDestination.Y,
             };
             SDLHelpers.ThrowIfFalse(SDL_RenderTextureRotated(Renderer.Pointer, texture.Pointer, sourceRectangle.HasValue ? &source : null, destinationRectangle.HasValue ? &destination : null, rotationInDegrees, &center, (SDL_FlipMode)flipMode));
+        }
+
+        [CameraIndependent]
+        public unsafe void RenderGeometry(ReadOnlySpan<TextureMappingVertex> vertices, Texture? mappingTexture = null, ReadOnlySpan<int> indices = default)
+        {
+            fixed (TextureMappingVertex* vertexPtr = vertices)
+            fixed (int* indexPtr = indices)
+            {
+                SDLHelpers.ThrowIfFalse(SDL_RenderGeometry(Renderer.Pointer, mappingTexture?.Pointer, (SDL_Vertex*)vertexPtr, vertices.Length, indexPtr, indices.Length));
+            }
         }
     }
 

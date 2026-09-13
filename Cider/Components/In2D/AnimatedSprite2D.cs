@@ -1,6 +1,7 @@
 using Cider.Assets;
 using Cider.Data;
 using Cider.Data.In2D;
+using Cider.Extensions;
 using Cider.Render;
 using System;
 using System.Collections.Generic;
@@ -29,8 +30,18 @@ namespace Cider.Components.In2D
         public TimeSpan FramePerTimeSpan
         {
             get;
-            set => field = value < TimeSpan.Zero ? throw new ArgumentOutOfRangeException(nameof(FramePerTimeSpan)) : value;
+            set
+            {
+                field = value <= TimeSpan.Zero ? throw new ArgumentOutOfRangeException(nameof(FramePerTimeSpan)) : value;
+                _accumulator = TimeSpan.Zero;
+            }
         } = TimeSpan.FromSeconds(1);
+
+        public FlipMode FlipMode { get; set; }
+
+        public int FrameIndex { get; private set => ArgumentOutOfRangeException.ThrowIfNegative(field = value, nameof(FrameIndex));}
+
+        public bool IsCentered { get; set; } = true;
 
         public AnimatedSprite2D()
         {
@@ -53,17 +64,23 @@ namespace Cider.Components.In2D
             {
                 if (animations.TryGetValue(CurrentAnimation, out var animation))
                 {
-                    var index = int.CreateChecked(_accumulator.Ticks / FramePerTimeSpan.Ticks);
+                    if (animation.SpriteFrames.Count == 0) return;
 
-                    var frame = animation.SpriteFrames[index];
+                    var frame = animation.SpriteFrames[FrameIndex];
 
-                    if (frame.Texture.LoadTextureAsync(context.Renderer) is { IsCompletedSuccessfully: true } task)
+                    if (frame.Texture.TryGetLoaded(context.Renderer, out var texture))
                     {
-                        var texture = task.Result;
-
                         var transform = GlobalTransform;
 
-                        context.RenderTexture(texture, transform.Position, frame.Region, transform.RotationInDegrees, transform.Scale, Vector2.Zero, FlipMode.None);
+                        var center = frame.Region is RectangleF rect ? new Vector2(rect.Width / 2, rect.Height / 2) : new Vector2(texture.Width / 2f, texture.Height / 2f);
+
+                        context.RenderTexture(texture,
+                            IsCentered ? (transform.Position - transform.Scale * center) : transform.Position,
+                            frame.Region,
+                            transform.RotationInDegrees,
+                            transform.Scale,
+                            IsCentered ? center : Vector2.Zero,
+                            FlipMode);
                     }
                 }
 
@@ -76,38 +93,60 @@ namespace Cider.Components.In2D
 
         private protected override void OnUpdateInternal(TimeContext context)
         {
-            if (CurrentAnimation != null)
+            if (CurrentAnimation is not null)
             {
                 if (animations.TryGetValue(CurrentAnimation, out var animation))
                 {
-                    switch (animation.LoopMode)
+                    int frame; // 没有初始化变量使用的话编译器会自动报错
+
+                    if (animation.SpriteFrames.Count <= 1)
+                    {
+                        frame = 0;
+                    }
+
+                    else switch (animation.LoopMode)
                     {
                         case LoopMode.None:
                             {
                                 Debug.Assert(_accumulator >= TimeSpan.Zero);
-                                var lastFrame = (animation.SpriteFrames.Count - 1) * FramePerTimeSpan;
-                                if (_accumulator < lastFrame)
+
+                                var max = (animation.SpriteFrames.Count - 1) * FramePerTimeSpan;
+                                if (_accumulator < max)
                                     _accumulator += context.DeltaTime;
+
+                                frame = int.CreateChecked(_accumulator.Ticks / FramePerTimeSpan.Ticks);
+
                                 break;
                             }
 
                         case LoopMode.Linear:
                             {
+                                Debug.Assert(_accumulator >= TimeSpan.Zero);
+
                                 _accumulator += context.DeltaTime;
-                                var total = animation.SpriteFrames.Count * FramePerTimeSpan;
-                                if (_accumulator >= total) _accumulator -= total;
+                                var max = animation.SpriteFrames.Count * FramePerTimeSpan;
+                                while (_accumulator >= max) _accumulator -= max;
+
+                                frame = int.CreateChecked(_accumulator.Ticks / FramePerTimeSpan.Ticks);
+
                                 break;
                             }
 
                         case LoopMode.Pingpong:
                             {
-                                // TODO
+                                _accumulator += context.DeltaTime; // 会无限膨胀，但是TimeSpan.MaxValue太大了不用管
+
+                                frame = int.CreateChecked(long.PingPong(_accumulator.Ticks / FramePerTimeSpan.Ticks, animation.SpriteFrames.Count - 1));
+
                                 break;
                             }
 
                         default:
                             throw new InvalidOperationException();
                     }
+
+                    
+                    if (FrameIndex != frame) FrameIndex = frame;
                 }
             }
             base.OnUpdateInternal(context);
@@ -115,6 +154,7 @@ namespace Cider.Components.In2D
 
         public void Play(string animation)
         {
+            if (_currentAnimation == animation) return;
             _currentAnimation = animation;
             _accumulator = TimeSpan.Zero;
         }
@@ -153,7 +193,7 @@ namespace Cider.Components.In2D
 
     public readonly record struct SpriteFrame
     {
-        public required TextureAsset Texture { get; init => ArgumentNullException.ThrowIfNull(field = value); }
+        public required TextureContainer Texture { get; init => field = value is null ? throw new ArgumentNullException(nameof(Texture)) : value; }
         public RectangleF? Region { get; init; }
     }
 }

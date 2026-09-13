@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using Cider.Data.In2D;
+using Cider.Extensions;
 
 namespace Cider.Animation
 {
@@ -11,25 +12,44 @@ namespace Cider.Animation
     /// </summary>
     public static class Tween
     {
-        public static ITween<T> Create<T>(T startValue, T endValue, Action<T> valueSetter, TimeSpan duration, PlaybackDirection direction = PlaybackDirection.Normal) where T : INumber<T>
+
+        public static ITween<T> Create<T>(T startValue, T endValue, Action<T> valueSetter, TimeSpan duration, EasingFunction easing, PlaybackDirection direction = PlaybackDirection.Normal) where T : INumber<T>
         {
             var tween = new TweenNumber<T>(startValue, endValue, duration, direction);
             tween.ValueChanged += valueSetter;
+            tween.Easing = easing;
+            return tween;
+        }
+
+        public static ITween<T> Create<T>(T startValue, T endValue, Action<T> valueSetter, TimeSpan duration, PlaybackDirection direction = PlaybackDirection.Normal) where T : INumber<T>
+        {
+            return Create(startValue, endValue, valueSetter, duration, Easings.Linear, direction);
+        }
+
+        public static ITween<Vector2> Create(Vector2 startValue, Vector2 endValue, Action<Vector2> valueSetter, TimeSpan duration, EasingFunction easing, PlaybackDirection direction = PlaybackDirection.Normal)
+        {
+            var tween = new TweenVector2(startValue, endValue, duration, direction);
+            tween.ValueChanged += valueSetter;
+            tween.Easing = easing;
             return tween;
         }
 
         public static ITween<Vector2> Create(Vector2 startValue, Vector2 endValue, Action<Vector2> valueSetter, TimeSpan duration, PlaybackDirection direction = PlaybackDirection.Normal)
         {
-            var tween = new TweenVector2(startValue, endValue, duration, direction);
+            return Create(startValue, endValue, valueSetter, duration, Easings.Linear, direction);
+        }
+
+        public static ITween<Color> Create(Color startValue, Color endValue, Action<Color> valueSetter, TimeSpan duration, EasingFunction easing, PlaybackDirection direction = PlaybackDirection.Normal)
+        {
+            var tween = new TweenColor(startValue, endValue, duration, direction);
             tween.ValueChanged += valueSetter;
+            tween.Easing = easing;
             return tween;
         }
 
         public static ITween<Color> Create(Color startValue, Color endValue, Action<Color> valueSetter, TimeSpan duration, PlaybackDirection direction = PlaybackDirection.Normal)
         {
-            var tween = new TweenColor(startValue, endValue, duration, direction);
-            tween.ValueChanged += valueSetter;
-            return tween;
+            return Create(startValue, endValue, valueSetter, duration, Easings.Linear, direction);
         }
     }
 
@@ -142,18 +162,8 @@ namespace Cider.Animation
 
         public void Seek(TimeSpan time)
         {
-            // TODO: implement Seek
-            throw new NotImplementedException();
-            //if (time < TimeSpan.Zero)
-            //    _elapsed = TimeSpan.Zero;
-
-            //else if (time > Duration)
-            //    _elapsed = Duration;
-
-            //else
-            //    _elapsed = time;
-
-            //UpdateValue();
+            _elapsed = time;
+            IsCompleted = false;
         }
 
         public void Update(TimeSpan delta)
@@ -171,12 +181,12 @@ namespace Cider.Animation
                         Complete();
                         return;
                     }
-                    UpdateValue();
+                    UpdateValue(_elapsed);
                     return;
 
                 case (true, true, PlaybackDirection.Normal):
                     _elapsed = EnsureInPeriod(_elapsed);
-                    UpdateValue();
+                    UpdateValue(_elapsed);
                     return;
 
                 case (false, _, PlaybackDirection.Normal):
@@ -194,40 +204,27 @@ namespace Cider.Animation
                         Complete();
                         return;
                     }
-                    UpdateValue();
+                    UpdateValue(_elapsed);
                     return;
 
                 case (false, true, PlaybackDirection.Reverse):
                     _elapsed = EnsureInPeriod(_elapsed);
-                    UpdateValue();
+                    UpdateValue(_elapsed);
                     return;
 
-                case (true, _, PlaybackDirection.PingPong):
-                    if (_elapsed >= Duration)
-                    {
-                        _elapsed = 2 * Duration - _elapsed;
-                        _forward = false;
-                    }
-                    UpdateValue();
+                case (_, true, PlaybackDirection.PingPong):
+                    // _elapsed会无限膨胀，但是TimeSpan.MaxValue太大了不用管
+                    UpdateValue(TimeSpan.FromTicks(long.PingPong(_elapsed.Ticks, Duration.Ticks)));
                     return;
 
-                case (false, false, PlaybackDirection.PingPong):
-                    if (_elapsed <= TimeSpan.Zero)
+                case (_, false, PlaybackDirection.PingPong):
+                    if (_elapsed >= 2 * Duration)
                     {
                         _elapsed = TimeSpan.Zero;
                         Complete();
                         return;
                     }
-                    UpdateValue();
-                    return;
-
-                case (false, true, PlaybackDirection.PingPong):
-                    if (_elapsed <= TimeSpan.Zero)
-                    {
-                        _elapsed = -_elapsed;
-                        _forward = true;
-                    }
-                    UpdateValue();
+                    UpdateValue(TimeSpan.FromTicks(long.PingPong(_elapsed.Ticks, Duration.Ticks)));
                     return;
             }
 
@@ -241,9 +238,9 @@ namespace Cider.Animation
             return TimeSpan.FromTicks(ticks);
         }
 
-        private void UpdateValue()
+        private void UpdateValue(TimeSpan elapsed)
         {
-            var t = Duration <= TimeSpan.Zero ? 1.0 : Math.Clamp(_elapsed.TotalSeconds / Duration.TotalSeconds, 0.0, 1.0);
+            var t = Math.Clamp(elapsed.TotalSeconds / Duration.TotalSeconds, 0.0, 1.0);
             var eased = Easing(t);
             var value = Lerp(StartValue, EndValue, eased);
             ValueChanged?.Invoke(value);
@@ -251,7 +248,7 @@ namespace Cider.Animation
 
         private void Complete()
         {
-            UpdateValue();
+            UpdateValue(_elapsed);
             IsPlaying = false;
             IsCompleted = true;
             Completed?.Invoke();

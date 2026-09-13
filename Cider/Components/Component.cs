@@ -358,7 +358,7 @@ namespace Cider.Components
         /// <para>等待当前帧的帧末</para>
         /// <para>在生命周期函数中修改Children属性可通过此方法在帧末修改</para>
         /// <para>此方法的返回值必须使用await异步等待，禁止同步等待</para>
-        /// <para>通过此方法进行的等待在恢复执行时默认在游戏主循环的线程上执行</para>
+        /// <para>此函数应在主线程上使用，在其它线程中使用不保证结果，且在恢复执行时默认在游戏主循环的线程上执行</para>
         /// <para>已经通过此方法到达帧末时再次调用此方法进行等待会使后续代码同步执行，不会等待到下一帧</para>
         /// <para>例如：</para>
         /// <code>
@@ -368,18 +368,6 @@ namespace Cider.Components
         ///     // 此处为当前帧末
         ///     await WaitForEndOfFrame();
         ///     // 此处的代码会同步执行，不会等待到下一帧
-        /// }
-        /// </code>
-        /// <para>也可通过本地函数使用此方法，例如：</para>
-        /// <code>
-        /// protected override void OnLoaded(Scene root)
-        /// {
-        ///     var foo = Foo(); // 可跟踪此Task的状态
-        ///     async Task Foo()
-        ///     {
-        ///         await WaitForEndOfFrame();
-        ///         // 后续代码
-        ///     }
         /// }
         /// </code>
         /// </summary>

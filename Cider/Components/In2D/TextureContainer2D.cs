@@ -19,10 +19,9 @@ namespace Cider.Components.In2D
         {
             if (Texture is null) return;
 
-            if (Texture.OwnerRenderer != context.Renderer) throw new InvalidOperationException();
-
             var transform = GlobalTransform;
 
+            //  Renderer不对的话这一行会抛出异常
             context.RenderTexture(Texture, transform.Position, Region, transform.RotationInDegrees, transform.Scale, Origin, FlipMode);
         }
     }

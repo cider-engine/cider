@@ -6,6 +6,8 @@ namespace Cider.Internals
 {
     internal static class SDLHelpers
     {
+        public static bool IsOnMainThread() => SDL3.SDL_IsMainThread();
+
         /// <summary>
         /// 
         /// </summary>

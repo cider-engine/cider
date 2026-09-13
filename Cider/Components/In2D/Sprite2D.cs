@@ -1,10 +1,8 @@
-using Cider.Assets;
 using Cider.Data.In2D;
 using Cider.Input;
 using Cider.Render;
 using System;
 using System.Numerics;
-using System.Threading.Tasks;
 
 namespace Cider.Components.In2D
 {
@@ -12,7 +10,7 @@ namespace Cider.Components.In2D
     {
         private RectangleF? _cachedRenderRegion = null;
 
-        public TextureAsset? Texture
+        public TextureContainer Texture
         {
             get;
             set
@@ -24,13 +22,9 @@ namespace Cider.Components.In2D
 
         public bool IsCentered { get; set { field = value; _cachedRenderRegion = null; } } = true;
 
-        public bool FlipHorizontally { get; set; } = false;
+        public FlipMode FlipMode { get; set; }
 
-        public bool FlipVertically { get; set; } = false;
-
-        public bool RegionEnabled { get; set { field = value; _cachedRenderRegion = null; } } = false;
-
-        public RectangleF RegionRectangle { get; set { field = value; _cachedRenderRegion = null; } } = RectangleF.Empty;
+        public RectangleF? Region { get; set { field = value; _cachedRenderRegion = null; } } = null;
 
         public int FrameIndex
         {
@@ -79,7 +73,7 @@ namespace Cider.Components.In2D
 
             if (HorizontalFrameCount == 1 && VerticalFrameCount == 1)
             {
-                _cachedRenderRegion = RegionEnabled ? RegionRectangle : new(0, 0, texture.Width, texture.Height);
+                _cachedRenderRegion = Region ?? new(0, 0, texture.Width, texture.Height);
                 return;
             }
 
@@ -92,11 +86,11 @@ namespace Cider.Components.In2D
             var x = frameWidth * column;
             var y = frameHeight * row;
 
-            if (RegionEnabled) _cachedRenderRegion = new RectangleF(
-                RegionRectangle.X + x,
-                RegionRectangle.Y + y,
-                RegionRectangle.Width,
-                RegionRectangle.Height);
+            if (Region is RectangleF rect) _cachedRenderRegion = new RectangleF(
+                rect.X + x,
+                rect.Y + y,
+                rect.Width,
+                rect.Height);
 
             else _cachedRenderRegion = new RectangleF(
                 x,
@@ -117,11 +111,10 @@ namespace Cider.Components.In2D
 
         protected override void OnRender(RenderContext context)
         {
-            if (Texture is null) return;
+            if (Texture is null || Color.A == 0) return;
 
-            if (Texture?.LoadTextureAsync(context.Renderer) is Task<Texture> { IsCompletedSuccessfully: true } task)
+            if (Texture.TryGetLoaded(context.Renderer, out var texture))
             {
-                var texture = task.Result;
                 if (_cachedRenderRegion is null) UpdateRenderRegion(texture);
 
                 var rect = _cachedRenderRegion!.Value;
@@ -145,12 +138,7 @@ namespace Cider.Components.In2D
 
                     originInSource: IsCentered ? new Vector2(rect.Width / 2, rect.Height / 2) : Vector2.Zero,
 
-                    flipMode: (FlipHorizontally
-                        ? FlipMode.FlipHorizontally
-                        : FlipMode.None) |
-                    (FlipVertically
-                        ? FlipMode.FlipVertically
-                        : FlipMode.None));
+                    flipMode: FlipMode);
             }
         }
     }

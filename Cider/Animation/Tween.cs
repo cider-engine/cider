@@ -264,12 +264,7 @@ namespace Cider.Animation
         public TweenNumber(T start, T end, TimeSpan duration, PlaybackDirection direction) : base(start, end, duration, direction)
         { }
 
-        public override T Lerp(T a, T b, double t)
-        {
-            var at = double.CreateChecked(a);
-            var bt = double.CreateChecked(b);
-            return T.CreateChecked(at + (bt - at) * t);
-        }
+        public override T Lerp(T a, T b, double t) => GenericExtensions.Lerp(a, b, t);
     }
 
     /// <summary>
@@ -280,12 +275,7 @@ namespace Cider.Animation
         public TweenVector2(Vector2 start, Vector2 end, TimeSpan duration, PlaybackDirection direction) : base(start, end, duration, direction)
         { }
 
-        public override Vector2 Lerp(Vector2 a, Vector2 b, double t)
-        {
-            var x = a.X + ((double)b.X - a.X) * t;
-            var y = a.Y + ((double)b.Y - a.Y) * t;
-            return new((float)x, (float)y);
-        }
+        public override Vector2 Lerp(Vector2 a, Vector2 b, double t) => Vector2.Lerp(a, b, t);
     }
 
     /// <summary>

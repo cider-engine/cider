@@ -45,7 +45,7 @@ namespace Cider.Audio
             SDLHelpers.ThrowIfFalse(SetTrackStoppedCallback(_track, (nint)callback, (nint)mixer.Pointer));
         }
 
-        public AudioClip? TrackAudio
+        public AudioClip? Audio
         {
             get
             {
@@ -198,7 +198,7 @@ namespace Cider.Audio
                         ownerMixer.TrackDictionary.TryRemove((nint)_track, out _);
                     }
                     ownerMixer = null!; // 解除引用，访问触发异常
-                    TrackAudio = null;
+                    Audio = null;
                 }
 
                 unsafe

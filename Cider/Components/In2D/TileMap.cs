@@ -332,11 +332,11 @@ namespace Cider.Components.In2D
                 }
 
                 //return ResolvePath(mapPath, imageSource);
-                return Path.Combine(Path.GetDirectoryName(mapPath!)!, imageSource).Replace('\\', '/');
+                return Path.Combine(Path.GetDirectoryName(mapPath)!, imageSource).Replace('\\', '/');
             }
 
             //return ResolvePath(tileset.Source.Value, imageSource);
-            return Path.Combine(Path.GetDirectoryName(mapPath!)!, imageSource).Replace('\\', '/');
+            return Path.Combine(Path.GetDirectoryName(mapPath)!, Path.GetDirectoryName(tileset.Source.Value)!, imageSource).Replace('\\', '/');
         }
 
         private static TextureAsset GetTextureAsset(string path)

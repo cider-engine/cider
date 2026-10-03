@@ -96,10 +96,12 @@ namespace Cider.Components.In2D
         /// <summary>
         /// <para>当前的全局变换</para>
         /// <para>尽管这个属性的开销较小，在单次使用中仍建议将此属性的计算结果存为局部变量并复用</para>
+        /// <para>修改这个属性只会间接修改<c>Transform</c>属性的值</para>
         /// </summary>
         public Transform2D GlobalTransform
         {
             get => _parentGlobalTransform.ApplyTransform2D(Transform);
+            set => Transform = _parentGlobalTransform.Invert().ApplyTransform2D(value);
         }
 
         /// <summary>

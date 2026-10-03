@@ -2,8 +2,6 @@ using Cider.Extensions;
 using Cider.Internals;
 using SDL;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Cider
 {
@@ -17,7 +15,7 @@ namespace Cider
         public static unsafe void OpenUrl(ReadOnlySpan<byte> urlNullTerminatedUtf8)
         {
             fixed (byte* ptr = urlNullTerminatedUtf8)
-            SDLHelpers.ThrowIfFalse(SDL3.SDL_OpenURL(urlNullTerminatedUtf8));
+                SDLHelpers.ThrowIfFalse(SDL3.SDL_OpenURL(ptr));
         }
     }
 }

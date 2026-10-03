@@ -62,7 +62,7 @@ namespace Cider
         /// <summary>
         /// MainWindow.Scene的别名
         /// </summary>
-        public Scene CurrentScene
+        public Scene? CurrentScene
         {
             get => MainWindow.Scene;
             set => MainWindow.Scene = value;
@@ -198,11 +198,11 @@ namespace Cider
 
 
             MainWindow = new Window(ProjectSettings.MainWindowTitle,
-                ProjectSettings.MainScene,
                 ProjectSettings.MainWindowSize.Width,
                 ProjectSettings.MainWindowSize.Height,
                 ProjectSettings.MainWindowFlags)
             {
+                Scene = ProjectSettings.MainScene,
                 BackgroundColor = ProjectSettings.MainWindowBackgroundColor,
                 ClearColor = ProjectSettings.MainWindowClearColor
             };
@@ -221,7 +221,7 @@ namespace Cider
 
             _initialized = true;
             Initialized?.Invoke();
-            CurrentScene.OnLoadedDispatcher(CurrentScene);
+            CurrentScene?.OnLoadedDispatcher(CurrentScene);
         }
 
         void Update(TimeContext context)
@@ -241,6 +241,8 @@ namespace Cider
                 if (window.IsClosed) continue;
 
                 var currentScene = window.Scene;
+
+                if (currentScene is null) continue;
 
                 currentScene.OnEarlyUpdate();
 
@@ -262,7 +264,7 @@ namespace Cider
 
                 currentScene.OnLateUpdate();
 
-                Draw(window, context);
+                Draw(window, currentScene, context);
             }
 
             // 我在想要不要加try finally
@@ -274,7 +276,7 @@ namespace Cider
             InputManager.Update();
         }
 
-        unsafe void Draw(Window window, TimeContext context)
+        unsafe void Draw(Window window, Scene scene, TimeContext context)
         {
             using (var colorScope = new RenderDrawColorScope(window.Renderer, window.ClearColor))
             {
@@ -294,7 +296,7 @@ namespace Cider
                 SDLHelpers.ThrowIfFalse(SDL_RenderFillRect(window.Renderer.Pointer, &rect));
             }
 
-            window.Scene.OnRenderDispatcher(new()
+            scene.OnRenderDispatcher(new()
             {
                 Renderer = window.Renderer,
                 TimeContext = context
@@ -499,15 +501,8 @@ namespace Cider
                             if (e->type == CiderSynchronizationContext.EventType)
                                 while (Instance.CurrentSynchronizationContext.Tasks.TryTake(out var task))
                                 {
-                                    try
-                                    {
-                                        task.d.Invoke(task.state);
-                                    }
-                                    catch (Exception exc)
-                                    {
-                                        Instance._gameProcess.TrySetException(exc);
-                                        return SDL_AppResult.SDL_APP_FAILURE;
-                                    }
+                                    // 外层有异常处理
+                                    task.d.Invoke(task.state);
                                 }
                             break;
                         }
@@ -594,7 +589,7 @@ namespace Cider
 
     /// <summary>
     /// <para>游戏时间戳，单位为纳秒</para>
-    /// <para>支持作差得到<c>TimeSpan</c>，但<c>TimeSpan的最小单位为1刻即100纳秒，会产生精度丢失</c></para>
+    /// <para>支持作差得到<c>TimeSpan</c>，但<c>TimeSpan</c>的最小单位为1刻即100纳秒，会产生精度丢失</para>
     /// </summary>
     /// <param name="Nanoseconds"></param>
     public readonly record struct GameTimestamp(ulong Nanoseconds)

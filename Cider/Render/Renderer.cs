@@ -11,6 +11,13 @@ using static SDL.SDL3;
 
 namespace Cider.Render
 {
+    public readonly record struct VSync(int Interval)
+    {
+        public static VSync Enabled => new(1);
+        public static VSync Disabled => new(0);
+        public static VSync Adaptive => new(-1);
+    }
+
     public class Renderer : IDisposable
     {
         private readonly unsafe SDL_Renderer* _renderer;
@@ -138,6 +145,29 @@ namespace Cider.Render
                     SDLHelpers.ThrowIfFalse(SDL_GetCurrentRenderOutputSize(_renderer, &width, &height));
 
                     return new(width, height);
+                }
+            }
+        }
+
+        public VSync VSync
+        {
+            get
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                unsafe
+                {
+                    int vsync;
+                    SDLHelpers.ThrowIfFalse(SDL_GetRenderVSync(_renderer, &vsync));
+                    return new(vsync);
+                }
+            }
+
+            set
+            {
+                ObjectDisposedException.ThrowIf(disposedValue, this);
+                unsafe
+                {
+                    SDLHelpers.ThrowIfFalse(SDL_SetRenderVSync(_renderer, value.Interval));
                 }
             }
         }

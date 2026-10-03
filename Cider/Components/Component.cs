@@ -28,43 +28,25 @@ namespace Cider.Components
             internal set
             {
                 if (this is Scene) throw new InvalidOperationException("Scene cannot have Parent");
-                if (field is Scene scene1)
+                if ((field as Scene ?? Root) is Scene scene1)
                 {
                     if (scene1.Window is Window window)
-                        OnWindowChangedDispatcher(window, null); // 如果已连接到窗口中就通知，与直接修改Window属性的通知不一样
-
-                    OnDetachFromSceneDispatcher(scene1);
-                }
-                else if (Root is Scene scene2)
-                {
-                    if (scene2.Window is Window window)
                         OnWindowChangedDispatcher(window, null);
 
-                    OnDetachFromSceneDispatcher(scene2);
+                    OnDetachFromSceneDispatcher(scene1);
                 }
 
                 field = value;
 
-                if (value is Scene scene3)
+                if ((value as Scene ?? value?.Root) is Scene scene2)
                 {
-                    OnAttachToSceneDispatcher(scene3);
+                    OnAttachToSceneDispatcher(scene2);
 
-                    if (scene3.Window is Window window)
-                    {
-                        OnWindowChangedDispatcher(null, window); // 一种情况是一开始就不在树中CurrentWindow为null，另一种情况是从一个树挪到另一个树下经上述步骤CurrentWindow已经是null了
-
-                        if (Game.IsInitialized) OnLoadedDispatcher(scene3);
-                    }
-                }
-                else if (value?.Root is Scene scene4)
-                {
-                    OnAttachToSceneDispatcher(scene4);
-
-                    if (scene4.Window is Window window)
+                    if (scene2.Window is Window window)
                     {
                         OnWindowChangedDispatcher(null, window);
 
-                        if (Game.IsInitialized) OnLoadedDispatcher(scene4);
+                        if (Game.IsInitialized) OnLoadedDispatcher(scene2);
                     }
                 }
 
@@ -217,6 +199,8 @@ namespace Cider.Components
         [Dispatcher]
         internal virtual void OnRenderDispatcher(RenderContext context)
         {
+            Debug.Assert(CurrentWindow is not null);
+
             if (!IsVisible) return;
             OnRender(context);
             foreach (var item in Children)

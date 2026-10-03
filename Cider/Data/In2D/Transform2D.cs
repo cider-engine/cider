@@ -4,7 +4,7 @@ using System.Numerics;
 
 namespace Cider.Data.In2D
 {
-    public struct Transform2D
+    public record struct Transform2D
     {
         public Transform2D()
         {
@@ -59,5 +59,12 @@ namespace Cider.Data.In2D
         public static Transform2D FromRotationInRadians(float rotationInRadians) => new(Vector2.Zero, rotationInRadians, Vector2.One);
 
         public static Transform2D FromScale(Vector2 scale) => new(Vector2.Zero, 0, scale);
+
+        public static Transform2D Lerp(Transform2D a, Transform2D b, double t) => default(Transform2D) with
+        {
+            Position = Vector2.Lerp(a.Position, b.Position, t),
+            RotationInRadians = float.Lerp(a.RotationInRadians, b.RotationInRadians, t),
+            Scale = Vector2.Lerp(a.Scale, b.Scale, t)
+        };
     }
 }

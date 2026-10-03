@@ -52,5 +52,8 @@ namespace Cider.Project
 
         [SettingGroup(Physics)]
         public Vector2 DefaultGravity { get; set; } = new(0, 0.98f * Game.LogicalUnitPerPhysicsUnit);
+
+        [SettingGroup(Physics)]
+        public bool IsPhysicsInterpolationEnabled { get; set; }
     }
 }

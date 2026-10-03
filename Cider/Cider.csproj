@@ -10,10 +10,10 @@
 	</PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
-    <PackageReference Include="ppy.SDL3-CS" Version="2026.722.0" />
-    <PackageReference Include="ppy.SDL3_image-CS" Version="2026.722.0" />
-    <PackageReference Include="ppy.SDL3_mixer-CS" Version="2026.722.0" />
-    <PackageReference Include="ppy.SDL3_ttf-CS" Version="2026.722.0" />
+    <PackageReference Include="ppy.SDL3-CS" Version="2026.1002.1" />
+    <PackageReference Include="ppy.SDL3_image-CS" Version="2026.1002.1" />
+    <PackageReference Include="ppy.SDL3_mixer-CS" Version="2026.1002.1" />
+    <PackageReference Include="ppy.SDL3_ttf-CS" Version="2026.1002.1" />
     <PackageReference Include="Tenekon.MSBuild.Packaging.ProjectBuildInPackage" Version="2.0.0">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

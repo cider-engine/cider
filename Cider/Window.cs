@@ -52,7 +52,7 @@ namespace Cider
             if (id.IsInvalid) return null;
             unsafe
             {
-                return new(id, SDL_GetWindowFromID((SDL_WindowID)id.Id), new());
+                return new(id, SDL_GetWindowFromID((SDL_WindowID)id.Id));
             }
         }
 
@@ -84,20 +84,16 @@ namespace Cider
         public bool IsClosed => disposedValue;
 
         /// <summary>
-        /// 此窗口连接的场景，设置为null会抛出异常
+        /// 此窗口连接的场景
         /// </summary>
-        public Scene Scene
+        public Scene? Scene
         {
             get;
             set
             {
-                field?.Window = null; // 第一次设置的时候field为null
-                field = value ?? throw new NullReferenceException();
-                value.Window = this;
-                if (Game.IsInitialized)
-                {
-                    value.OnLoadedDispatcher(value); // 如果游戏没有初始化，则在Initialize里调用
-                }
+                field?.Window = null;
+                field = value;
+                value?.Window = this;
             }
         }
 
@@ -214,14 +210,13 @@ namespace Cider
         /// <para>浏览器平台最多只支持1个窗口</para>
         /// </summary>
         /// <param name="title">标题，不可为null</param>
-        /// <param name="scene">场景，不可谓null</param>
         /// <param name="width">窗口宽度</param>
         /// <param name="height">窗口高度</param>
         /// <param name="flags">窗口的其它属性</param>
         /// <exception cref="PlatformNotSupportedException">当已经存在窗口时抛出</exception>
-        public unsafe Window(string title, Scene scene, int width, int height, WindowFlags flags)
+        public unsafe Window(string title, int width, int height, WindowFlags flags)
         {
-            if (OperatingSystem.IsBrowser() && AllWindows.Count > 0) throw new PlatformNotSupportedException("browser doesn't support multiple windows.");
+            if (OperatingSystem.IsBrowser() && _allWindows.Count > 0) throw new PlatformNotSupportedException("browser doesn't support multiple windows.");
 
             SDLHelpers.EnsureOnMainThread();
             using var unmanaged = title.ToUnmanagedUtf8();
@@ -231,28 +226,16 @@ namespace Cider
 
             _renderer = new(_window);
 
-            scene.Window = this;
-
-            Scene = scene;
-
-            SDLHelpers.ThrowIfFalse(SDL_SetRenderVSync(Renderer.Pointer, 1)); // 默认强制垂直同步
-
             _allWindows.Add(WindowId, this);
         }
 
-        private unsafe Window(WindowId id, SDL_Window* window, Scene scene)
+        private unsafe Window(WindowId id, SDL_Window* window)
         {
             _window = window;
 
             WindowId = id;
 
             _renderer = new(_window);
-
-            scene.Window = this;
-
-            Scene = scene;
-
-            SDLHelpers.ThrowIfFalse(SDL_SetRenderVSync(Renderer.Pointer, 1)); // 默认强制垂直同步
 
             _allWindows.Add(WindowId, this);
         }

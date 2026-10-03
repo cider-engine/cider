@@ -1,7 +1,7 @@
+using Cider.Components.In2D;
 using Cider.Extensions;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Cider.Components
 {
@@ -13,13 +13,20 @@ namespace Cider.Components
         public Window? Window
         {
             get;
-            set
+            internal set
             {
                 var old = field;
                 field = value;
                 OnWindowChangedDispatcher(old, value);
+
+                if (value is not null && Game.IsInitialized)
+                {
+                    OnLoadedDispatcher(this); // 如果游戏没有初始化，则在Initialize里调用
+                }
             }
         }
+
+        internal List<Component2D> LastMouseOverComponents { get; } = new(16);
 
         private List<nkast.Aether.Physics2D.Dynamics.Body> BodiesToAdd2D { get; } = new();
         private List<nkast.Aether.Physics2D.Dynamics.Body> BodiesToRemove2D { get; } = new();

@@ -105,25 +105,25 @@ namespace Cider.Assets
         public unsafe Surface RenderSolid(ReadOnlySpan<char> text, Color foreground)
         {
             using var unmanaged = text.ToUnmanagedUtf8();
-            return new(SDLHelpers.ThrowIfPtrIsNull(TTF_RenderText_Solid(_font, unmanaged.Pointer, length: 0, foreground.AsColor()))); // null-terminated
+            return new(SDLHelpers.ThrowIfPtrIsNull(TTF_RenderText_Solid(_font, unmanaged.Pointer, (nuint)unmanaged.Length, foreground.AsColor())));
         }
 
         public unsafe Surface RenderBlended(ReadOnlySpan<char> text, Color foreground)
         {
             using var unmanaged = text.ToUnmanagedUtf8();
-            return new(SDLHelpers.ThrowIfPtrIsNull(TTF_RenderText_Blended(_font, unmanaged.Pointer, length: 0, foreground.AsColor()))); // null-terminated
+            return new(SDLHelpers.ThrowIfPtrIsNull(TTF_RenderText_Blended(_font, unmanaged.Pointer, (nuint)unmanaged.Length, foreground.AsColor())));
         }
 
         public unsafe Surface RenderShaded(ReadOnlySpan<char> text, Color foreground, Color background)
         {
             using var unmanaged = text.ToUnmanagedUtf8();
-            return new(SDLHelpers.ThrowIfPtrIsNull(TTF_RenderText_Shaded(_font, unmanaged.Pointer, length: 0, foreground.AsColor(), background.AsColor()))); // null-terminated
+            return new(SDLHelpers.ThrowIfPtrIsNull(TTF_RenderText_Shaded(_font, unmanaged.Pointer, (nuint)unmanaged.Length, foreground.AsColor(), background.AsColor())));
         }
 
         public unsafe Surface RenderLCD(ReadOnlySpan<char> text, Color foreground, Color background)
         {
             using var unmanaged = text.ToUnmanagedUtf8();
-            return new(SDLHelpers.ThrowIfPtrIsNull(TTF_RenderText_LCD(_font, unmanaged.Pointer, length: 0, foreground.AsColor(), background.AsColor()))); // null-terminated
+            return new(SDLHelpers.ThrowIfPtrIsNull(TTF_RenderText_LCD(_font, unmanaged.Pointer, (nuint)unmanaged.Length, foreground.AsColor(), background.AsColor())));
         }
 
         public unsafe (int width, int height) MeasureString(ReadOnlySpan<char> text)
@@ -131,7 +131,7 @@ namespace Cider.Assets
             using var unmanaged = text.ToUnmanagedUtf8();
             int width;
             int height;
-            TTF_GetStringSize(_font, unmanaged.Pointer, length: 0, &width, &height); // null-terminated
+            TTF_GetStringSize(_font, unmanaged.Pointer, (nuint)unmanaged.Length, &width, &height);
             return (width, height);
         }
 

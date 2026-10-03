@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
 	  <TargetFramework>netstandard2.0</TargetFramework>
@@ -6,11 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<PackageReference Include="Microsoft.Build.Framework" Version="17.14.28" />
-	<PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.14.28" />
+	<PackageReference Include="Microsoft.Build.Framework" Version="18.10.1" />
+	<PackageReference Include="Microsoft.Build.Utilities.Core" Version="18.10.1" />
 	<PackageReference Update="@(PackageReference)" PrivateAssets="All" />
-	<PackageReference Update="Microsoft.Build.Framework" Version="18.8.2" />
-	<PackageReference Update="Microsoft.Build.Utilities.Core" Version="18.8.2" />
   </ItemGroup>
 
 </Project>

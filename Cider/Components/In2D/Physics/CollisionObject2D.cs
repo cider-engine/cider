@@ -6,11 +6,18 @@ using Cider.Physics;
 using nkast.Aether.Physics2D.Dynamics;
 using nkast.Aether.Physics2D.Dynamics.Contacts;
 using System;
+using System.Diagnostics;
 
 namespace Cider.Components.In2D.Physics
 {
     public class CollisionObject2D : Component2D
     {
+        private Transform2D _previousLocal = new();
+        private Transform2D _currentLocal = new();
+        private TimeSpan _previousToCurrent = TimeSpan.Zero;
+        private TimeSpan _interpolationAccumulator = TimeSpan.Zero;
+        private bool _changeTransformFromInterpolation = false;
+
         public CollisionObject2D()
         {
             Body = new()
@@ -68,9 +75,22 @@ namespace Cider.Components.In2D.Physics
 
         private protected override void OnGlobalTransformChangedInternal(EventArgs args)
         {
+            // 如果是插值在修改Transform就跳过下面的物理对象同步
+            if (_changeTransformFromInterpolation)
+            {
+                _changeTransformFromInterpolation = false;
+                base.OnGlobalTransformChangedInternal(args);
+                return;
+            }
+
+            // 手动修改Transform，强制同步到Body
             var globalTransform = ((Transform2DChangedEventArgs)args).CurrentTransform2D;
             var globalPosition = globalTransform.Position;
             var globalRotation = globalTransform.RotationInRadians;
+
+            // 应该换一个更好的方式来阻止物理插值修改Transform时强制同步到物理位置
+            // 但是这里不用在物体瞬移的时候多写一个重置插值的方法
+            _previousLocal = _currentLocal = globalTransform;
 
             if (globalPosition != Body.Position.AsVector2())
             {
@@ -85,7 +105,50 @@ namespace Cider.Components.In2D.Physics
             base.OnGlobalTransformChangedInternal(args);
         }
 
+        private protected override void OnUpdateInternal(TimeContext context)
+        {
+            if (Game.Instance.ProjectSettings.IsPhysicsInterpolationEnabled)
+            {
+                _interpolationAccumulator += context.DeltaTime;
+
+                if (Transform != _currentLocal)
+                {
+                    if (_interpolationAccumulator >= _previousToCurrent)
+                    {
+                        Debug.Assert(!_changeTransformFromInterpolation);
+                        _changeTransformFromInterpolation = true;
+                        Transform = _currentLocal;
+                    }
+
+                    else
+                    {
+                        Debug.Assert(!_changeTransformFromInterpolation);
+                        _changeTransformFromInterpolation = true;
+                        Transform = Transform2D.Lerp(_previousLocal, _currentLocal, _interpolationAccumulator / _previousToCurrent);
+                    }
+                }
+            }
+
+            base.OnUpdateInternal(context);
+        }
+
         private protected override void OnFixedUpdateInternal(TimeContext context)
+        {
+            _previousLocal = _currentLocal;
+            _interpolationAccumulator = TimeSpan.Zero;
+            _previousToCurrent = context.DeltaTime;
+            if (TryGetNewLocalTransform(out var transform))
+            {
+                _currentLocal = transform;
+
+                if (!Game.Instance.ProjectSettings.IsPhysicsInterpolationEnabled)
+                    Transform = transform;
+            }
+
+            base.OnFixedUpdateInternal(context);
+        }
+
+        private bool TryGetNewLocalTransform(out Transform2D transform)
         {
             // 从物理世界获取期望的全局位置和旋转
             var targetGlobalPosition = Body.Position.AsVector2();
@@ -103,12 +166,17 @@ namespace Cider.Components.In2D.Physics
                 var newLocalTransform = _parentGlobalTransform.Invert().ApplyTransform2D(targetGlobalTransform);
 
                 // 更新当前组件的局部位置和旋转
-                Transform = Transform with
+                transform = Transform with
                 {
                     Position = newLocalTransform.Position,
                     RotationInRadians = newLocalTransform.RotationInRadians
                 };
+
+                return true;
             }
+
+            transform = default; // 这个transform不应该使用，所以直接default而不是无参构造
+            return false;
         }
     }
 }

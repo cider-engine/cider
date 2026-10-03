@@ -2,6 +2,7 @@ using Cider.Components;
 using Cider.Components.In2D;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Cider.Input
@@ -19,7 +20,7 @@ namespace Cider.Input
 
         public static event MouseButtonEventHandler MouseDown;
 #nullable enable
-        private static readonly List<Component2D> visitedMouseMovedComponents = new(256); // 深度
+        private static readonly List<Component2D> currentMouseOverComponents = new(16); // 深度
 
         internal static void RaiseMouseMoved(Window? window, in MouseMovedEventArgs args)
         {
@@ -27,10 +28,9 @@ namespace Cider.Input
 
             if (window is { Scene: { } scene, Renderer.Camera2D.OffsetPosition: var offset })
             {
-                using (var result = HitTestResult.GetScopedSingleton(args.Position - args.Movement, offset))
+                using (var result = HitTestResult.GetScopedSingleton(args.Position, offset))
                 {
                     scene.HitTestDispatcher(result);
-
                     if (result.GetComponent() is Component component)
                     {
                         context.Target = component;
@@ -40,52 +40,40 @@ namespace Cider.Input
                             if (item is Component2D c2d)
                             {
                                 c2d.OnMouseMoved(c2d, args, ref context);
-                                visitedMouseMovedComponents.Add(c2d);
+                                currentMouseOverComponents.Add(c2d);
                             }
                         }
                     }
                 }
 
-                var crossIndex = -1;
-
-                using (var result = HitTestResult.GetScopedSingleton(args.Position, offset))
+                foreach (var item in scene.LastMouseOverComponents)
                 {
-                    window.Scene.HitTestDispatcher(result);
-
-                    if (result.GetComponent() is Component component)
+                    if (!currentMouseOverComponents.Contains(item))
                     {
-                        context.Target = component;
-
-                        foreach (var item in component.EnumerateToRoot())
-                        {
-                            if (item is Component2D c2d)
-                            {
-                                crossIndex = visitedMouseMovedComponents.IndexOf(c2d);
-                                if (crossIndex >= 0) break;
-
-                                c2d.IsMouseOver = true;
-                                c2d.OnMouseEnter(c2d, args);
-
-                                c2d.OnMouseMoved(component, args, ref context);
-                            }
-                        }
+                        Debug.Assert(item.IsMouseOver);
+                        item.IsMouseOver = false;
+                        item.OnMouseLeave(item, args);
                     }
                 }
 
+                foreach (var item in currentMouseOverComponents)
                 {
-                    // span的生命周期只在这个block内
-                    var span = CollectionsMarshal.AsSpan(visitedMouseMovedComponents);
-
-                    // 如果第二次命中测试成功，就遍历到第一个重复父元素前
-                    // 如果没成功，就全部遍历
-                    foreach (var c2d in crossIndex >= 0 ? span[..crossIndex] : span)
+                    if (!item.IsMouseOver)
                     {
-                        c2d.IsMouseOver = false;
-                        c2d.OnMouseLeave(c2d, args);
+                        item.IsMouseOver = true;
+                        item.OnMouseEnter(item, args);
                     }
                 }
 
-                visitedMouseMovedComponents.Clear();
+                // 限制在当前block中
+                {
+                    CollectionsMarshal.SetCount(scene.LastMouseOverComponents, currentMouseOverComponents.Count);
+                    var currentMouseOverSpan = CollectionsMarshal.AsSpan(currentMouseOverComponents);
+                    var lastMouseOverSpan = CollectionsMarshal.AsSpan(scene.LastMouseOverComponents);
+                    currentMouseOverSpan.CopyTo(lastMouseOverSpan);
+                }
+
+                currentMouseOverComponents.Clear();
             }
 
             if (!context.SuppressGlobalHandling)

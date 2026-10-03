@@ -17,6 +17,13 @@ namespace Cider.Extensions
 
         extension<T>(T number) where T : INumber<T>
         {
+            public static T Lerp(T a, T b, double t)
+            {
+                var at = double.CreateChecked(a);
+                var bt = double.CreateChecked(b);
+                return T.CreateChecked(at + (bt - at) * t);
+            }
+
             public static T Repeat(T t, T length)
             {
                 T r = t % length;

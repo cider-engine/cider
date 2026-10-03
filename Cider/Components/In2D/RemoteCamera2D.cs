@@ -61,13 +61,15 @@ namespace Cider.Components.In2D
 
         private protected override void OnUpdateInternal(TimeContext context)
         {
-            if (UpdateMode == CameraUpdateMode.Update) OnCameraUpdate(context, ref _currentPosition, _targetPosition);
+            if (UpdateMode == CameraUpdateMode.Update || Game.Instance.ProjectSettings.IsPhysicsInterpolationEnabled)
+                OnCameraUpdate(context, ref _currentPosition, _targetPosition);
             base.OnUpdateInternal(context);
         }
 
         private protected override void OnFixedUpdateInternal(TimeContext context)
         {
-            if (UpdateMode == CameraUpdateMode.FixedUpdate) OnCameraUpdate(context, ref _currentPosition, _targetPosition);
+            if (UpdateMode == CameraUpdateMode.FixedUpdate && !Game.Instance.ProjectSettings.IsPhysicsInterpolationEnabled)
+                OnCameraUpdate(context, ref _currentPosition, _targetPosition);
             base.OnFixedUpdateInternal(context);
         }
 
@@ -120,5 +122,8 @@ namespace Cider.Components.In2D
         FixedUpdate
     }
 
-    public record struct CameraPosition(double X, double Y);
+    public record struct CameraPosition(double X, double Y)
+    {
+        public static CameraPosition operator -(CameraPosition left, CameraPosition right) => new(left.X - right.X, left.Y - right.Y);
+    }
 }

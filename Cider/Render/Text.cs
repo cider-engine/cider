@@ -88,13 +88,13 @@ namespace Cider.Render
 
             using var unmanaged = text.ToUnmanagedUtf8();
 
-            SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_SetTextString(_text, unmanaged.Pointer, 0));
+            SDLHelpers.ThrowIfFalse(SDL3_ttf.TTF_SetTextString(_text, unmanaged.Pointer, (nuint)unmanaged.Length));
         }
 
         public unsafe Text(ITextEngine engine, FontVariant variant, ReadOnlySpan<char> text)
         {
             using var unmanaged = text.ToUnmanagedUtf8();
-            _text = SDLHelpers.ThrowIfPtrIsNull(SDL3_ttf.TTF_CreateText(engine.Pointer, variant.Pointer, unmanaged.Pointer, 0));
+            _text = SDLHelpers.ThrowIfPtrIsNull(SDL3_ttf.TTF_CreateText(engine.Pointer, variant.Pointer, unmanaged.Pointer, (nuint)unmanaged.Length));
 
             OwnerTextEngine = engine;
         }

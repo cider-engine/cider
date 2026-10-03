@@ -69,6 +69,13 @@ namespace Cider.Extensions
                 x = vector.X;
                 y = vector.Y;
             }
+
+            public static Vector2 Lerp(Vector2 a, Vector2 b, double t)
+            {
+                var x = a.X + ((double)b.X - a.X) * t;
+                var y = a.Y + ((double)b.Y - a.Y) * t;
+                return new((float)x, (float)y);
+            }
         }
     }
 

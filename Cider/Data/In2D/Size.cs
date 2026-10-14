@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Text;
 
 namespace Cider.Data.In2D
@@ -16,5 +17,6 @@ namespace Cider.Data.In2D
         }
 
         public readonly bool IsEmpty => Width == 0 && Height == 0;
+        public readonly Vector2 Vector => new(Width, Height);
     }
 }

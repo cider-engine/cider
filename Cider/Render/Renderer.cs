@@ -180,6 +180,9 @@ namespace Cider.Render
             SDLHelpers.EnsureOnMainThread();
             _renderer = SDLHelpers.ThrowIfPtrIsNull(SDL_CreateRenderer(window, (byte*)null));
 
+            if (OperatingSystem.IsBrowser())
+                VSync = VSync.Enabled; // 浏览器端默认开启垂直同步使用requestAnimationFrame，可以手动关闭
+
             WhiteSinglePixelTexture = new(() =>
             {
                 using var surface = new Surface(1, 1);

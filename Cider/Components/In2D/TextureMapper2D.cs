@@ -20,9 +20,9 @@ namespace Cider.Components.In2D
             Children.ComponentAdded += ChildrenComponentAdded;
         }
 
-        private void ChildrenComponentAdded(Component owner, Component changedComponent)
+        private static void ChildrenComponentAdded(Component owner, Component changedComponent)
         {
-            throw new NotImplementedException();
+            throw new InvalidOperationException();
         }
 
         protected override void OnRender(RenderContext context)

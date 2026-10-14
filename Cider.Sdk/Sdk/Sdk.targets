@@ -1,7 +1,7 @@
 <Project>
 	<PropertyGroup>
 		<_IsOnBrowser>false</_IsOnBrowser>
-		<_IsOnBrowser Condition="(!$(TargetFrameworks.Contains('-browser')) And $(BuildToBrowser) == 'true') Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'">true</_IsOnBrowser>
+		<_IsOnBrowser Condition="(!$(TargetFrameworks.Contains('-browser')) And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == '' And $(BuildToBrowser) == 'true') Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'browser'">true</_IsOnBrowser>
 		<_CiderTest>false</_CiderTest>
 		<_CiderTest Condition="$(CiderTest) == 'true'">true</_CiderTest>
 	</PropertyGroup>
@@ -25,10 +25,10 @@
 	<ItemGroup>
 		<CiderAssets Include="$(CiderAssetsPath)\**\*" />
 
-		<_CiderAssetsWithoutMeta Include="@(CiderAssets)" />
-		<_CiderAssetsWithoutMeta Remove="**\*.meta" />
+		<_CiderAssetsWithoutMeta Include="@(CiderAssets)" Exclude="**\*.meta" />
 
-		<Content Include="@(_CiderAssetsWithoutMeta)">
+		<!--Android Assets由AndroidAsset处理 不将其作为Content来避免XA0101警告-->
+		<Content Include="@(_CiderAssetsWithoutMeta)" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">
 			<!--Browser Assets由StaticWebAssetsSdk处理-->
 			<CopyToOutputDirectory Condition="!$(_IsOnBrowser)">PreserveNewest</CopyToOutputDirectory>
 		</Content>
@@ -49,10 +49,12 @@
 	
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<Compile Include="Platform\Android\**\*.cs" />
-		
+
+		<!--此属性只对Android可见-->
+		<CompilerVisibleProperty Include="MonoAndroidAssetsPrefix" />
+
+		<AndroidAsset Remove="@(AndroidAsset)" />
 		<AndroidAsset Include="@(_CiderAssetsWithoutMeta)" />
-		<AndroidAsset Remove="**\*.meta" />
-		<AndroidAsset Remove="**\*.cider" />
 	</ItemGroup>
 	<!--Android End-->
 	
@@ -70,6 +72,12 @@
 		<PackageReference Include="Cider.NativeAssets.WebAssembly" Version="$(CiderVersion)" />
 		
 		<Compile Include="Platform\Browser\**\*.cs" />
+		
+		<Content Include="Platform\Browser\wwwroot\**\*">
+			<Link>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</Link>
+			<!--根目录的wwwroot隐藏，子目录的wwwroot由默认None项自动加载，前提是EnableDefaultNoneItems为默认值或true-->
+			<Visible>false</Visible>
+		</Content>
 		
 		<StaticWebAssetFingerprintPattern Include="JS" Pattern="*.js" Expression="#[.{fingerprint}]!" />
 		<!--<NativeFileReference Include="*.a" />-->

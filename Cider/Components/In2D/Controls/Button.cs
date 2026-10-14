@@ -3,6 +3,7 @@ using Cider.Data.In2D;
 using Cider.Input;
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 
 namespace Cider.Components.In2D.Controls
 {
@@ -63,5 +64,7 @@ namespace Cider.Components.In2D.Controls
 
             return false;
         }
+
+        public override bool TryMeasureSize(out Vector2 unscaledSize) => _content.TryMeasureSize(out unscaledSize);
     }
 }

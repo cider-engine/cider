@@ -6,7 +6,7 @@ using System.Numerics;
 
 namespace Cider.Components.In2D
 {
-    public class Sprite2D : Component2D
+    public class Sprite2D : Component2D, ISizeMeasurable
     {
         private RectangleF? _cachedRenderRegion = null;
 
@@ -97,6 +97,18 @@ namespace Cider.Components.In2D
                 y,
                 frameWidth,
                 frameHeight);
+        }
+
+        public bool TryMeasureSize(out Vector2 unscaledSize)
+        {
+            if (Texture is null || _cachedRenderRegion is null)
+            {
+                unscaledSize = default;
+                return false;
+            }
+
+            unscaledSize = _cachedRenderRegion.Value.SizeVector;
+            return true;
         }
 
         protected override bool HitTest(HitTestResult result)

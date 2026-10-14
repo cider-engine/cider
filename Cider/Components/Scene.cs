@@ -1,11 +1,13 @@
 using Cider.Components.In2D;
 using Cider.Extensions;
+using Cider.Render;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Cider.Components
 {
-    public class Scene : Component
+    public class Scene : Component, ISizeMeasurable
     {
         /// <summary>
         /// 此场景所属的<c>Window</c>
@@ -35,6 +37,18 @@ namespace Cider.Components
         {
             Gravity = Game.Instance.ProjectSettings.DefaultGravity.AsPhysicsVector2()
         });
+
+        public bool TryMeasureSize(out Vector2 size)
+        {
+            if (Window is { Renderer: Renderer renderer })
+            {
+                size = renderer.CurrentOutputSize.Vector;
+                return true;
+            }
+
+            size = default;
+            return false;
+        }
 
         internal void OnPhysicsStep(float delta)
         {

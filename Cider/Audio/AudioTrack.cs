@@ -155,6 +155,15 @@ namespace Cider.Audio
             }
         }
 
+        public void Resume()
+        {
+            ObjectDisposedException.ThrowIf(disposedValue, this);
+            unsafe
+            {
+                SDLHelpers.ThrowIfFalse(MIX_ResumeTrack(_track));
+            }
+        }
+
         public void Stop(SampleFrame fadeOutFrames)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
@@ -171,11 +180,6 @@ namespace Cider.Audio
             {
                 SDLHelpers.ThrowIfFalse(MIX_StopTrack(_track, TimeSpanToFrames(fadeOutTime).Value));
             }
-        }
-
-        public void Remove()
-        {
-            ((IDisposable)this).Dispose();
         }
 
 #pragma warning disable CA1816
@@ -218,7 +222,7 @@ namespace Cider.Audio
             Dispose(disposing: false);
         }
 
-        void IDisposable.Dispose()
+        public void Dispose()
         {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);

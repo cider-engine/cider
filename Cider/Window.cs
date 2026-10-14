@@ -210,13 +210,17 @@ namespace Cider
         /// <para>浏览器平台最多只支持1个窗口</para>
         /// </summary>
         /// <param name="title">标题，不可为null</param>
-        /// <param name="width">窗口宽度</param>
-        /// <param name="height">窗口高度</param>
+        /// <param name="width">窗口宽度，在Android平台中会被覆盖为0</param>
+        /// <param name="height">窗口高度，在Android平台中会被覆盖为0</param>
         /// <param name="flags">窗口的其它属性</param>
         /// <exception cref="PlatformNotSupportedException">当已经存在窗口时抛出</exception>
         public unsafe Window(string title, int width, int height, WindowFlags flags)
         {
             if (OperatingSystem.IsBrowser() && _allWindows.Count > 0) throw new PlatformNotSupportedException("browser doesn't support multiple windows.");
+#if ANDROID
+            width = 0;
+            height = 0;
+#endif
 
             SDLHelpers.EnsureOnMainThread();
             using var unmanaged = title.ToUnmanagedUtf8();

@@ -183,6 +183,13 @@ namespace Cider.Components.In2D.Controls
             base.OnWindowChangedInternal(oldWindow, newWindow);
         }
 
+        public override bool TryMeasureSize(out Vector2 unscaledSize)
+        {
+            var returnValue = TryMeasureSize(out var width, out var height);
+            unscaledSize = new(width, height);
+            return returnValue;
+        }
+
         public bool TryMeasureSize(out float unscaledWidth, out float unscaledHeight)
         {
             if (_text is { Size: { IsEmpty: false, Width: var width, Height: var height } })
@@ -243,7 +250,7 @@ namespace Cider.Components.In2D.Controls
 
                     using (context.PushTarget(@this._cachedTexture))
                     {
-                        context.FillColor(@this.Background);
+                        context.RenderColor(@this.Background);
                         text.Render(0, 0);
                     }
                 }
@@ -283,7 +290,7 @@ namespace Cider.Components.In2D.Controls
 
                 var size = text.Size;
 
-                context.FillRectangle(transform.Position, size.Width, size.Height, 0, @this.Background, Vector2.One);
+                context.RenderFilledRect(transform.Position, size.Width, size.Height, 0, @this.Background, Vector2.One);
 
                 if (context.Renderer.Camera2D is { IsEnabled: true } camera)
                     text.Render(transform.Position.X - camera.OffsetPosition.X, transform.Position.Y - camera.OffsetPosition.Y);

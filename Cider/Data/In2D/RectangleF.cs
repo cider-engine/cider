@@ -1,5 +1,5 @@
-using Cider.Render;
 using System;
+using System.Numerics;
 
 namespace Cider.Data.In2D
 {
@@ -14,6 +14,7 @@ namespace Cider.Data.In2D
         public readonly float Right => X + Width;
         public readonly float Bottom => Y + Height;
         public readonly bool IsEmpty => (Width <= 0) || (Height <= 0);
+        public readonly Vector2 SizeVector => new(Width, Height);
 
         public RectangleF(float x, float y, float width, float height)
         {

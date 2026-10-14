@@ -11,19 +11,14 @@ namespace Cider.Assets
     /// <typeparam name="T">继承此类的类自身</typeparam>
     public abstract class Asset<T> : IEquatable<Asset<T>> where T : Asset<T>
     {
-        private readonly string _path;
         /// <summary>
-        /// 在加载时使用的路径，可能因操作系统发生变化
+        /// 资源路径
         /// </summary>
-        public string Path => OperatingSystem.IsAndroid() ? _path["Assets/".Length..] : _path;
-        /// <summary>
-        /// 传入构造函数的原路径，此路径用于注册进每个类的<c>LookUp</c>字典
-        /// </summary>
-        public string OriginPath => _path;
+        public string Path { get; }
 
         public Asset(string path)
         {
-            ArgumentException.ThrowIfNullOrEmpty(_path = path);
+            ArgumentException.ThrowIfNullOrEmpty(Path = path);
             Lookup.Add(path, GetThis());
         }
 
@@ -52,7 +47,7 @@ namespace Cider.Assets
 
         public override int GetHashCode()
         {
-            return OriginPath.GetHashCode();
+            return Path.GetHashCode();
         }
 
         public static IDictionary<string, T> Lookup { get; protected set; } = new Dictionary<string, T>();

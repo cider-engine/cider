@@ -72,7 +72,7 @@ namespace Cider.Components.In2D
             {
                 var map = task.Result;
 
-                var (entries, bounds, _) = LoadedData ??= BuildLoadedData(map, Map.OriginPath);
+                var (entries, bounds, _) = LoadedData ??= BuildLoadedData(map, Map.Path);
 
                 foreach (var entry in entries.Values)
                 {
@@ -85,7 +85,7 @@ namespace Cider.Components.In2D
 
                 using (context.PushTarget(_target!))
                 {
-                    context.FillColor(new(map.BackgroundColor.R, map.BackgroundColor.G, map.BackgroundColor.B, map.BackgroundColor.A));
+                    context.RenderColor(new(map.BackgroundColor.R, map.BackgroundColor.G, map.BackgroundColor.B, map.BackgroundColor.A));
 
                     foreach (var entry in entries)
                     {

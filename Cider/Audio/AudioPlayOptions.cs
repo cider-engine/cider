@@ -12,52 +12,52 @@ namespace Cider.Audio
             set => SetNumberProperty(MIX_PROP_PLAY_LOOPS_NUMBER, value);
         }
 
-        public long MaxFrame
+        public SampleFrame MaxFrame
         {
-            get => GetNumberProperty(MIX_PROP_PLAY_MAX_FRAME_NUMBER);
-            set => SetNumberProperty(MIX_PROP_PLAY_MAX_FRAME_NUMBER, value);
+            get => new(GetNumberProperty(MIX_PROP_PLAY_MAX_FRAME_NUMBER));
+            set => SetNumberProperty(MIX_PROP_PLAY_MAX_FRAME_NUMBER, value.Value);
         }
 
         public TimeSpan MaxTime
         {
             get => TimeSpan.FromMilliseconds(GetNumberProperty(MIX_PROP_PLAY_MAX_MILLISECONDS_NUMBER));
-            set => SetNumberProperty(MIX_PROP_PLAY_MAX_MILLISECONDS_NUMBER, (long)value.TotalMilliseconds);
+            set => SetNumberProperty(MIX_PROP_PLAY_MAX_MILLISECONDS_NUMBER, long.CreateChecked(value.TotalMilliseconds));
         }
 
-        public long StartFrame
+        public SampleFrame StartFrame
         {
-            get => GetNumberProperty(MIX_PROP_PLAY_START_FRAME_NUMBER);
-            set => SetNumberProperty(MIX_PROP_PLAY_START_FRAME_NUMBER, value);
+            get => new(GetNumberProperty(MIX_PROP_PLAY_START_FRAME_NUMBER));
+            set => SetNumberProperty(MIX_PROP_PLAY_START_FRAME_NUMBER, value.Value);
         }
 
         public TimeSpan StartTime
         {
             get => TimeSpan.FromMilliseconds(GetNumberProperty(MIX_PROP_PLAY_START_MILLISECOND_NUMBER));
-            set => SetNumberProperty(MIX_PROP_PLAY_START_MILLISECOND_NUMBER, (long)value.TotalMilliseconds);
+            set => SetNumberProperty(MIX_PROP_PLAY_START_MILLISECOND_NUMBER, long.CreateChecked(value.TotalMilliseconds));
         }
 
-        public long LoopStartFrame
+        public SampleFrame LoopStartFrame
         {
-            get => GetNumberProperty(MIX_PROP_PLAY_LOOP_START_FRAME_NUMBER);
-            set => SetNumberProperty(MIX_PROP_PLAY_LOOP_START_FRAME_NUMBER, value);
+            get => new(GetNumberProperty(MIX_PROP_PLAY_LOOP_START_FRAME_NUMBER));
+            set => SetNumberProperty(MIX_PROP_PLAY_LOOP_START_FRAME_NUMBER, value.Value);
         }
 
         public TimeSpan LoopStartTime
         {
             get => TimeSpan.FromMilliseconds(GetNumberProperty(MIX_PROP_PLAY_LOOP_START_MILLISECOND_NUMBER));
-            set => SetNumberProperty(MIX_PROP_PLAY_LOOP_START_MILLISECOND_NUMBER, (long)value.TotalMilliseconds);
+            set => SetNumberProperty(MIX_PROP_PLAY_LOOP_START_MILLISECOND_NUMBER, long.CreateChecked(value.TotalMilliseconds));
         }
 
-        public long FadeInFrames
+        public SampleFrame FadeInFrames
         {
-            get => GetNumberProperty(MIX_PROP_PLAY_FADE_IN_FRAMES_NUMBER);
-            set => SetNumberProperty(MIX_PROP_PLAY_FADE_IN_FRAMES_NUMBER, value);
+            get => new(GetNumberProperty(MIX_PROP_PLAY_FADE_IN_FRAMES_NUMBER));
+            set => SetNumberProperty(MIX_PROP_PLAY_FADE_IN_FRAMES_NUMBER, value.Value);
         }
 
         public TimeSpan FadeInTime
         {
             get => TimeSpan.FromMilliseconds(GetNumberProperty(MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER));
-            set => SetNumberProperty(MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER, (long)value.TotalMilliseconds);
+            set => SetNumberProperty(MIX_PROP_PLAY_FADE_IN_MILLISECONDS_NUMBER, long.CreateChecked(value.TotalMilliseconds));
         }
 
         public float FadeInStartGain
@@ -66,16 +66,16 @@ namespace Cider.Audio
             set => SetFloatProperty(MIX_PROP_PLAY_FADE_IN_START_GAIN_FLOAT, value);
         }
 
-        public long AppendSilenceFrames
+        public SampleFrame AppendSilenceFrames
         {
-            get => GetNumberProperty(MIX_PROP_PLAY_APPEND_SILENCE_FRAMES_NUMBER);
-            set => SetNumberProperty(MIX_PROP_PLAY_APPEND_SILENCE_FRAMES_NUMBER, value);
+            get => new(GetNumberProperty(MIX_PROP_PLAY_APPEND_SILENCE_FRAMES_NUMBER));
+            set => SetNumberProperty(MIX_PROP_PLAY_APPEND_SILENCE_FRAMES_NUMBER, value.Value);
         }
 
         public TimeSpan AppendSilenceTime
         {
             get => TimeSpan.FromMilliseconds(GetNumberProperty(MIX_PROP_PLAY_APPEND_SILENCE_MILLISECONDS_NUMBER));
-            set => SetNumberProperty(MIX_PROP_PLAY_APPEND_SILENCE_MILLISECONDS_NUMBER, (long)value.TotalMilliseconds);
+            set => SetNumberProperty(MIX_PROP_PLAY_APPEND_SILENCE_MILLISECONDS_NUMBER, long.CreateChecked(value.TotalMilliseconds));
         }
 
         public bool HaltWhenExhausted
@@ -86,7 +86,7 @@ namespace Cider.Audio
 
         public int StartOrder
         {
-            get => (int)GetNumberProperty(MIX_PROP_PLAY_START_ORDER_NUMBER);
+            get => int.CreateChecked(GetNumberProperty(MIX_PROP_PLAY_START_ORDER_NUMBER));
             set => SetNumberProperty(MIX_PROP_PLAY_START_ORDER_NUMBER, value);
         }
     }

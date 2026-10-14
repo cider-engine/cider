@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Cider.Components.In2D.Controls
 {
-    public class Control : Component2D
+    public abstract class Control : Component2D, ISizeMeasurable
     {
         protected static bool SetIfChanged<T>(ref T field, T value)
         {
@@ -13,5 +14,7 @@ namespace Cider.Components.In2D.Controls
 
             return true;
         }
+
+        public abstract bool TryMeasureSize(out Vector2 unscaledSize);
     }
 }

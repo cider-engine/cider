@@ -28,7 +28,7 @@ namespace Cider.Render
 
         public RenderScaleScope PushScale(Vector2 scale) => new(Renderer, scale);
 
-        public void FillColor(Color color)
+        public void RenderColor(Color color)
         {
             using var colorScope = PushDrawColor(color);
             unsafe
@@ -38,7 +38,7 @@ namespace Cider.Render
         }
 
         [CameraDependent]
-        public void FillRectangle(Vector2 position, float width, float height, float rotationInDegrees, Color color, Vector2 scale)
+        public void RenderFilledRect(Vector2 position, float width, float height, float rotationInDegrees, Color color, Vector2 scale)
         {
             using var colorScope = new RenderTextureColorScope(Renderer.WhiteSinglePixelTexture.Value, color);
             RenderTexture(Renderer.WhiteSinglePixelTexture.Value, position, null, rotationInDegrees, new(width * scale.X, height * scale.Y), Vector2.Zero, FlipMode.None);

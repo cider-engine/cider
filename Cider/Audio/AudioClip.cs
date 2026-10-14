@@ -31,16 +31,16 @@ namespace Cider.Audio
             _audio = SDLHelpers.ThrowIfPtrIsNull(SDL3_mixer.MIX_LoadAudio_IO(mixer?.Pointer , stream, false, closeio: true));
         }
 
-        public unsafe TimeSpan FramesToTimeSpan(long frames)
+        public unsafe TimeSpan FramesToTimeSpan(SampleFrame frames)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
-            return TimeSpan.FromMilliseconds(SDLHelpers.ThrowIfNegative(SDL3_mixer.MIX_AudioFramesToMS(_audio, frames)));
+            return TimeSpan.FromMilliseconds(SDLHelpers.ThrowIfNegative(SDL3_mixer.MIX_AudioFramesToMS(_audio, frames.Value)));
         }
 
-        public unsafe long TimeSpanToFrames(TimeSpan timeSpan)
+        public unsafe SampleFrame TimeSpanToFrames(TimeSpan timeSpan)
         {
             ObjectDisposedException.ThrowIf(disposedValue, this);
-            return SDLHelpers.ThrowIfNegative(SDL3_mixer.MIX_AudioMSToFrames(_audio, (long)timeSpan.TotalMilliseconds));
+            return new(SDLHelpers.ThrowIfNegative(SDL3_mixer.MIX_AudioMSToFrames(_audio, long.CreateChecked(timeSpan.TotalMilliseconds))));
         }
 
         private void Dispose(bool disposing)

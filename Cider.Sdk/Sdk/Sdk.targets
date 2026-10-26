@@ -131,9 +131,11 @@
 			</_PackedCiderAssets>
 			
 			<_PackedCiderAssets Include="@(_CiderInternalCompiledShaders)">
-				<Link>internal\%(_CiderInternalCompiledShaders.OriginalRecursiveDir)%(Filename)%(Extension)</Link>
-				<TargetPath>internals\%(_CiderInternalCompiledShaders.OriginalRecursiveDir)%(Filename)%(Extension)</TargetPath>
+				<Link>%(_CiderInternalCompiledShaders.OriginalRecursiveDir)%(Filename)%(Extension)</Link>
+				<TargetPath>%(_CiderInternalCompiledShaders.OriginalRecursiveDir)%(Filename)%(Extension)</TargetPath>
 			</_PackedCiderAssets>
+
+			<FileWrites Include="@(_CiderPublicCompiledShaders);@(_CiderInternalCompiledShaders)" />
 			
 			<!--Android Assets由AndroidAsset处理 不将其作为Content来避免XA0101警告-->
 			<Content Include="@(_PackedCiderAssets)" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">

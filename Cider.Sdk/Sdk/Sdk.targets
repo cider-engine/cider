@@ -24,14 +24,15 @@
 
 	<ItemGroup>
 		<CiderAssets Include="$(CiderAssetsPath)\**\*" />
+		<CiderShaders Include="$(CiderAssetsPath)\$(CiderShadersPath)\**\*" Exclude="**\*.meta" />
 
-		<_CiderAssetsWithoutMeta Include="@(CiderAssets)" Exclude="**\*.meta" />
+		<_CiderPublicShaders Include="@(CiderShaders)" />
 
-		<!--Android Assets由AndroidAsset处理 不将其作为Content来避免XA0101警告-->
-		<Content Include="@(_CiderAssetsWithoutMeta)" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">
-			<!--Browser Assets由StaticWebAssetsSdk处理-->
-			<CopyToOutputDirectory Condition="!$(_IsOnBrowser)">PreserveNewest</CopyToOutputDirectory>
-		</Content>
+		<_CiderInternalShaders Include="$(MSBuildThisFileDirectory)..\shaders\**\*" />
+
+		<CiderShaders Include="@(_CiderInternalShaders)" />
+
+		<_PackedCiderAssets Include="@(CiderAssets)" Exclude="@(CiderShaders);**\*.meta" />
 		
 		<CompilerVisibleProperty Include="MSBuildProjectDirectory" />
 
@@ -54,7 +55,6 @@
 		<CompilerVisibleProperty Include="MonoAndroidAssetsPrefix" />
 
 		<AndroidAsset Remove="@(AndroidAsset)" />
-		<AndroidAsset Include="@(_CiderAssetsWithoutMeta)" />
 	</ItemGroup>
 	<!--Android End-->
 	
@@ -75,6 +75,7 @@
 		
 		<Content Include="Platform\Browser\wwwroot\**\*">
 			<Link>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</Link>
+			<ContentRoot>$(MSBuildProjectDirectory)\Platform\Browser\wwwroot</ContentRoot>
 			<!--根目录的wwwroot隐藏，子目录的wwwroot由默认None项自动加载，前提是EnableDefaultNoneItems为默认值或true-->
 			<Visible>false</Visible>
 		</Content>
@@ -87,9 +88,9 @@
 		<EmccExportedRuntimeMethod Include="requestFullscreen" />
 	</ItemGroup>
 
-	<Target Name="AddExtraStaticWebAssets" Condition="$(_IsOnBrowser)">
+	<Target Name="AddExtraStaticWebAssets" Condition="$(_IsOnBrowser)" DependsOnTargets="AssetProcess">
 		<DefineStaticWebAssets
-			CandidateAssets="@(_CiderAssetsWithoutMeta)"
+			CandidateAssets="@(_PackedCiderAssets)"
 			SourceId="$(PackageId)"
 			SourceType="Discovered"
 			AssetKind="All"
@@ -122,8 +123,124 @@
 			Text="The property BuildToBrowser will be ignored when browser is in TargetFrameworks." />
 	</Target>
 
-	<Target Name="AssetMetaPreprocess" BeforeTargets="BeforeBuild">
+	<Target Name="AssetProcess" BeforeTargets="BeforeBuild" DependsOnTargets="AssetMetaPreprocess;ShaderCompile_Direct3D12;ShaderCompile_Vulkan;ShaderCompile_Metal">
+		<ItemGroup>
+			<_PackedCiderAssets Include="@(_CiderPublicCompiledShaders)">
+				<Link>$(CiderAssetsPath)\$(CiderShadersPath)\%(_CiderPublicCompiledShaders.OriginalRecursiveDir)%(Filename)%(Extension)</Link>
+				<TargetPath>$(CiderAssetsPath)\$(CiderShadersPath)\%(_CiderPublicCompiledShaders.OriginalRecursiveDir)%(Filename)%(Extension)</TargetPath>
+			</_PackedCiderAssets>
+			
+			<_PackedCiderAssets Include="@(_CiderInternalCompiledShaders)">
+				<Link>internal\%(_CiderInternalCompiledShaders.OriginalRecursiveDir)%(Filename)%(Extension)</Link>
+				<TargetPath>internals\%(_CiderInternalCompiledShaders.OriginalRecursiveDir)%(Filename)%(Extension)</TargetPath>
+			</_PackedCiderAssets>
+			
+			<!--Android Assets由AndroidAsset处理 不将其作为Content来避免XA0101警告-->
+			<Content Include="@(_PackedCiderAssets)" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'">
+				<!--Browser Assets由StaticWebAssetsSdk处理-->
+				<CopyToOutputDirectory Condition="!$(_IsOnBrowser)">PreserveNewest</CopyToOutputDirectory>
+			</Content>
+			
+			<AndroidAsset Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'" Include="@(_PackedCiderAssets)" />
+		</ItemGroup>
+	</Target>
+
+	<Target Name="AssetMetaPreprocess">
+		<!--更好的方法是在添加资源时自己就添加.meta-->
+		<!--如果是当前构建生成的.meta代码里肯定是引用不到的（不知道ID），所以AdditionalFiles不管了-->
 		<AssetTask Assets="@(CiderAssets)" />
+	</Target>
+
+	<PropertyGroup Condition="$([System.OperatingSystem]::IsWindows())">
+		<_ShaderCompilingPlatform>win-x64</_ShaderCompilingPlatform>
+		<_ShaderCompilerExe>shadercross.exe</_ShaderCompilerExe>
+		<_UseUtf8Encoding>Always</_UseUtf8Encoding>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([System.OperatingSystem]::IsLinux())">
+		<_ShaderCompilingPlatform>linux-x64</_ShaderCompilingPlatform>
+		<_ShaderCompilerExe>shadercross</_ShaderCompilerExe>
+		<_UseUtf8Encoding>Detect</_UseUtf8Encoding>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([System.OperatingSystem]::IsMacOS())">
+		<_ShaderCompilingPlatform>osx-arm64</_ShaderCompilingPlatform>
+		<_ShaderCompilerExe>shadercross</_ShaderCompilerExe>
+		<_UseUtf8Encoding>Detect</_UseUtf8Encoding>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<_ShaderRunningPlatform>$(RuntimeIdentifier)</_ShaderRunningPlatform>
+		<_ShaderRunningPlatform Condition="$(_ShaderRunningPlatform) == ''">$(_ShaderCompilingPlatform)</_ShaderRunningPlatform>
+	</PropertyGroup>
+
+	<Target Name="ShaderCompile_Direct3D12" Condition="$(_ShaderRunningPlatform.StartsWith('win'))"
+			Inputs="@(CiderShaders)" Outputs="@(CiderShaders->'$(IntermediateOutputPath)shaders\compiled\dxil\%(RecursiveDir)%(Filename)%(Extension).dxil')">
+		<Error Condition="$(_ShaderCompilingPlatform) == ''" Text="Current building platform is unsupported" />
+
+		<MakeDir Directories="$(IntermediateOutputPath)shaders\compiled\dxil\%(CiderShaders.RecursiveDir)" Condition="!Exists('$(IntermediateOutputPath)shaders\compiled\dxil\%(CiderShaders.RecursiveDir)')" />
+	
+		<Exec UseUtf8Encoding="$(_UseUtf8Encoding)" Command="&quot;$(MSBuildThisFileDirectory)..\tools\SDL_shadercross\$(_ShaderCompilingPlatform)\bin\$(_ShaderCompilerExe)&quot; &quot;%(CiderShaders.FullPath)&quot; -o &quot;$(IntermediateOutputPath)shaders\compiled\dxil\%(CiderShaders.RecursiveDir)%(CiderShaders.Filename)%(CiderShaders.Extension).dxil&quot;" />
+
+		<ItemGroup>
+			<_CiderInternalCompiledShaders Include="@(_CiderInternalShaders->'$(IntermediateOutputPath)shaders\compiled\dxil\%(RecursiveDir)%(Filename)%(Extension).dxil')" Type="dxil" OriginalRecursiveDir="%(RecursiveDir)" />
+			<_CiderPublicCompiledShaders Include="@(_CiderPublicShaders->'$(IntermediateOutputPath)shaders\compiled\dxil\%(RecursiveDir)%(Filename)%(Extension).dxil')" Type="dxil" OriginalRecursiveDir="%(RecursiveDir)" />
+			
+			<_CompiledShadersWithoutSource Include="$(IntermediateOutputPath)shaders\compiled\dxil\**\*.dxil" />
+			<_CompiledShadersWithoutSource Remove="@(_CiderInternalCompiledShaders);@(_CiderPublicCompiledShaders)" />
+		</ItemGroup>
+
+		<Delete Files="@(_CompiledShadersWithoutSource)" />
+
+		<ItemGroup>
+			<_CompiledShadersWithoutSource Remove="@(_CompiledShadersWithoutSource)" />
+		</ItemGroup>
+	</Target>
+	
+	<Target Name="ShaderCompile_Vulkan" Condition="!$(_ShaderRunningPlatform.StartsWith('osx'))"
+			Inputs="@(CiderShaders)" Outputs="@(CiderShaders->'$(IntermediateOutputPath)shaders\compiled\spv\%(RecursiveDir)%(Filename)%(Extension).spv')">
+		<Error Condition="$(_ShaderCompilingPlatform) == ''" Text="Current building platform is unsupported" />
+
+		<MakeDir Directories="$(IntermediateOutputPath)shaders\compiled\spv\%(CiderShaders.RecursiveDir)" Condition="!Exists('$(IntermediateOutputPath)shaders\compiled\spv\%(CiderShaders.RecursiveDir)')" />
+
+		<Exec UseUtf8Encoding="$(_UseUtf8Encoding)" Command="&quot;$(MSBuildThisFileDirectory)..\tools\SDL_shadercross\$(_ShaderCompilingPlatform)\bin\$(_ShaderCompilerExe)&quot; &quot;%(CiderShaders.FullPath)&quot; -o &quot;$(IntermediateOutputPath)shaders\compiled\spv\%(CiderShaders.RecursiveDir)%(CiderShaders.Filename)%(CiderShaders.Extension).spv&quot;" />
+
+		<ItemGroup>
+			<_CiderInternalCompiledShaders Include="@(_CiderInternalShaders->'$(IntermediateOutputPath)shaders\compiled\spv\%(RecursiveDir)%(Filename)%(Extension).spv')" Type="spv" OriginalRecursiveDir="%(RecursiveDir)" />
+			<_CiderPublicCompiledShaders Include="@(_CiderPublicShaders->'$(IntermediateOutputPath)shaders\compiled\spv\%(RecursiveDir)%(Filename)%(Extension).spv')" Type="spv" OriginalRecursiveDir="%(RecursiveDir)" />
+
+			<_CompiledShadersWithoutSource Include="$(IntermediateOutputPath)shaders\compiled\spv\**\*.spv" />
+			<_CompiledShadersWithoutSource Remove="@(_CiderInternalCompiledShaders);@(_CiderPublicCompiledShaders)" />
+		</ItemGroup>
+
+		<Delete Files="@(_CompiledShadersWithoutSource)" />
+
+		<ItemGroup>
+			<_CompiledShadersWithoutSource Remove="@(_CompiledShadersWithoutSource)" />
+		</ItemGroup>
+	</Target>
+	
+	<Target Name="ShaderCompile_Metal" Condition="$(_ShaderRunningPlatform.StartsWith('osx'))"
+			Inputs="@(CiderShaders)" Outputs="@(CiderShaders->'$(IntermediateOutputPath)shaders\compiled\msl\%(RecursiveDir)%(Filename)%(Extension).msl')">
+		<Error Condition="$(_ShaderCompilingPlatform) == ''" Text="Current building platform is unsupported" />
+
+		<MakeDir Directories="$(IntermediateOutputPath)shaders\compiled\msl\%(CiderShaders.RecursiveDir)" Condition="!Exists('$(IntermediateOutputPath)shaders\compiled\msl\%(CiderShaders.RecursiveDir)')" />
+
+		<Exec UseUtf8Encoding="$(_UseUtf8Encoding)" Command="&quot;$(MSBuildThisFileDirectory)..\tools\SDL_shadercross\$(_ShaderCompilingPlatform)\bin\$(_ShaderCompilerExe)&quot; &quot;%(CiderShaders.FullPath)&quot; -o &quot;$(IntermediateOutputPath)shaders\compiled\msl\%(CiderShaders.RecursiveDir)%(CiderShaders.Filename)%(CiderShaders.Extension).msl&quot;" />
+
+		<ItemGroup>
+			<_CiderInternalCompiledShaders Include="@(_CiderInternalShaders->'$(IntermediateOutputPath)shaders\compiled\msl\%(RecursiveDir)%(Filename)%(Extension).msl')" Type="msl" OriginalRecursiveDir="%(RecursiveDir)" />
+			<_CiderPublicCompiledShaders Include="@(_CiderPublicShaders->'$(IntermediateOutputPath)shaders\compiled\msl\%(RecursiveDir)%(Filename)%(Extension).msl')" Type="msl" OriginalRecursiveDir="%(RecursiveDir)" />
+
+			<_CompiledShadersWithoutSource Include="$(IntermediateOutputPath)shaders\compiled\msl\**\*.msl" />
+			<_CompiledShadersWithoutSource Remove="@(_CiderInternalCompiledShaders);@(_CiderPublicCompiledShaders)" />
+		</ItemGroup>
+
+		<Delete Files="@(_CompiledShadersWithoutSource)" />
+
+		<ItemGroup>
+			<_CompiledShadersWithoutSource Remove="@(_CompiledShadersWithoutSource)" />
+		</ItemGroup>
 	</Target>
 
 	<Import Condition="!$(_IsOnBrowser)" Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
